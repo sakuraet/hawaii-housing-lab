@@ -12,15 +12,19 @@ This template is language-agnostic. Use Python, JavaScript, Go, R, or anything e
 ==============================================================================
 -->
 
-# [Project name]
+# Feasim: Hawaii Housing Lab
 
-[One or two sentences: what your tool does and who it is for. Example: "A state-level simulator that estimates how many additional homes a set of pro-housing reforms could unlock in [state], with a county-level breakdown."]
+Give it a lot (its size, zoning and height limit) and a policy pathway, such as current zoning, Bill 7 or a transit-oriented development (TOD) permit. It works out what a developer could build there, then runs the project's pro forma: units, parking, costs, rents and sales, financing, residual land value and developer returns. It finishes with a verdict: is the project strong, marginal or poor?
 
-## What this tool does
+Some things you can use it for:
 
-[Short description of the tool, the state(s) it covers, and the benchmark policy scenarios it addresses. List which of the five benchmark scenarios you implemented (at least three are required).]
+- **Compare pathways for one lot:** Which policy makes a project pencil?
+- **Test assumptions:** How do land cost, construction cost, interest rates or a subsidy change the answer?
+- **Run many parcels:** Map or total the housing a policy would make feasible across a district or the whole island.
 
-## Command contract
+**Note:** The model code is in plain TypeScript with no runtime dependencies, so it runs in Node or the browser.
+
+## Command contract (WIP)
 
 Fill in the exact commands a stranger would run. These three commands are what reviewers use to reproduce your tool, so they must work from a clean checkout. Use whatever tooling you like (Make, npm scripts, a justfile, shell scripts, or plain commands) — only the documented commands matter.
 
@@ -34,11 +38,11 @@ If there any assumptions on the environment required to run these commands, list
 
 If your tool needs environment variables, copy `.env.example` to `.env` and fill in the values before running.
 
-## Data
+## Data (WIP)
 
 [How to obtain the data your tool uses. Do not commit raw or large data — see data/README.md. Point to the datasets and describe any download or preparation steps. Full provenance goes in docs/DATA_PROVENANCE.md.]
 
-## Documentation
+## Documentation (WIP)
 
 - [Model & Assumptions Overview](docs/MODEL_AND_ASSUMPTIONS.md) — how the tool works and what it assumes
 - [Policy Scenario Comparison](docs/POLICY_SCENARIO_COMPARISON.md) — scenario ranking and drivers
@@ -46,7 +50,7 @@ If your tool needs environment variables, copy `.env.example` to `.env` and fill
 - [Disclosures](docs/DISCLOSURES.md) — AI tools, pretrained models, and external services
 - [Presentation Guide](docs/PRESENTATION_GUIDE.md) — slide deck and demo video guidance
 
-## License
+## License (WIP)
 
 This project is licensed under the **Apache License 2.0** (see [LICENSE](LICENSE)), the challenge's recommended default because its express patent grant is the safest choice for tools that may later be adopted or integrated downstream.
 
@@ -54,4 +58,7 @@ The challenge also permits **MIT**, **BSD 3-Clause**, and **BSD 2-Clause**. If y
 
 ## Team
 
-[List team members. All contributors must agree to the license and the challenge's [Official Rules](https://housingchallenge.turnout.rocks/rules.html).]
+- **Patrick Spence** – Program Manager at National Association of Counties (NACo)
+- **Phillip Lee** – Post-doc researcher at University of Hawaiʻi Economic Research Organization (UHERO)
+- **Sakura Takahashi** – Junior Housing Research Associate at University of Hawaiʻi Economic Research Organization (UHERO)
+- **Trey Gordner** – Policy researcher and data analyst at University of Hawaiʻi Economic Research Organization (UHERO)
