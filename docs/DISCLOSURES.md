@@ -42,3 +42,6 @@ remain freely available to end users.]
 # Generated or Copied Code
 
 [Note any code copied or adapted from external sources, and the license it came under. Ensure attribution requirements (e.g., an entry in NOTICE) are met.]
+
+## Important Notice (WIP) 
+imported unchanged in commit `b29c53c` this is from @uhero/policy-simulator which is OSI compliant.
