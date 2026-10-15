@@ -26,17 +26,17 @@ Some things you can use it for:
 
 ## Command contract (WIP)
 
-Fill in the exact commands a stranger would run. These three commands are what reviewers use to reproduce your tool, so they must work from a clean checkout. Use whatever tooling you like (Make, npm scripts, a justfile, shell scripts, or plain commands) — only the documented commands matter.
+Run these from the repository root, on a clean checkout:
 
-| Step  | Command                     | Notes |
-| ----- | --------------------------- | ----- |
-| Setup | `[e.g., pip install -r requirements.txt]` | Installs dependencies |
-| Run   | `[e.g., python app.py]`     | Starts the tool |
-| Test  | `[e.g., pytest]`            | Runs the automated tests |
+| Step  | Command   | Notes |
+| ----- | --------- | ----- |
+| Setup | `npm ci`  | Installs the exact dev dependencies in `package-lock.json` and builds the model into `dist/` |
+| Run   | `[TBD]`   | The interactive tool is not built yet |
+| Test  | `npm test` | Runs the automated tests (Vitest) |
 
-If there any assumptions on the environment required to run these commands, list them explicitly. Submissions with complicated build processes should provide a Dockerfile as a convenience.
+**Requirements:** Node.js 24 and npm. CI runs the same commands on Ubuntu with Node.js 24 (see `.github/workflows/ci.yml`).
 
-If your tool needs environment variables, copy `.env.example` to `.env` and fill in the values before running.
+No environment variables or API keys are needed.
 
 ## Data (WIP)
 
