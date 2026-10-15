@@ -14,4 +14,11 @@ you may leave the section below empty.
 Third-party attributions
 --------------------------------------------------------------------------------
 
-[none]
+@uhero/feasim (formerly @uhero/policy-simulator)
+Copyright (c) 2026 UHERO
+Licensed under the MIT License; see licenses/UHERO-feasim-MIT.txt.
+https://github.com/UHERO/policy-simulator-package
+
+The code in src/ and test/ was imported unchanged from UHERO commit 6e75844
+(2026-10-13) in this repository's commit b29c53c. The same model code was
+published to npm as @uhero/feasim 0.1.0 under the MIT License.
