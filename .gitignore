@@ -36,6 +36,7 @@ Thumbs.db
 data/*
 !data/sample/
 !data/README.md
+!data/DATA_SOURCES.md
 *.csv
 *.parquet
 *.xlsx
