@@ -28,6 +28,8 @@ import {
   TOD_ELIGIBLE_DISTRICTS,
   TOD_MIN_LOT_SQFT,
 } from "./calculations/calc-shared";
+import type { Locality } from "./core/locality";
+import { assertPathway, getLocality } from "./localities";
 
 /** Bill 7's height cap, ft, and statutory FAR. */
 export const BILL7_MAX_HEIGHT = 60;
@@ -35,6 +37,9 @@ export const BILL7_FAR = 4.0;
 
 /** A real parcel's physical envelope. */
 export interface Parcel {
+  /** the county whose rules apply, a locality id such as "hi-maui";
+   *  Honolulu if unset */
+  locality?: string;
   tmk?: string;
   lot_sqft: number;
   zone_class: string;
@@ -299,6 +304,9 @@ export function pathwayEnvelope(
   parcel: Parcel,
   opts: TodEnvelopeOpts = {}
 ): Envelope {
+  const loc = getLocality(parcel.locality);
+  assertPathway(loc, program);
+  // TOD and Bill 7 are Honolulu pathways, so their rules stay Honolulu's
   if (program === "tod") return todEnvelope(parcel, opts);
   const height = parcel.height > 0 ? parcel.height : DEFAULT_HEIGHT[program];
   switch (program) {
@@ -308,7 +316,8 @@ export function pathwayEnvelope(
       return withOpenSpaceBonus(
         parcel.zone_class,
         height,
-        calcFarBill6(parcel.zone_class)
+        calcFarBill6(parcel.zone_class, loc),
+        loc
       );
     case "bill7":
       return {
@@ -320,7 +329,8 @@ export function pathwayEnvelope(
       return withOpenSpaceBonus(
         parcel.zone_class,
         height,
-        calcFAR(parcel.zone_class, parcel.lot_sqft)
+        calcFAR(parcel.zone_class, parcel.lot_sqft, loc),
+        loc
       );
   }
 }
@@ -329,9 +339,10 @@ export function pathwayEnvelope(
 function withOpenSpaceBonus(
   zone_class: string,
   height_limit: number,
-  far: number
+  far: number,
+  loc: Locality
 ): Envelope {
-  const bonus = openSpaceBonusOver(zone_class, far);
+  const bonus = openSpaceBonusOver(zone_class, far, loc);
   return { height_limit, max_far: far + bonus, open_space_bonus: bonus };
 }
 
@@ -397,8 +408,9 @@ export const DEFAULT_INPUTS: Record<ProgramId, SliderInputs> = (() => {
       retail_rent: 3,
       retail_share: 0.1,
       building_area_per_unit: 800,
+      // no grant_amount: the model takes it from grant_type (GRANT), so a
+      // pre-construction run gets $50,000 rather than the post-construction $12,000
       grant_type: "post_construct",
-      grant_amount: 12000,
       hard_cost_per_sqft: 450,
       land_cost: 130,
       opex_ratio: 0.19,
@@ -458,6 +470,7 @@ export function parcelInputs(
   // § 21-6.20(a) exemption
   if (program === "bill6" || program === "standard" || program === "h201")
     inputs.parking_exempt = parcel.parking_exempt;
+  if (parcel.locality !== undefined) inputs.locality = parcel.locality;
   return inputs;
 }
 

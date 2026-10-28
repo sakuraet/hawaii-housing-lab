@@ -8,10 +8,9 @@ should still be noted if its terms affect your submission.
 
 # AI-Assisted Code Generation
 
-[List any AI coding tools you used in a material way (e.g., for generating core
-logic). Confirm that the tool's terms permit submitting and openly licensing the
-generated output. You remain responsible for understanding, testing, and
-securing all code you submit.]
+| Tool | Used for |
+| ---- | -------- |
+| Claude Code | Restructuring the model so each county's rules and assumptions live in a config file (`src/core/`, `src/localities/`) instead of the calculation code; porting the team's later model changes from `@uhero/feasim` 0.2.1; writing the tests that check the config against the original model (`test/honolulu-config.test.ts`, `test/schedule.test.ts`, `test/zoning.test.ts`, `test/parking.test.ts`, `test/fees.test.ts`, `test/market.test.ts`, `test/locality.test.ts`); drafting documentation |
 
 # Pretrained Models, Weights, and Embeddings
 
@@ -44,4 +43,6 @@ remain freely available to end users.]
 [Note any code copied or adapted from external sources, and the license it came under. Ensure attribution requirements (e.g., an entry in NOTICE) are met.]
 
 ## Important Notice (WIP) 
-imported unchanged in commit `b29c53c` this is from @uhero/policy-simulator which is OSI compliant.
+Note: imported unchanged in commit `b29c53c` this is from @uhero/policy-simulator which is OSI compliant.
+
+Model changes made later by a team member (Sakura Takahashi) during the Coding Period, first in UHERO's package and released as `@uhero/feasim` 0.2.1, were ported into this repository: commits `059c4ef`, `69b85fa`, `91255fe`, `01544aa` and `27716f3` of UHERO/policy-simulator-package (Bill 7 grant sizing and prevailing wages, RLV detail, rent escalation, one permitting and construction time for every zone). The package's other changes after `6e75844` (renaming, publishing, release automation and version bumps, by non-team UHERO staff) were not ported.

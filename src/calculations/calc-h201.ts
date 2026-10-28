@@ -48,7 +48,7 @@ import {
   PARKING,
   podiumEnvelope,
   resolveCapRate,
-  resolveConstMonths,
+  DEFAULT_CONST_MONTHS,
   RETAIL_CAP_SPREAD,
   RETAIL_PREMIUM,
   sizeConstructionLoan,
@@ -59,6 +59,7 @@ import {
   zeroOutput,
   zoneStepBack,
 } from "./calc-shared";
+import { hawaii } from "../localities/hi/state";
 
 // =========================================================
 // DEFAULTS
@@ -76,8 +77,9 @@ export const H201_DEFAULT_RETAIL_RENT = 5;
 export const H201_DEFAULT_AFFORDABLE_AMI = "ami_80";
 export const H201_DEFAULT_MARKET_AMI = "ami_120";
 
-// 201H regulatory floors
-const H201_MIN_AFD_FRAC = 0.5;
+// 201H regulatory floor: more than half the units affordable (HRS Ch. 201H,
+// a state rule, from the state config)
+const H201_MIN_AFD_FRAC = hawaii.h201_min_affordable_frac;
 
 // =========================================================
 // MAIN ENTRY: calcH201Single
@@ -112,7 +114,7 @@ export function calcH201Single(sliders: SliderInputs): ParcelOutput {
     sliders.permitting_months ?? H201_DEFAULT_PERMITTING_MO;
   const impact_fee_per_unit = sliders.impact_fee ?? 0;
   const waivable_fee_basis = sliders.waivable_fee_basis ?? "market_units";
-  const const_months = resolveConstMonths(zone_class, sliders.const_months);
+  const const_months = sliders.const_months || DEFAULT_CONST_MONTHS;
   const hard_cost_per_sqft = sliders.hard_cost_per_sqft ?? 450;
   // Article 6 minimum unless the lever is set (§ 21-6.20); no 201H
   // exemption is assumed
@@ -276,8 +278,11 @@ export function calcH201Single(sliders: SliderInputs): ParcelOutput {
   const project_years = total_months / 12;
 
   // 7. REVENUE (h201_rental + h201_sale)
+  // affordable rent caps reset with each year's hud limits (roh 32-1.1 uses
+  // the current ami), so they escalate over permitting like market rents
   const afd_rent_multiplier =
-    FINANCING.ami_escalation ** ((const_months + total_carry_months) / 12);
+    FINANCING.ami_escalation **
+    ((permitting_months + const_months + total_carry_months) / 12);
   const mkt_rent_multiplier =
     FINANCING.ami_escalation **
     ((permitting_months + const_months + total_carry_months) / 12);
@@ -378,8 +383,7 @@ export function calcH201Single(sliders: SliderInputs): ParcelOutput {
     gdv,
     dev_cost,
     rlv_financing_cost,
-    0, // no per-unit grant
-    "none", // no grant type
+    [], // no grants in 201H
     lot_sqft,
     total_months,
     sliders.target_return ?? DEFAULT_TARGET_RETURN,
@@ -388,7 +392,6 @@ export function calcH201Single(sliders: SliderInputs): ParcelOutput {
 
   const rlv = {
     ...rlv_base,
-    post_construction_grant: 0,
     rlv: rlv_base.rlv,
     rlv_sqft: Math.round((rlv_base.rlv / lot_sqft) * 100) / 100,
   };
@@ -493,7 +496,15 @@ export function calcH201Single(sliders: SliderInputs): ParcelOutput {
     const hold_months = hold_years * 12;
     const total_with_hold = total_months + hold_months;
     const cf = new Array(total_with_hold + 1).fill(0);
-    cf[0] = -equity_amount;
+    // equity drawn as in the flip: land, predev, rest at closing
+    equityFirstDraws(
+      equity_amount,
+      land_cost_total,
+      predev.monthly_predev_spend,
+      permitting_months
+    ).forEach((d, m) => {
+      cf[m] += d;
+    });
     cf[total_months] += excess_sale_cash;
 
     let current_egi = egi,
@@ -639,7 +650,8 @@ export function calcH201Single(sliders: SliderInputs): ParcelOutput {
     cap_rate,
     gdv: Math.round(gdv),
     rlv_selling_costs: rlv.selling_costs,
-    rlv_post_grant: 0,
+    rlv_grants_pv: rlv.grants_pv,
+    rlv_land_carry: rlv.land_carry,
     rlv_profit: rlv.profit,
     rlv_project_cost: rlv.project_cost,
     rlv: rlv.rlv,
