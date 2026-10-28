@@ -15,7 +15,6 @@ import {
   calcFAR,
   calcFarBill6,
   commercialFracByZone,
-  constructionMonthsByZone,
   DEFAULT_CAP_RATE,
   excavationDepthByZone,
   FEES,
@@ -35,7 +34,6 @@ import {
   PARK_SQFT_PER_UNIT,
   PARKING,
   PARKING_MINIMUM,
-  permittingMonthsByZone,
   planReviewFee,
   residentialUse,
   stockpilingPermit,
@@ -146,10 +144,22 @@ describe("Honolulu config: zoning matches the code", () => {
 describe("Honolulu config: zone assumptions match the code", () => {
   const zone = (z: string) => assumptions.zones[z] ?? assumptions.default_zone;
 
-  it.each([...ZONES, "low_rise", "mid_rise", "XYZ"])("%s", (z) => {
-    expect(zone(z).permitting_months).toBe(permittingMonthsByZone(z));
-    expect(zone(z).construction_months).toBe(constructionMonthsByZone(z));
+  it.each([...ZONES, "low_rise", "mid_rise", "XYZ"])("%s: excavation depth", (z) => {
     expect(zone(z).excavation_depth_ft).toBe(excavationDepthByZone(z));
+  });
+});
+
+// Values changed on purpose since 0.1.0, by the team in UHERO's package
+// (@uhero/feasim 0.2.1). Everything else must still match 0.1.0.
+describe("Honolulu config: changes since 0.1.0", () => {
+  it("one permitting and construction time for every zone (commit 91255fe)", () => {
+    // 0.1.0 set them by zone; 0.2.1 uses 18 and 12 months everywhere
+    expect(assumptions.timing).toEqual({ permitting_months: 18, construction_months: 12 });
+  });
+
+  it("rent growth 4% instead of 3.5% (commit 27716f3)", () => {
+    expect(HOLD.annual_rent_growth).toBe(0.035);
+    expect(assumptions.market.annual_rent_growth).toBe(0.04);
   });
 });
 
@@ -265,7 +275,6 @@ describe("Honolulu config: state rules and market assumptions match the code", (
     expect(m.vacancy).toEqual({ residential: VACANCY.rental, retail: VACANCY.default });
     expect(m.cost_inflation).toBe(FINANCING.cost_inflation);
     expect(m.ami_escalation).toBe(FINANCING.ami_escalation);
-    expect(m.annual_rent_growth).toBe(HOLD.annual_rent_growth);
     expect(m.annual_opex_growth).toBe(HOLD.annual_opex_growth);
     expect(m.annual_assessment_growth).toBe(HOLD.annual_assessment_growth);
     const { stalls_per_unit: _, ...parking } = PARKING;

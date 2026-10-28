@@ -1,41 +1,41 @@
-// City and County of Honolulu: estimates we chose (not law). Values copied
-// unchanged from @uhero/feasim 0.1.0 (calculations/calc-shared.ts);
-// test/honolulu-config.test.ts checks every value against that code.
+// City and County of Honolulu: estimates we chose (not law). Values from
+// @uhero/feasim 0.1.0 (calculations/calc-shared.ts), with two changes made
+// later in the package by the team (see test/honolulu-config.test.ts):
+// one permitting and construction time for every zone, and 4% rent growth.
 
-import type { MarketAssumptions, ZoneAssumptions } from "../../../core/locality";
+import type {
+  MarketAssumptions,
+  TimingAssumptions,
+  ZoneAssumptions,
+} from "../../../core/locality";
 
-// permitting time in days, converted to whole months (days / 30, rounded)
-const months = (days: number) => Math.round(days / 30);
+// permitting and construction months, every zone and pathway; a slider
+// setting overrides them
+export const timing: TimingAssumptions = {
+  permitting_months: 18,
+  construction_months: 12,
+};
 
-// permitting months, construction months and excavation depth (ft) by zone
-function zone(
-  permitting_months: number,
-  construction_months: number,
-  excavation_depth_ft: number
-): ZoneAssumptions {
-  return { permitting_months, construction_months, excavation_depth_ft };
-}
+// excavation depth (ft) by zone; assumed, not from the code
+const zone = (excavation_depth_ft: number): ZoneAssumptions => ({ excavation_depth_ft });
 
-export const default_zone = zone(14, 18, 4);
+export const default_zone = zone(4);
 
 export const zones: Record<string, ZoneAssumptions> = {
-  "R-5": zone(months(353), 18, 3),
-  "A-1": zone(months(425), 18, 3),
-  "AMX-1": zone(months(425), 18, 3),
-  "A-2": zone(months(535), 24, 5),
-  "AMX-2": zone(months(535), 24, 5),
-  "A-3": zone(months(535), 36, 9),
-  "AMX-3": zone(months(535), 36, 9),
-  Apart: zone(months(535), 36, 9),
-  ApartMix: zone(months(535), 36, 9),
-  "B-1": default_zone,
-  "B-2": zone(months(454), 24, 5),
-  "BMX-3": zone(months(454), 36, 4),
-  "BMX-4": zone(months(454), 36, 9),
-  // Bill 7 placeholders, used when a lot has no zone: by height, up to 30 ft
-  // and above 30 ft
-  low_rise: zone(months(425), 18, 4),
-  mid_rise: zone(months(535), 24, 4),
+  // low density
+  "R-5": zone(3),
+  "A-1": zone(3),
+  "AMX-1": zone(3),
+  // medium density
+  "A-2": zone(5),
+  "AMX-2": zone(5),
+  "B-2": zone(5),
+  // high density and Waikiki
+  "A-3": zone(9),
+  "AMX-3": zone(9),
+  Apart: zone(9),
+  ApartMix: zone(9),
+  "BMX-4": zone(9),
 };
 
 export const market: MarketAssumptions = {
@@ -46,8 +46,10 @@ export const market: MarketAssumptions = {
   cost_inflation: 1.056,
   // 4%/yr AMI growth (2015–2026 Honolulu median family income growth)
   ami_escalation: 1.04,
-  // blended: affordable 4%, market 3.2% (Apartments.com Honolulu)
-  annual_rent_growth: 0.035,
+  // hold-period rent growth for all units: affordable caps track AMI (4%/yr,
+  // Honolulu MFI 2015-2025), and market rents grew about as fast (Zillow
+  // Honolulu 3.6%/yr since 2016, 4.2%/yr over the last 5 years)
+  annual_rent_growth: 0.04,
   annual_opex_growth: 0.035,
   annual_assessment_growth: 0.02,
   parking: {

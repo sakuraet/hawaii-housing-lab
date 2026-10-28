@@ -8,7 +8,6 @@ import {
   calcFAR,
   calcFarBill6,
   commercialFracByZone,
-  constructionMonthsByZone,
   excavationDepthByZone,
   envelopeCoverage,
   lotCoverage,
@@ -16,8 +15,6 @@ import {
   openSpaceBonus,
   openSpaceBonusOver,
   permitsGroundFloorRetail,
-  permittingMonthsByZone,
-  resolveConstMonths,
   waikikiOpenSpaceFrac,
   zoneName,
   zoneStepBack,
@@ -53,9 +50,9 @@ const strict: Locality = {
   assumptions: {
     ...honolulu.assumptions,
     zones: {
-      "R-TEST": { permitting_months: 6, construction_months: 9, excavation_depth_ft: 2 },
+      "R-TEST": { excavation_depth_ft: 2 },
     },
-    default_zone: { permitting_months: 30, construction_months: 40, excavation_depth_ft: 10 },
+    default_zone: { excavation_depth_ft: 10 },
   },
 };
 
@@ -112,20 +109,13 @@ describe("coverage, open space, commercial share and step-backs", () => {
   });
 });
 
-describe("timing, excavation and zone names", () => {
-  it("read the locality's zone assumptions", () => {
-    expect(permittingMonthsByZone("R-TEST", strict)).toBe(6);
-    expect(constructionMonthsByZone("R-TEST", strict)).toBe(9);
+describe("excavation and zone names", () => {
+  it("excavation depth reads the locality's zone assumptions", () => {
     expect(excavationDepthByZone("R-TEST", strict)).toBe(2);
-    // a slider override still wins
-    expect(resolveConstMonths("R-TEST", 15, strict)).toBe(15);
-    expect(resolveConstMonths("R-TEST", undefined, strict)).toBe(9);
   });
 
-  it("a zone with no estimates of its own gets the locality's default", () => {
-    expect(permittingMonthsByZone("OTHER", strict)).toBe(30);
-    expect(constructionMonthsByZone("XYZ")).toBe(18);
-    expect(permittingMonthsByZone("XYZ")).toBe(14);
+  it("a zone with no estimate of its own gets the locality's default", () => {
+    expect(excavationDepthByZone("OTHER", strict)).toBe(10);
     expect(excavationDepthByZone("XYZ")).toBe(4);
   });
 

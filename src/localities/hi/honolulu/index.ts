@@ -25,6 +25,7 @@ export const honolulu: Locality = {
     income_limits: rules.income_limits,
   },
   assumptions: {
+    timing: assumptions.timing,
     zones: assumptions.zones,
     default_zone: assumptions.default_zone,
     market: assumptions.market,

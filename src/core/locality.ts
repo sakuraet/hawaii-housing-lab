@@ -134,11 +134,15 @@ export interface WaterRules {
 
 // ── assumptions ─────────────────────────────────────────────────────────
 
-/** per-zone estimates: how long projects take and how deep they dig */
+/** per-zone estimates: how deep projects dig */
 export interface ZoneAssumptions {
+  excavation_depth_ft: number;
+}
+
+/** how long projects take in this place, every zone and pathway */
+export interface TimingAssumptions {
   permitting_months: number;
   construction_months: number;
-  excavation_depth_ft: number;
 }
 
 /** market estimates that can differ by place */
@@ -204,6 +208,8 @@ export interface Locality {
   };
 
   assumptions: {
+    /** permitting and construction months; a slider setting overrides them */
+    timing: TimingAssumptions;
     zones: Record<string, ZoneAssumptions>;
     /** used for a zone with no entry in `zones` */
     default_zone: ZoneAssumptions;

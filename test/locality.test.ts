@@ -189,13 +189,12 @@ describe("the bill6 pathway reads every group from the parcel's county", () => {
   });
 
   // DEFAULT_INPUTS sets permitting and construction months for every
-  // pathway, so a parcel run uses those; the zone's estimates apply when the
+  // pathway, so a parcel run uses those; the county's timing applies when the
   // inputs leave them unset
   it("permitting and construction months, when the inputs leave them unset", () => {
     registerLocality(
       testCounty("test-timing", (l) => {
-        l.assumptions.zones["A-2"].permitting_months = 36;
-        l.assumptions.zones["A-2"].construction_months = 40;
+        l.assumptions.timing = { permitting_months: 36, construction_months: 40 };
         return l;
       })
     );

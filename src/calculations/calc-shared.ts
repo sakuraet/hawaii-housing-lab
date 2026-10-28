@@ -235,13 +235,9 @@ export const FINANCING = {
 // hold strategy assumptions
 export const HOLD = {
   amort_years: 30,
-  // affordable units stay AMI-capped, so track AMI growth
-  annual_affordable_rent_growth: 0.04,
-  // market units follow market rent (Apartments.com Honolulu YoY)
-  annual_market_rent_growth: 0.032,
-  // Honolulu's growth rates, from its config: blended hold-period rent growth
-  // (affordable 4% / market 3.2%), operating expenses on their own series
-  // rather than as a fixed share of EGI, and the property-tax escalation
+  // Honolulu's growth rates, from its config: hold-period rent growth for all
+  // units, operating expenses on their own series rather than as a fixed
+  // share of EGI, and the property-tax escalation
   annual_rent_growth: honoluluMarket.annual_rent_growth,
   annual_opex_growth: honoluluMarket.annual_opex_growth,
   annual_assessment_growth: honoluluMarket.annual_assessment_growth,
@@ -280,11 +276,42 @@ export const COMMERCIAL_COVERAGE = {
   commercial2: 0.4,
 };
 
-// bill 7 grant amounts per affordable unit
+// bill 7 grant amounts: post-construction per affordable unit (units under
+// 300 sf get $40/sf of floor area), pre-construction per unit
 export const GRANT = {
   pre_construct: 50000,
   post_construct: 12000,
+  small_unit_sqft: 300,
+  small_unit_per_sqft: 40,
 };
+
+// prevailing wages (HRS 104), required for the pre-construction subsidy only
+export const PREVAILING_WAGE = {
+  // on-site labor share of hard cost (2022 economic census, DBEDT data book
+  // tables 21.05-21.06: 22-27%)
+  onsite_labor_share: 0.25,
+  // prevailing wage premium on that labor: median of 11 trades, dlir bulletin
+  // 509 (basic + fringe) vs bls oews honolulu median wage plus 30% benefits
+  // (27-83% by trade; test 35% and 55%)
+  labor_premium: 0.45,
+};
+
+// post-construction grant for one affordable unit of the given floor area
+export function postGrantPerUnit(unit_sqft: number): number {
+  return unit_sqft < GRANT.small_unit_sqft
+    ? unit_sqft * GRANT.small_unit_per_sqft
+    : GRANT.post_construct;
+}
+
+// blended post-construction grant per affordable unit for a mix key, sized
+// unit type by unit type
+export function mixPostGrant(mix_key: string): number {
+  const mix = UNIT_MIX[mix_key] ?? UNIT_MIX["one_bb_100"];
+  return mix.reduce(
+    (sum, m) => sum + postGrantPerUnit(UNIT_SIZE[m.type] ?? 500) * m.weight,
+    0
+  );
+}
 
 // parking: the default stalls per dwelling unit (TOD), and Honolulu's stall
 // sizes, costs and rent, read from its config (assumptions.market.parking)
@@ -1532,6 +1559,12 @@ export interface SliderInputs {
   equity?: number;
   grant_type?: "none" | "pre_construct" | "post_construct";
   grant_amount?: number;
+  // units the pre-construction subsidy pays on (ROH 32-5.2(c)(2): "each unit")
+  grant_units?: "all" | "affordable";
+  // pre-construction only: premium on on-site labor
+  prevailing_wage_premium?: number;
+  // on-site labor share of hard cost
+  onsite_labor_share?: number;
   land_cost?: number;
   permanent_rate?: number;
   hold_years?: number;
@@ -1619,6 +1652,10 @@ export interface ParcelOutput {
   // total_financing_cost above is the deal loan, sized with land in the base
   rlv_financing_cost: number;
   pre_construction_subsidy: number;
+  // bill 7 pre-construction: wage premium in hard_cost, and the subsidy cap
+  pw_premium_cost?: number;
+  subsidy_labor_cap?: number;
+  subsidy_cap_binds?: boolean;
   equity_amount: number;
   loan_balance_at_stab: number;
   permitting_months: number;
@@ -1680,7 +1717,10 @@ export interface ParcelOutput {
   total_predev_cost: number;
   construction_equity: number;
   rlv_selling_costs: number;
-  rlv_post_grant: number;
+  // grants discounted to the land purchase at the target return
+  rlv_grants_pv: number;
+  // (1 + target return) ^ years to stabilization
+  rlv_land_carry: number;
   rlv_profit: number;
   rlv_project_cost: number;
   rlv: number;
@@ -2046,32 +2086,10 @@ export function envelopeCoverage(
   return Math.min(coverage, 1 - waikikiOpenSpaceFrac(zone_class, far, loc));
 }
 
-// construction months by zone class, from the locality's zone assumptions
-// (Bill 7 passes "low_rise" or "mid_rise" when a lot has no zone)
-export function constructionMonthsByZone(
-  zone_class: string,
-  loc: Locality = honolulu
-): number {
-  return zoneAssumptions(loc, zone_class).construction_months;
-}
-
-// user override if provided, else the zone-based lookup
-export function resolveConstMonths(
-  zone_class: string,
-  override?: number,
-  loc: Locality = honolulu
-): number {
-  if (override != null && override > 0) return override;
-  return constructionMonthsByZone(zone_class, loc);
-}
-
-// permitting months by zone class, from the locality's zone assumptions
-export function permittingMonthsByZone(
-  zone_class: string,
-  loc: Locality = honolulu
-): number {
-  return zoneAssumptions(loc, zone_class).permitting_months;
-}
+// default timing in months, all pathways: Honolulu's, from its config
+// (assumptions.timing). The bill6 pathway reads the parcel's county instead.
+export const DEFAULT_PERMITTING_MONTHS = honolulu.assumptions.timing.permitting_months;
+export const DEFAULT_CONST_MONTHS = honolulu.assumptions.timing.construction_months;
 
 // setback-limited footprint (sqft), assuming a 2:1 depth:width lot
 export function setbackFootprint(
@@ -2858,17 +2876,15 @@ export function calcDevRLV(
   gdv: number,
   dev_cost: number,
   total_financing_cost: number,
-  affordable_units: number,
-  grant_type: string,
+  // grant cash by month (bill 7); empty for none
+  grant_flows: number[],
   lot_sqft: number,
   total_months: number,
   land_rate: number = DEFAULT_TARGET_RETURN,
-  profit_margin: number = DEFAULT_PROFIT_MARGIN,
-  grant_amount: number = GRANT.post_construct
+  profit_margin: number = DEFAULT_PROFIT_MARGIN
 ): {
   selling_costs: number;
-  post_construction_grant: number;
-  pre_construction_subsidy: number;
+  grants_pv: number;
   profit: number;
   project_cost: number;
   land_carry: number;
@@ -2877,32 +2893,27 @@ export function calcDevRLV(
 } {
   const selling_costs = gdv * FINANCING.disposition_cost;
 
-  const post_construction_grant =
-    grant_type === "post_construct" ? affordable_units * grant_amount : 0;
-
-  // pre-construction subsidy is cash at t=0, so it is added after the land
-  // carry rather than inside the residual (which is a stabilization-date figure)
-  const pre_construction_subsidy =
-    grant_type === "pre_construct" ? affordable_units * grant_amount : 0;
-
   const project_cost = dev_cost + total_financing_cost;
   const profit = project_cost * profit_margin;
 
-  const residual =
-    gdv - selling_costs + post_construction_grant - project_cost - profit;
+  const residual = gdv - selling_costs - project_cost - profit;
 
   // land carry: only the land is paid at t=0
   const land_carry = (1 + land_rate) ** (total_months / 12);
-  const rlv = residual / land_carry + pre_construction_subsidy;
+  // grants discounted from the month each is paid
+  const grants_pv = grant_flows.reduce(
+    (sum, g, m) => sum + g / (1 + land_rate) ** (m / 12),
+    0
+  );
+  const rlv = residual / land_carry + grants_pv;
   const rlv_sqft = rlv / lot_sqft;
 
   return {
     selling_costs: Math.round(selling_costs),
-    post_construction_grant,
-    pre_construction_subsidy,
+    grants_pv: Math.round(grants_pv),
     profit: Math.round(profit),
     project_cost: Math.round(project_cost),
-    land_carry: Math.round(land_carry * 10000) / 10000,
+    land_carry,
     rlv: Math.round(rlv),
     rlv_sqft: Math.round(rlv_sqft * 100) / 100,
   };
@@ -2973,8 +2984,7 @@ export function sizeConstructionLoan(
   amount_to_finance: number,
   equity_floor: number,
   ltc_stabilized_balance: number,
-  take_out: number | null,
-  closing_grant: number = 0
+  take_out: number | null
 ): {
   loan_principal: number;
   equity_amount: number;
@@ -2993,10 +3003,7 @@ export function sizeConstructionLoan(
     0,
     Math.min(ltc_principal, take_out_principal)
   );
-  const equity_amount = Math.max(
-    0,
-    amount_to_finance - loan_principal - closing_grant
-  );
+  const equity_amount = Math.max(0, amount_to_finance - loan_principal);
   return {
     loan_principal,
     equity_amount,
@@ -3154,7 +3161,8 @@ export function zeroOutput(
     total_predev_cost: 0,
     construction_equity: 0,
     rlv_selling_costs: 0,
-    rlv_post_grant: 0,
+    rlv_grants_pv: 0,
+    rlv_land_carry: 1,
     rlv_profit: 0,
     rlv_project_cost: 0,
     rlv: 0,
