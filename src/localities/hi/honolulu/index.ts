@@ -12,6 +12,8 @@ export const honolulu: Locality = {
   name: "City and County of Honolulu",
   state: hawaii,
   pathways: ["bill6", "standard", "bill7", "tod", "h201"],
+  // the original model gives an unlisted zone no FAR and 60% coverage
+  unknown_zone: "fallback",
   rules: {
     zones,
     parking: rules.parking,

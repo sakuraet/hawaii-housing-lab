@@ -11,7 +11,8 @@
 //             the rest the standard FAR (baseFar); coverage without the
 //             lot-size tiers (lotCoverage with no lot size)
 // Bill 7 sets its own FAR (4.0) and coverage (80%) whatever the zone, so it
-// is not listed here.
+// is not listed here. The resort and industrial districts have no coverage
+// rule in the model; they get the engine's fallback (60%, see core/zoning).
 
 import type { ZoneRules } from "../../../core/locality";
 import { flat, type Schedule } from "../../../core/schedule";
@@ -144,16 +145,14 @@ function sameEverywhere(
 }
 
 // a district with no FAR under Ord. 26-7 (resort, industrial): Standard and
-// the TOD base only
+// the TOD base only; no coverage rule, so the engine's fallback applies
 function noOrdFar(
   far: Schedule,
   extra: Partial<ZoneRules> & { source: string }
 ): ZoneRules {
-  // not regulated in LOT_COVERAGE: the model's 60% fallback
-  const cov = flat(0.6, "model default (zone not in LOT_COVERAGE)");
   return {
     far: { standard: far, tod: far },
-    lot_coverage: { standard: cov, bill6: cov, h201: cov, tod: cov },
+    lot_coverage: {},
     commercial_coverage: 0,
     bicycle_required: true,
     residential_permitted: true,

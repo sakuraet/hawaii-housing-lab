@@ -69,6 +69,9 @@ import {
   TOD_DEFAULT_PERMANENT_RATE,
   TOD_DEFAULT_ZONE_CLASS,
 } from "./calc-tod";
+import { assertPathway, getLocality } from "../localities";
+
+const PROGRAMS: ProgramId[] = ["bill6", "standard", "bill7", "tod", "h201"];
 
 // =========================================================
 // RE-EXPORTS
@@ -187,6 +190,8 @@ function prefersWithout(
 }
 
 function calcProgram(sliders: SliderInputs): ParcelOutput {
+  // stop a pathway the locality does not have (other counties: bill6 only)
+  assertPathway(getLocality(sliders.locality), PROGRAMS.includes(sliders.program) ? sliders.program : "bill6");
   switch (sliders.program) {
     case "standard":
       return calcStandardSingle(sliders);

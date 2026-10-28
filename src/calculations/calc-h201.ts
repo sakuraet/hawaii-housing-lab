@@ -59,6 +59,7 @@ import {
   zeroOutput,
   zoneStepBack,
 } from "./calc-shared";
+import { hawaii } from "../localities/hi/state";
 
 // =========================================================
 // DEFAULTS
@@ -76,8 +77,9 @@ export const H201_DEFAULT_RETAIL_RENT = 5;
 export const H201_DEFAULT_AFFORDABLE_AMI = "ami_80";
 export const H201_DEFAULT_MARKET_AMI = "ami_120";
 
-// 201H regulatory floors
-const H201_MIN_AFD_FRAC = 0.5;
+// 201H regulatory floor: more than half the units affordable (HRS Ch. 201H,
+// a state rule, from the state config)
+const H201_MIN_AFD_FRAC = hawaii.h201_min_affordable_frac;
 
 // =========================================================
 // MAIN ENTRY: calcH201Single

@@ -1,7 +1,8 @@
 // Tests that Honolulu's config (src/localities/hi/honolulu) holds exactly the
-// values the model's code uses today (calculations/calc-shared.ts). The
-// config is not wired into the model yet; once it is, the code's own tables
-// go away and these tests are what showed the move lost nothing.
+// values of the original model: a frozen copy of @uhero/feasim 0.1.0's
+// calc-shared.ts (test/legacy). The model now reads its rules from the
+// config, so comparing against the live code would compare the config with
+// itself; the frozen copy keeps this a real check.
 
 import { describe, expect, it } from "vitest";
 
@@ -49,9 +50,10 @@ import {
   ZONE_GROUPS,
   zoneName,
   zoneStepBack,
-} from "../src/calculations/calc-shared";
+} from "./legacy/calc-shared-v0.1.0";
 import type { PathwayId } from "../src/core/locality";
 import { evaluateSchedule, type Schedule } from "../src/core/schedule";
+import { FALLBACK_LOT_COVERAGE } from "../src/core/zoning";
 import { honolulu } from "../src/localities/hi/honolulu";
 import calculatorDefaults from "./data/calculator-defaults.json";
 import gaugeParcels from "./data/gauge-parcels.json";
@@ -67,6 +69,9 @@ const LOTS = [
 
 // a missing schedule means no value: the code returns 0 there
 const at = (s: Schedule | undefined, x: number) => (s ? evaluateSchedule(s, x) : 0);
+// a missing coverage rule gets the engine's fallback, as in the original
+const covAt = (s: Schedule | undefined, x: number) =>
+  s ? evaluateSchedule(s, x) : FALLBACK_LOT_COVERAGE;
 
 // every zone code that appears in the test data
 function dataZones(): string[] {
@@ -117,10 +122,10 @@ describe("Honolulu config: zoning matches the code", () => {
 
   it.each(ZONES)("%s: lot coverage in every pathway", (z) => {
     for (const lot of LOTS) {
-      expect(at(cov(z, "standard"), lot), `standard ${lot}`).toBe(lotCoverage(z, lot));
-      expect(at(cov(z, "tod"), lot), `tod ${lot}`).toBe(lotCoverage(z));
-      expect(at(cov(z, "bill6"), lot), `bill6 ${lot}`).toBe(lotCoverageBill6(z));
-      expect(at(cov(z, "h201"), lot), `h201 ${lot}`).toBe(lotCoverageBill6(z));
+      expect(covAt(cov(z, "standard"), lot), `standard ${lot}`).toBe(lotCoverage(z, lot));
+      expect(covAt(cov(z, "tod"), lot), `tod ${lot}`).toBe(lotCoverage(z));
+      expect(covAt(cov(z, "bill6"), lot), `bill6 ${lot}`).toBe(lotCoverageBill6(z));
+      expect(covAt(cov(z, "h201"), lot), `h201 ${lot}`).toBe(lotCoverageBill6(z));
     }
   });
 

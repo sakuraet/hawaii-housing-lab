@@ -185,6 +185,10 @@ export interface Locality {
   state: StateRules;
   /** pathways this place has; Honolulu has all five, other counties bill6 */
   pathways: PathwayId[];
+  /** what a zone missing from `rules.zones` gets: "fallback" keeps the
+   *  original model's behavior (no FAR, 60% coverage) and is for Honolulu;
+   *  "error" stops the run, so a missing rule is noticed in a new county */
+  unknown_zone: "fallback" | "error";
 
   rules: {
     zones: Record<string, ZoneRules>;

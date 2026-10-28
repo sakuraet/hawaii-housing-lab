@@ -3,6 +3,11 @@
 // Shared constants, types, and helper functions used by all program calculators.
 // =========================================================
 
+import type { Locality } from "../core/locality";
+import { evaluateSchedule } from "../core/schedule";
+import { zoneAssumptions, zoneCoverage, zoneFar, zoneRules } from "../core/zoning";
+import { honolulu } from "../localities/hi/honolulu";
+
 // currrently unused as of 2026-08-05, zone-specific hard construction cost per sqft
 export const COST_PER_ZONE: Record<string, number> = {
   "A-1": 170.5,
@@ -20,57 +25,49 @@ export const COST_PER_ZONE: Record<string, number> = {
   ApartMix: 161.21,
 };
 
-// zone classes that share a low-density treatment (FAR, Bill 6 FAR, excavation depth)
-// note: permitting and construction duration use different groupings, see those functions
-export const ZONE_GROUPS = {
-  lowDensity: ["A-1", "AMX-1", "R-5"],
-  // zones permitting ground floor commercial use
-  mixedUse: ["AMX-1", "AMX-2", "AMX-3", "BMX-3", "BMX-4", "ApartMix"],
-  // Waikiki Special District: Apartment Precinct and Apartment Mixed Use Subprecinct
-  waikiki: ["Apart", "ApartMix"],
-} satisfies Record<string, string[]>;
-
-// official names for the zone codes above that are shorthand; every other
-// code (A-2, BMX-3, …) is already the official district name
-const ZONE_NAMES: Record<string, string> = {
-  Apart: "Apartment Precinct",
-  ApartMix: "Apartment Mixed Use Subprecinct",
-};
-
-export function zoneName(zone_class: string): string {
-  return ZONE_NAMES[zone_class] ?? zone_class;
+// the official district name for a zone code, where the locality's config
+// gives one (Honolulu: the Waikiki precincts); otherwise the code itself
+export function zoneName(zone_class: string, loc: Locality = honolulu): string {
+  return loc.rules.zones[zone_class]?.name ?? zone_class;
 }
 
-// function that checks if the selected zone permits ground floor retail
-export function permitsGroundFloorRetail(zone_class: string): boolean {
-  return ZONE_GROUPS.mixedUse.includes(zone_class);
+// whether the zone permits ground-floor retail: it has a commercial share
+export function permitsGroundFloorRetail(
+  zone_class: string,
+  loc: Locality = honolulu
+): boolean {
+  return commercialFracByZone(zone_class, loc) > 0;
 }
 
-// ground floor commercial fraction of lot area, by zone (ROH Table 21-3.3)
-export function commercialFracByZone(zone_class: string): number {
-  if (zone_class === "AMX-1") return COMMERCIAL_COVERAGE.commercial1;
-  if (zone_class === "AMX-2") return COMMERCIAL_COVERAGE.commercial2;
-  if (["AMX-3", "BMX-3", "BMX-4", "ApartMix"].includes(zone_class))
-    return COMMERCIAL_COVERAGE.commercial3;
-  return 0;
+// ground floor commercial fraction of lot area, by zone (Honolulu: ROH Table
+// 21-3.3), from the locality's zoning config; 0 where none is permitted
+export function commercialFracByZone(
+  zone_class: string,
+  loc: Locality = honolulu
+): number {
+  return zoneRules(loc, zone_class)?.commercial_coverage ?? 0;
 }
 
 // PARK DEDICATION CONSTANTS
 // currrently unused as of 2026-08-05, but may be used in future versions of the calculator
 // private park build cost per sqft (ground-level amenity)
 export const PARK_BUILD_COST_PER_SQFT = 145;
-// park dedication minimum land area rule for apartments
-export const PARK_SQFT_PER_UNIT = 110;
-// park dedication minimum land area rule for special districts
-export const PARK_FLOOR_AREA_FRACTION = 0.1;
-// park dedication minimum land area = lesser of 110 sqft/unit or 10% of floor area
+// Honolulu's park dedication land requirement (ROH 22-7.5), read from its
+// config (rules.fees.park_dedication)
+export const PARK_SQFT_PER_UNIT = honolulu.rules.fees.park_dedication.sqft_per_unit;
+export const PARK_FLOOR_AREA_FRACTION =
+  honolulu.rules.fees.park_dedication.floor_area_fraction;
+// park dedication minimum land area = lesser of so many sqft per unit and a
+// share of floor area (Honolulu: 110 sqft, 10%)
 export function calcParkArea(
   max_units: number,
-  buildable_sqft: number
+  buildable_sqft: number,
+  loc: Locality = honolulu
 ): number {
+  const park = loc.rules.fees.park_dedication;
   return Math.min(
-    PARK_SQFT_PER_UNIT * max_units,
-    PARK_FLOOR_AREA_FRACTION * buildable_sqft
+    park.sqft_per_unit * max_units,
+    park.floor_area_fraction * buildable_sqft
   );
 }
 // construction management fee
@@ -117,10 +114,14 @@ export function mixUnitSize(mix_key: string): number {
 }
 
 // blended rent for a mix key (weighted avg of each component's rentByAmi)
-export function mixRentByAmi(ami: string | number, mix_key: string): number {
+export function mixRentByAmi(
+  ami: string | number,
+  mix_key: string,
+  loc: Locality = honolulu
+): number {
   const mix = UNIT_MIX[mix_key] ?? UNIT_MIX["one_bb_100"];
   return Math.floor(
-    mix.reduce((sum, m) => sum + rentByAmi(ami, m.type) * m.weight, 0)
+    mix.reduce((sum, m) => sum + rentByAmi(ami, m.type, loc) * m.weight, 0)
   );
 }
 
@@ -157,28 +158,36 @@ const RENT_HOUSEHOLD: Record<string, number[]> = {
   four_bb: [6],
 };
 
-// affordable rent = 30% of household income, utilities included (HHFDC guideline)
-export const AFFORDABLE_RENT_INCOME_SHARE = 0.3;
+// affordable rent = a share of household income, utilities included (HHFDC:
+// 30%), from the state rules
+export const AFFORDABLE_RENT_INCOME_SHARE = honolulu.state.affordable_rent_income_share;
 
-export function rentByAmi(ami: string | number, unit_type: string): number {
+// monthly rent at an AMI level, from the locality's income limits
+export function rentByAmi(
+  ami: string | number,
+  unit_type: string,
+  loc: Locality = honolulu
+): number {
+  const limits = loc.rules.income_limits;
   const raw = Number(String(ami).replace("ami_", ""));
   const pct = Number.isFinite(raw) ? raw : 50;
   // exact bracket if published; otherwise scale the 50% row (it's linear)
-  const row =
-    INCOME_LIMITS[pct] ?? INCOME_LIMITS[50].map((v) => (v * pct) / 50);
+  const row = limits[pct] ?? limits[50].map((v) => (v * pct) / 50);
   const sizes = RENT_HOUSEHOLD[unit_type] ?? RENT_HOUSEHOLD[DEFAULT_UNIT_TYPE];
   const income = sizes.reduce((sum, p) => sum + row[p - 1], 0) / sizes.length;
   // HHFDC publishes these floored, not rounded
-  return Math.floor((income * AFFORDABLE_RENT_INCOME_SHARE) / 12);
+  return Math.floor((income * loc.state.affordable_rent_income_share) / 12);
 }
 
 // default unit type
 export const DEFAULT_UNIT_TYPE = "one_bb";
 
-// vacancy rates
+// vacancy rates: Honolulu's retail (default) and residential (rental), read
+// from its config (assumptions.market.vacancy); home is unused
+const honoluluMarket = honolulu.assumptions.market;
 export const VACANCY = {
-  default: 0.126,
-  rental: 0.074,
+  default: honoluluMarket.vacancy.retail,
+  rental: honoluluMarket.vacancy.residential,
   home: 0.01,
 };
 
@@ -214,12 +223,13 @@ export const FINANCING = {
   contingency: 1.1,
   cost_carried: 0.1,
   equity: 0.1,
-  // 4%/yr AMI growth (2015 to 2026 Honolulu MFI CAGR); escalates AMI-capped rents & sale prices to lease-up/sale
-  ami_escalation: 1.04,
-  // 5.6%/yr construction hard-cost escalation; applied to construction midpoint
-  cost_inflation: 1.056,
+  // Honolulu's, from its config: AMI growth escalates AMI-capped rents and
+  // sale prices to lease-up/sale; cost inflation escalates hard cost to the
+  // construction midpoint; the property tax rate is a county rule
+  ami_escalation: honoluluMarket.ami_escalation,
+  cost_inflation: honoluluMarket.cost_inflation,
   disposition_cost: 0.035,
-  rpt_residential: 0.0035,
+  rpt_residential: honolulu.rules.property_tax_rate,
 };
 
 // hold strategy assumptions
@@ -229,18 +239,18 @@ export const HOLD = {
   annual_affordable_rent_growth: 0.04,
   // market units follow market rent (Apartments.com Honolulu YoY)
   annual_market_rent_growth: 0.032,
-  // blended hold-period rent growth (affordable 4% / market 3.2%); see note
-  annual_rent_growth: 0.035,
-  // operating expenses trend on their own series rather than as a fixed share of EGI
-  annual_opex_growth: 0.035,
-  // 2%/yr is the property-tax escalation
-  annual_assessment_growth: 0.02,
+  // Honolulu's growth rates, from its config: blended hold-period rent growth
+  // (affordable 4% / market 3.2%), operating expenses on their own series
+  // rather than as a fixed share of EGI, and the property-tax escalation
+  annual_rent_growth: honoluluMarket.annual_rent_growth,
+  annual_opex_growth: honoluluMarket.annual_opex_growth,
+  annual_assessment_growth: honoluluMarket.annual_assessment_growth,
   exit_cap_spread: 0.005,
   tax_exemption_years: 15,
 };
 
-// market cap rate, the same for every zone
-export const DEFAULT_CAP_RATE = 0.051;
+// Honolulu's market cap rate, the same for every zone, from its config
+export const DEFAULT_CAP_RATE = honoluluMarket.cap_rate;
 
 // required return-on-cost spread over cap rate (150 bps)
 export const DEFAULT_TARGET_SPREAD = 0.015;
@@ -251,37 +261,23 @@ export const DEFAULT_TARGET_RETURN = 0.115;
 // developer profit as a margin on total project cost (dev cost + finance)
 export const DEFAULT_PROFIT_MARGIN = 0.15;
 
-// slider override if provided, else the market cap rate
-export function resolveCapRate(override?: number): number {
+// slider override if provided, else the locality's market cap rate
+export function resolveCapRate(
+  override?: number,
+  loc: Locality = honolulu
+): number {
   if (override != null && override > 0) return override;
-  return DEFAULT_CAP_RATE;
+  return loc.assumptions.market.cap_rate;
 }
 
 // retail cap rate spread above residential cap rate
 export const RETAIL_CAP_SPREAD = 0.015;
 
-// lot coverage fraction by zone class
-export const LOT_COVERAGE: Record<string, number> = {
-  "A-1": 0.6,
-  "AMX-1": 0.6,
-  "R-5": 0.6,
-  "B-1": 1.0,
-  "A-2": 0.5,
-  "AMX-2": 0.5,
-  "A-3": 0.4,
-  "AMX-3": 0.4,
-  Apart: 1.0,
-  ApartMix: 1.0,
-  "B-2": 1.0,
-  "BMX-3": 1.0,
-  "BMX-4": 1.0,
-};
-
-// commercial coverage fraction of lot_sqft
+// Bill 7's ground-floor commercial share when a lot has no zone: the AMX-1
+// share up to 30 ft of height, the AMX-2 share above (Table 21-3.3)
 export const COMMERCIAL_COVERAGE = {
   commercial1: 0.3,
   commercial2: 0.4,
-  commercial3: 0.6,
 };
 
 // bill 7 grant amounts per affordable unit
@@ -290,42 +286,31 @@ export const GRANT = {
   post_construct: 12000,
 };
 
-// parking
+// parking: the default stalls per dwelling unit (TOD), and Honolulu's stall
+// sizes, costs and rent, read from its config (assumptions.market.parking)
 export const PARKING = {
-  // default stalls per dwelling unit
   stalls_per_unit: 0,
-  // gross sqft per stall incl. drive aisles (Ulupono 2020)
-  stall_sqft: 330,
-  monthly_rent_per_stall: 100,
-  // RLB Q2 2026 Honolulu above-ground parking, low end of $190–245
-  cost_per_sqft: 190,
-  // surface lot: Ulupono 2020 on-grade construction, adjusted to 2026 + margin
-  surface_stall_sqft: 360,
-  surface_cost_per_sqft: 30,
+  ...honoluluMarket.parking,
 };
 
 // ground-floor retail share of the floor plate
 export const DEFAULT_RETAIL_SHARE = 0.1;
 
-// § 21-6.20 minimum off-street parking (Table 21-6.1) and § 21-6.30(g) joint
-// use (Table 21-6.2), for pathways that must provide parking
+// Honolulu's minimum off-street parking (§ 21-6.20, Table 21-6.1) and joint
+// use (§ 21-6.30(g), Table 21-6.2), for pathways that must provide parking.
+// Read from its config (rules.parking); the functions below take a locality.
 export const PARKING_MINIMUM = {
-  // 1 stall per 1,000 sqft of private dwelling area, common areas excluded
-  residential_sqft_per_stall: 1000,
-  // Commercial 1 (retail and sales, eating and drinking, offices): 1 per 500
-  retail_sqft_per_stall: 500,
-  // housing and retail sharing the stalls and loading
-  joint_use: 0.9,
+  residential_sqft_per_stall: honolulu.rules.parking.residential_sqft_per_stall,
+  retail_sqft_per_stall: honolulu.rules.parking.retail_sqft_per_stall,
+  joint_use: honolulu.rules.parking.joint_use,
 };
 
-// § 21-6.110 off-street loading (Table 21-6.5) and § 21-6.130 space sizes
+// Honolulu's off-street loading (§ 21-6.110) and space sizes (§ 21-6.130),
+// read from its config (rules.loading)
 export const LOADING = {
-  // lots of this size or less need no loading space
-  min_lot_sqft: 7500,
-  // 19 ft x 8 ft 6 in
-  small_sqft: 19 * 8.5,
-  // 35 ft x 12 ft, for a third of the spaces when more than one is required
-  large_sqft: 35 * 12,
+  min_lot_sqft: honolulu.rules.loading.min_lot_sqft,
+  small_sqft: honolulu.rules.loading.small_space_sqft,
+  large_sqft: honolulu.rules.loading.large_space_sqft,
 };
 
 // § 21-6.20(b)(1), § 21-6.110(b)(3): a fraction of 0.5 or more rounds up
@@ -333,104 +318,95 @@ export function roundHalfUp(x: number): number {
   return Math.floor(x + 0.5 + 1e-9);
 }
 
-/** legal minimum stalls per unit: 1 per 1,000 sqft of private dwelling area;
- *  exempt parcels (§ 21-6.20(a)) pass `parking_exempt` instead */
-export function legalParkingRatio(unit_type: string): number {
-  return mixUnitSize(unit_type) / PARKING_MINIMUM.residential_sqft_per_stall;
+/** legal minimum stalls per unit: 1 per so many sqft of private dwelling
+ *  area (Honolulu: 1,000); exempt parcels (§ 21-6.20(a)) pass
+ *  `parking_exempt` instead */
+export function legalParkingRatio(
+  unit_type: string,
+  loc: Locality = honolulu
+): number {
+  return mixUnitSize(unit_type) / loc.rules.parking.residential_sqft_per_stall;
 }
 
-/** Table 21-6.5: loading spaces for multifamily (by units) and retail (by
- *  floor area), with the joint-use rate when both need one */
+/** loading spaces for multifamily (by units) and retail (by floor area),
+ *  with the joint-use rate when both need one (Honolulu: Table 21-6.5) */
 export function loadingSpaces(
   units: number,
   retail_sqft: number,
-  joint_use = 1
+  joint_use = 1,
+  loc: Locality = honolulu
 ): number {
-  const multifamily =
-    units < 20
-      ? 0
-      : units <= 150
-        ? 1
-        : units <= 300
-          ? 2
-          : 2 + roundHalfUp((units - 300) / 200);
-  const retail =
-    retail_sqft < 2000
-      ? 0
-      : retail_sqft <= 10000
-        ? 1
-        : retail_sqft <= 20000
-          ? 2
-          : retail_sqft <= 40000
-            ? 3
-            : retail_sqft <= 60000
-              ? 4
-              : 4 + roundHalfUp((retail_sqft - 60000) / 50000);
+  const multifamily = evaluateSchedule(loc.rules.loading.multifamily_spaces, units);
+  const retail = evaluateSchedule(loc.rules.loading.retail_spaces, retail_sqft);
   const joint = multifamily > 0 && retail > 0 ? joint_use : 1;
   return roundHalfUp(joint * (multifamily + retail));
 }
 
-/** § 21-6.130(a): ground area the loading spaces take, sqft */
-export function loadingSqft(spaces: number): number {
+/** ground area the loading spaces take, sqft: one small space, or a third
+ *  of them large when more than one is required (Honolulu: § 21-6.130(a)) */
+export function loadingSqft(spaces: number, loc: Locality = honolulu): number {
+  const { small_space_sqft, large_space_sqft } = loc.rules.loading;
   if (spaces <= 0) return 0;
-  if (spaces === 1) return LOADING.small_sqft;
+  if (spaces === 1) return small_space_sqft;
   const large = roundHalfUp(spaces / 3);
-  return large * LOADING.large_sqft + (spaces - large) * LOADING.small_sqft;
+  return large * large_space_sqft + (spaces - large) * small_space_sqft;
 }
 
 /** Article 6 inputs to podiumEnvelope for a pathway that must provide
  *  parking: retail stalls, the joint-use rate and loading. An exempt lot
  *  (§ 21-6.20(a)) needs no stalls but still needs loading (§ 21-6.110). */
-export function article6Parking(lot_sqft: number, parking_exempt = false) {
+export function article6Parking(
+  lot_sqft: number,
+  parking_exempt = false,
+  loc: Locality = honolulu
+) {
   return {
     retail_stalls_per_sqft: parking_exempt
       ? 0
-      : 1 / PARKING_MINIMUM.retail_sqft_per_stall,
-    joint_use: PARKING_MINIMUM.joint_use,
-    loading: lot_sqft > LOADING.min_lot_sqft,
+      : 1 / loc.rules.parking.retail_sqft_per_stall,
+    joint_use: loc.rules.parking.joint_use,
+    loading: lot_sqft > loc.rules.loading.min_lot_sqft,
     bicycle: true,
   };
 }
 
-// bicycle parking
-// § 21-6.40, Table 21-6.3. Costs are installed costs per space (GoodLockers,
-// Nov 2025): a U-rack for short-term, a locker for long-term.
+// bicycle parking: installed cost per space, the same everywhere
+// (GoodLockers, Nov 2025): a U-rack for short-term, a locker for long-term
+const BICYCLE_COST_PER_SPACE = { short_term: 225, long_term: 1250 };
+
+// Honolulu's bicycle parking (§ 21-6.40, Table 21-6.3), read from its config
+// (rules.bicycle), with the installed costs above
 export const BICYCLE_PARKING = {
   short_term: {
-    // residential: 1 per 10 units; commercial: 1 per 2,000 sqft or portion,
-    // or 1 per 10 vehicle spaces or portion, whichever is greater
-    units_per_space: 10,
-    retail_sqft_per_space: 2000,
-    stalls_per_space: 10,
-    cost_per_space: 225,
+    ...honolulu.rules.bicycle.short_term,
+    cost_per_space: BICYCLE_COST_PER_SPACE.short_term,
   },
   long_term: {
-    // residential: 1 per 2 units; commercial: 1 per 12,000 sqft, or 1 per 30
-    // vehicle spaces or portion, whichever is greater
-    units_per_space: 2,
-    retail_sqft_per_space: 12000,
-    stalls_per_space: 30,
-    cost_per_space: 1250,
+    ...honolulu.rules.bicycle.long_term,
+    cost_per_space: BICYCLE_COST_PER_SPACE.long_term,
   },
-  // § 21-6.40(d)(1): 2 ft x 6 ft, plus 5 ft clear on the 2 ft access side
-  sqft_per_space: 2 * 6 + 2 * 5,
+  sqft_per_space: honolulu.rules.bicycle.sqft_per_space,
 };
 
-/** § 21-6.40(a): the districts that require bicycle parking (apartment,
- *  AMX, business, BMX, resort and Waikiki; not industrial) */
-export function bicycleRequired(zone_class: string): boolean {
-  return !INDUSTRIAL.includes(zone_class);
+/** whether the zone requires bicycle parking (Honolulu: § 21-6.40(a), every
+ *  district but industrial); a zone the config does not list requires it */
+export function bicycleRequired(
+  zone_class: string,
+  loc: Locality = honolulu
+): boolean {
+  return zoneRules(loc, zone_class)?.bicycle_required ?? true;
 }
 
-/** Table 21-6.3: short- and long-term spaces for the housing and the retail,
- *  with a fraction of 0.5 or more rounded up (§ 21-6.40(b)) */
+/** short- and long-term spaces for the housing and the retail, with a
+ *  fraction of 0.5 or more rounded up (Honolulu: Table 21-6.3, § 21-6.40(b)) */
 export function bicycleSpaces(
   units: number,
   retail_sqft: number,
-  retail_stalls: number
+  retail_stalls: number,
+  loc: Locality = honolulu
 ): { short_term: number; long_term: number } {
-  const st = BICYCLE_PARKING.short_term;
-  const lt = BICYCLE_PARKING.long_term;
+  const st = loc.rules.bicycle.short_term;
+  const lt = loc.rules.bicycle.long_term;
   const up = (x: number) => Math.ceil(x - 1e-9);
   const retail = retail_sqft > 0;
   const short_retail = retail
@@ -451,36 +427,44 @@ export function bicycleSpaces(
   };
 }
 
-// fee constants
+// Honolulu's flat fees, read from its config (rules.fees). The school impact
+// fee (HRS Ch. 302A) is a state assessment, so the city's waivable-fee toggle
+// does not reach it; it is $0 for now instead of $1,836. The TOD zoning
+// application fee belongs to the TOD pathway, which only Honolulu has.
+const honoluluFees = honolulu.rules.fees;
 export const FEES = {
-  environment: { ea: 600, eis: 1200 },
-  administrative: { temp_occupancy_cert: 200 },
-  park_dedication: { exempt: 0, in_lieu: 200 },
-  // school impact fee (HRS Ch. 302A),this is a state assessment, so this
-  // does not trigger the city's waivable impact fees set to 0 for now instead of $1836
-  impact: { per_dwelling: 0 },
-  civil: { escp: 250, installation_trench: 195, service_connection: 50 },
+  environment: { ...honoluluFees.environmental },
+  administrative: { temp_occupancy_cert: honoluluFees.temp_occupancy_cert },
+  park_dedication: { ...honoluluFees.park_dedication.application_fee },
+  impact: { per_dwelling: honoluluFees.school_impact_per_unit },
+  civil: {
+    escp: honoluluFees.escp,
+    installation_trench: honoluluFees.installation_trench,
+    service_connection: honoluluFees.service_connection,
+  },
   zoning: { tod_application: 15000 },
-  wastewater_charge_per_esdu: 7539,
+  wastewater_charge_per_esdu: honoluluFees.wastewater.charge_per_esdu,
 };
 
 // =========================================================
 // BWS WATER CHARGES (one-time soft costs, paid at building permit)
 // =========================================================
 
+// Honolulu's Board of Water Supply charges, read from its config
+// (rules.water); the functions below take a locality.
 // Water System Facilities Charge, $/fixture unit; flat, never escalated.
 // Multi-family rates only (single-family is not used).
 export const WSFC_PER_FU = {
   // up to 3 living stories
-  multi_low_rise: 271.27,
+  multi_low_rise: honolulu.rules.water.wsfc_per_fu.low_rise,
   // higher than 3 living stories
-  multi_high_rise: 204.12,
-} as const;
+  multi_high_rise: honolulu.rules.water.wsfc_per_fu.high_rise,
+};
 
 // per application
-export const WSFC_MIN_FU = 20;
+export const WSFC_MIN_FU = honolulu.rules.water.min_fu;
 // affordable-unit waiver cap, applied per project (BWS's is 500/yr islandwide)
-export const WSFC_WAIVER_UNIT_CAP = 500;
+export const WSFC_WAIVER_UNIT_CAP = honolulu.rules.water.waiver_unit_cap;
 
 // fixture units per dwelling unit, low-flow; no dishwasher or hose bibb,
 // in-unit washer
@@ -504,20 +488,18 @@ export const COMMON_AREA_FU = 0;
 
 // new meter cost: fire service connection charge by meter size (inches)
 export const FIRE_METER_CHARGE: Record<string, number> = {
-  "5/8": 500,
-  "3/4": 600,
-  "1": 700,
-  "1.5": 1100,
-  "2": 1700,
-  "4": 5600,
-  "6": 12100,
-  "8": 21100,
+  ...honolulu.rules.water.fire_meter_charge,
 };
 
+// which WSFC rate applies: low-rise up to the locality's story limit
+// (Honolulu: 3 living stories), high-rise above
 export function wsfcCategory(
-  living_stories: number
+  living_stories: number,
+  loc: Locality = honolulu
 ): "multi_low_rise" | "multi_high_rise" {
-  return living_stories <= 3 ? "multi_low_rise" : "multi_high_rise";
+  return living_stories <= loc.rules.water.low_rise_max_stories
+    ? "multi_low_rise"
+    : "multi_high_rise";
 }
 
 // blended fixture units per dwelling unit for a mix key
@@ -555,12 +537,18 @@ export function calcWaterFees(i: {
   water_chargeable_units: number;
   living_stories: number;
   fu_per_unit: number;
+  // whose water charges apply; Honolulu by default
+  loc?: Locality;
 }): { wsfc: number; water_meter: number; total_fu: number } {
   if (i.max_units <= 0) return { wsfc: 0, water_meter: 0, total_fu: 0 };
-  const rate = WSFC_PER_FU[wsfcCategory(i.living_stories)];
+  const water = (i.loc ?? honolulu).rules.water;
+  const rate =
+    wsfcCategory(i.living_stories, i.loc) === "multi_low_rise"
+      ? water.wsfc_per_fu.low_rise
+      : water.wsfc_per_fu.high_rise;
   const total_fu = Math.max(
     i.max_units * i.fu_per_unit + COMMON_AREA_FU,
-    WSFC_MIN_FU
+    water.min_fu
   );
   const waived_units = i.max_units - i.water_chargeable_units;
   // WSFC is waived on the fixture units of the waived units
@@ -569,7 +557,7 @@ export function calcWaterFees(i: {
       ? (total_fu - waived_units * i.fu_per_unit) * rate
       : 0;
   // the meter waiver is the waived units' share of all units
-  const meter_gross = FIRE_METER_CHARGE[fireMeterSize(i.living_stories)];
+  const meter_gross = water.fire_meter_charge[fireMeterSize(i.living_stories)];
   const water_meter = (meter_gross * i.water_chargeable_units) / i.max_units;
   return { wsfc, water_meter, total_fu };
 }
@@ -577,23 +565,9 @@ export function calcWaterFees(i: {
 // =========================================================
 // HHFDC AFFORDABLE SALE PRICE TABLES
 // =========================================================
-// 2025 HHFDC Honolulu County income schedule by family size (median $129,300)
-export const INCOME_LIMITS: Record<number, number[]> = {
-  10: [10640, 12160, 13680, 15200, 16420, 17640, 18850, 20070],
-  20: [21280, 24320, 27360, 30400, 32840, 35280, 37700, 40140],
-  30: [31920, 36480, 41040, 45600, 49260, 52920, 56550, 60210],
-  40: [42560, 48640, 54720, 60800, 65680, 70560, 75400, 80280],
-  50: [53200, 60800, 68400, 76000, 82100, 88200, 94250, 100350],
-  60: [63840, 72960, 82080, 91200, 98520, 105840, 113100, 120420],
-  70: [74480, 85120, 95760, 106400, 114940, 123480, 131950, 140490],
-  80: [85120, 97280, 109440, 121600, 131360, 141120, 150800, 160560],
-  90: [95760, 109440, 123120, 136800, 147780, 158760, 169650, 180630],
-  100: [106400, 121600, 136800, 152000, 164200, 176400, 188500, 200700],
-  110: [117040, 133760, 150480, 167200, 180620, 194040, 207350, 220770],
-  120: [127680, 145920, 164160, 182400, 197040, 211680, 226200, 240840],
-  130: [138320, 158080, 177840, 197600, 213460, 229320, 245050, 260910],
-  140: [148960, 170240, 191520, 212800, 229880, 246960, 263900, 280980],
-};
+// 2025 HHFDC Honolulu County income limits by AMI % and family size (median
+// $129,300), read from Honolulu's config (rules.income_limits)
+export const INCOME_LIMITS: Record<number, number[]> = honolulu.rules.income_limits;
 
 const HHFDC_RATES = [
   0.04, 0.0425, 0.045, 0.0475, 0.05, 0.0525, 0.055, 0.0575, 0.06, 0.0625, 0.065,
@@ -1533,6 +1507,8 @@ export type ProgramId = "bill7" | "standard" | "tod" | "h201" | "bill6";
 
 export interface SliderInputs {
   program: ProgramId;
+  /** whose rules apply, a locality id such as "hi-maui"; Honolulu if unset */
+  locality?: string;
   lot_sqft?: number;
   height_limit?: number;
   floor_height?: number;
@@ -1733,6 +1709,8 @@ export type SoftCostInputs = {
   // BWS water charges
   living_stories: number;
   fu_per_unit: number;
+  // whose fee schedules and water charges apply; Honolulu by default
+  loc?: Locality;
 };
 
 // soft cost line items (shared across all pathways)
@@ -1762,45 +1740,16 @@ export type SoftCostBreakdown = {
 // =========================================================
 
 // zone-based FAR formula
-export function calcFAR(zone_class: string, lot_sqft: number): number {
-  if (ZONE_GROUPS.lowDensity.includes(zone_class)) {
-    if (lot_sqft < 10000) return 0.00003 * lot_sqft + 0.3;
-    if (lot_sqft <= 40000) return 0.00001 * lot_sqft + 0.5;
-    return 0.9;
-  }
-  if (zone_class === "A-2" || zone_class === "AMX-2") {
-    if (lot_sqft < 10000) return 0.00009 * lot_sqft + 0.4;
-    if (lot_sqft <= 40000) return 0.00002 * lot_sqft + 1.1;
-    return 1.9;
-  }
-  if (zone_class === "A-3" || zone_class === "AMX-3") {
-    if (lot_sqft < 10000) return 0.00014 * lot_sqft + 0.6;
-    if (lot_sqft <= 20000) return 0.00004 * lot_sqft + 1.6;
-    if (lot_sqft <= 40000) return 0.00002 * lot_sqft + 2.0;
-    return 2.8;
-  }
-  if (ZONE_GROUPS.waikiki.includes(zone_class)) {
-    if (lot_sqft < 20000) return 0.00003 * lot_sqft + 1.3;
-    return 1.9;
-  }
-  if (zone_class === "B-1") return 1.0;
-  // Resort, Table 21-3.4
-  if (zone_class === "Resort" || zone_class === "ResMix" || zone_class === "ResCom") {
-    if (lot_sqft < 10000) return 0.00006 * lot_sqft + 0.4;
-    if (lot_sqft <= 30000) return 0.00002 * lot_sqft + 0.8;
-    return 1.4;
-  }
-  // Industrial, Table 21-3.5
-  if (zone_class === "I-1") return 1.0;
-  if (zone_class === "I-2" || zone_class === "I-3") return 2.5;
-  // IMX-1 § 21-3.140-1(c)(1) scales with the use mix; a residential model
-  // takes the base rung.
-  if (zone_class === "IMX-1") return 1.5;
-  // Table 21-3.4; the open-space bonus (§ 21-3.120-2(c)) is added by each
-  // pathway that allows it (openSpaceBonusOver)
-  if (zone_class === "B-2" || zone_class === "BMX-3") return 2.5;
-  if (zone_class === "BMX-4") return 4.0;
-  return 0;
+// FAR before Ord. 26-7, scaled by lot size (the Standard pathway). The
+// tables are in the locality's zoning config; the open-space bonus
+// (§ 21-3.120-2(c)) is added by each pathway that allows it
+// (openSpaceBonusOver).
+export function calcFAR(
+  zone_class: string,
+  lot_sqft: number,
+  loc: Locality = honolulu
+): number {
+  return zoneFar(loc, zone_class, "standard", lot_sqft);
 }
 
 // ── Transit permits — see the model documentation ────────────────────────
@@ -1839,34 +1788,42 @@ export function todUseZone(zone_class: string): string {
 // § 21-9.100-5(e)(1)(C): FAR doubles after the open-space bonus in these only
 const DOUBLE_AFTER_BONUS = ["B-2", "BMX-3", "BMX-4", "IMX-1"];
 
-// § 21-3.120-2(c) ceilings; the bonus is the gap from base FAR
-export const OPEN_SPACE_FAR_CEILING: Record<string, number> = {
-  "B-2": 3.5,
-  "BMX-3": 3.5,
-  "BMX-4": 7.5,
-};
-
-// Table 21-3.3 districts; calcFAR still holds older lot-scaled formulas other
-// pathways depend on, so calcFarBill6 supplies the current flat figures.
-const TABLE_21_3_3 = ["A-1", "AMX-1", "A-2", "AMX-2", "A-3", "AMX-3"];
+// § 21-3.120-2(c) ceilings; the bonus is the gap from base FAR. Honolulu's,
+// read from its zoning config (each zone's open_space_far_ceiling).
+export const OPEN_SPACE_FAR_CEILING: Record<string, number> = Object.fromEntries(
+  Object.entries(honolulu.rules.zones).flatMap(([zone, rules]) =>
+    rules.open_space_far_ceiling == null ? [] : [[zone, rules.open_space_far_ceiling]]
+  )
+);
 
 /**
- * Base FAR by district family: Table 21-3.3 for the apartment districts,
- * calcFAR (Table 21-3.4 and the others) for the rest.
+ * Base FAR for TOD: the current (Ord. 26-7) figure in the Table 21-3.3
+ * apartment districts, the Standard FAR for the rest. The locality's zoning
+ * config holds it as the `tod` pathway's FAR.
  */
-export function baseFar(zone_class: string, lot_sqft = 0): number {
-  if (TABLE_21_3_3.includes(zone_class)) return calcFarBill6(zone_class);
-  return calcFAR(zone_class, lot_sqft);
+export function baseFar(
+  zone_class: string,
+  lot_sqft = 0,
+  loc: Locality = honolulu
+): number {
+  return zoneFar(loc, zone_class, "tod", lot_sqft);
 }
 
 /** largest open-space bonus the district allows, in FAR */
-export function openSpaceBonus(zone_class: string): number {
-  return openSpaceBonusOver(zone_class, baseFar(zone_class));
+export function openSpaceBonus(
+  zone_class: string,
+  loc: Locality = honolulu
+): number {
+  return openSpaceBonusOver(zone_class, baseFar(zone_class, 0, loc), loc);
 }
 
 /** open-space bonus on top of a pathway's own FAR, up to the district ceiling */
-export function openSpaceBonusOver(zone_class: string, far: number): number {
-  const ceiling = OPEN_SPACE_FAR_CEILING[zone_class];
+export function openSpaceBonusOver(
+  zone_class: string,
+  far: number,
+  loc: Locality = honolulu
+): number {
+  const ceiling = zoneRules(loc, zone_class)?.open_space_far_ceiling;
   return ceiling == null ? 0 : Math.max(0, ceiling - far);
 }
 
@@ -2036,133 +1993,84 @@ export function todHeightLimit(
   return Math.max(base_height, Math.min(2 * base_height, TOD_MAX_HEIGHT_FT));
 }
 
-// calculate FAR based on bill 6 ordinanace (ONLY USE FOR BILL 6 PATH)
-export function calcFarBill6(zone_class: string): number {
-  // Ord. 26-7 changed the apartment districts only; business districts keep
-  // Table 21-3.4
-  if (zone_class in BUSINESS_FAR) return BUSINESS_FAR[zone_class];
-  if (ZONE_GROUPS.lowDensity.includes(zone_class)) return 2.0;
-  if (zone_class === "A-2" || zone_class === "AMX-2") return 3.0;
-  if (
-    zone_class === "A-3" ||
-    zone_class === "AMX-3" ||
-    ZONE_GROUPS.waikiki.includes(zone_class)
-  )
-    return 4.0;
-  return 0;
+// FAR under current zoning, Ord. 26-7 (the bill6 pathway; 201H uses it too).
+// Ord. 26-7 changed the apartment districts only; business districts keep
+// Table 21-3.4. The figures are flat, so the lot size does not matter.
+export function calcFarBill6(
+  zone_class: string,
+  loc: Locality = honolulu
+): number {
+  return zoneFar(loc, zone_class, "bill6", 0);
 }
 
-// ROH Table 21-3.4 base FAR
-const BUSINESS_FAR: Record<string, number> = {
-  "B-1": 1.0,
-  "B-2": 2.5,
-  "BMX-3": 2.5,
-  "BMX-4": 4.0,
-};
-
-const APARTMENT_ZONES = ["A-1", "A-2", "A-3", "AMX-1", "AMX-2", "AMX-3"];
-
-// get lot coverage by zone class, tiered max building area
-export function lotCoverage(zone_class: string, lot_sqft?: number): number {
-  if (lot_sqft != null && APARTMENT_ZONES.includes(zone_class)) {
-    if (lot_sqft < 7500) return 0.6;
-    if (lot_sqft <= 20000) return 0.5;
-    return 0.4;
-  }
-  return LOT_COVERAGE[zone_class] ?? 0.6;
+// maximum lot coverage before Ord. 26-7 (Standard). With a lot size, the
+// apartment districts' coverage tiers by lot size apply; without one, the
+// zone's flat figure (the TOD base). Read from the locality's zoning config.
+export function lotCoverage(
+  zone_class: string,
+  lot_sqft?: number,
+  loc: Locality = honolulu
+): number {
+  return lot_sqft != null
+    ? zoneCoverage(loc, zone_class, "standard", lot_sqft)
+    : zoneCoverage(loc, zone_class, "tod", 0);
 }
 
-// ord. 26-7 replaced lot coverage tiers with a flat 60% 
-export function lotCoverageBill6(zone_class: string): number {
-  return APARTMENT_ZONES.includes(zone_class)
-    ? 0.6
-    : (LOT_COVERAGE[zone_class] ?? 0.6);
+// maximum lot coverage under current zoning (Ord. 26-7 replaced the
+// apartment tiers with a flat 60%)
+export function lotCoverageBill6(
+  zone_class: string,
+  loc: Locality = honolulu
+): number {
+  return zoneCoverage(loc, zone_class, "bill6", 0);
 }
 
-// waikiki open space requirement
-export const WAIKIKI_OPEN_SPACE = {
-  low_far: 0.35,
-  high_far: 0.5,
-  far_threshold: 1.5,
-};
-
-export function waikikiOpenSpaceFrac(zone_class: string, far: number): number {
-  if (!ZONE_GROUPS.waikiki.includes(zone_class)) return 0;
-  return far < WAIKIKI_OPEN_SPACE.far_threshold
-    ? WAIKIKI_OPEN_SPACE.low_far
-    : WAIKIKI_OPEN_SPACE.high_far;
+// share of the lot a special district keeps as open space, by FAR (Honolulu:
+// the Waikiki precincts, 35% below FAR 1.5, 50% at 1.5+); 0 elsewhere
+export function waikikiOpenSpaceFrac(
+  zone_class: string,
+  far: number,
+  loc: Locality = honolulu
+): number {
+  const open_space = zoneRules(loc, zone_class)?.open_space;
+  return open_space ? evaluateSchedule(open_space, far) : 0;
 }
 
 // lot coverage & open space don't stack, so the effective coverage is the minimum of the two
 export function envelopeCoverage(
   zone_class: string,
   far: number,
-  coverage: number
+  coverage: number,
+  loc: Locality = honolulu
 ): number {
-  return Math.min(coverage, 1 - waikikiOpenSpaceFrac(zone_class, far));
+  return Math.min(coverage, 1 - waikikiOpenSpaceFrac(zone_class, far, loc));
 }
 
-// construction months by zone class
-export function constructionMonthsByZone(zone_class: string): number {
-  if (
-    zone_class === "R-5" ||
-    zone_class === "A-1" ||
-    zone_class === "AMX-1" ||
-    zone_class === "low_rise"
-  )
-    return 18;
-  if (
-    zone_class === "A-2" ||
-    zone_class === "AMX-2" ||
-    zone_class === "B-2" ||
-    zone_class === "mid_rise"
-  )
-    return 24;
-  if (
-    zone_class === "A-3" ||
-    zone_class === "AMX-3" ||
-    zone_class === "BMX-3" ||
-    zone_class === "BMX-4" ||
-    ZONE_GROUPS.waikiki.includes(zone_class)
-  )
-    return 36;
-  return 18;
+// construction months by zone class, from the locality's zone assumptions
+// (Bill 7 passes "low_rise" or "mid_rise" when a lot has no zone)
+export function constructionMonthsByZone(
+  zone_class: string,
+  loc: Locality = honolulu
+): number {
+  return zoneAssumptions(loc, zone_class).construction_months;
 }
 
-// user override if provided, else the existing zone-based lookup
+// user override if provided, else the zone-based lookup
 export function resolveConstMonths(
   zone_class: string,
-  override?: number
+  override?: number,
+  loc: Locality = honolulu
 ): number {
   if (override != null && override > 0) return override;
-  return constructionMonthsByZone(zone_class);
+  return constructionMonthsByZone(zone_class, loc);
 }
 
-// permitting months by zone class
-export function permittingMonthsByZone(zone_class: string): number {
-  if (
-    zone_class === "A-1" ||
-    zone_class === "AMX-1" ||
-    zone_class === "low_rise"
-  )
-    return Math.round(425 / 30);
-  if (
-    zone_class === "A-2" ||
-    zone_class === "AMX-2" ||
-    zone_class === "A-3" ||
-    zone_class === "AMX-3" ||
-    ZONE_GROUPS.waikiki.includes(zone_class) ||
-    zone_class === "mid_rise"
-  )
-    return Math.round(535 / 30);
-  if (
-    zone_class === "B-2" ||
-    zone_class === "BMX-3" ||
-    zone_class === "BMX-4"
-  )
-    return Math.round(454 / 30);
-  if (zone_class === "R-5") return Math.round(353 / 30);
-  return 14;
+// permitting months by zone class, from the locality's zone assumptions
+export function permittingMonthsByZone(
+  zone_class: string,
+  loc: Locality = honolulu
+): number {
+  return zoneAssumptions(loc, zone_class).permitting_months;
 }
 
 // setback-limited footprint (sqft), assuming a 2:1 depth:width lot
@@ -2207,47 +2115,29 @@ export function frontStripSqft(
   return Math.max(0, width - 2 * setback) * Math.max(0, depth - setback);
 }
 
-// excavation depth by zone class
-export function excavationDepthByZone(zone_class: string): number {
-  if (ZONE_GROUPS.lowDensity.includes(zone_class)) return 3;
-  if (
-    zone_class === "A-2" ||
-    zone_class === "AMX-2" ||
-    zone_class === "B-2"
-  )
-    return 5;
-  if (
-    zone_class === "A-3" ||
-    zone_class === "AMX-3" ||
-    ZONE_GROUPS.waikiki.includes(zone_class) ||
-    zone_class === "BMX-4"
-  )
-    return 9;
-  return 4;
+// excavation depth (ft) by zone class, from the locality's zone assumptions
+export function excavationDepthByZone(
+  zone_class: string,
+  loc: Locality = honolulu
+): number {
+  return zoneAssumptions(loc, zone_class).excavation_depth_ft;
 }
 
-// building permit fee
-export function buildingPermitFee(total_valuation: number): number {
-  if (total_valuation <= 500) return 20;
-  if (total_valuation <= 1000) return 8 + (total_valuation * 2.5) / 100;
-  if (total_valuation <= 20000) return 12 + (total_valuation * 2.2) / 100;
-  if (total_valuation <= 50000)
-    return 82 + ((total_valuation - 20000) * 18) / 1000;
-  if (total_valuation <= 100000)
-    return 286 + ((total_valuation - 50000) * 14) / 1000;
-  if (total_valuation <= 500000)
-    return 700 + ((total_valuation - 100000) * 10) / 1000;
-  if (total_valuation <= 2000000)
-    return 3200 + ((total_valuation - 500000) * 5) / 1000;
-  return 4300 + ((total_valuation - 2000000) * 4.5) / 1000;
+// building permit fee, by construction value (Honolulu: ROH 18-7.5, Table
+// 18-A), from the locality's fee schedule
+export function buildingPermitFee(
+  total_valuation: number,
+  loc: Locality = honolulu
+): number {
+  return evaluateSchedule(loc.rules.fees.building_permit, total_valuation);
 }
 
-// plan review fee
-export function planReviewFee(original_permit_fee: number): number {
-  const fee = original_permit_fee * 0.1;
-  if (fee < 200) return 200;
-  if (fee > 25000) return 25000;
-  return fee;
+// plan review fee, by building permit fee (Honolulu: 10%, $200 to $25,000)
+export function planReviewFee(
+  original_permit_fee: number,
+  loc: Locality = honolulu
+): number {
+  return evaluateSchedule(loc.rules.fees.plan_review, original_permit_fee);
 }
 
 // special district processing fee
@@ -2265,35 +2155,36 @@ export function specialDistrictTotal(lot_sqft: number): number {
   return 400 + specialDistrictFee(lot_sqft);
 }
 
-// wastewater system facility charge
+// wastewater system facility charge: chargeable units x ESDU per unit (by
+// project size) x the charge per ESDU (Honolulu: ROH 43-10.3)
 export function wastewaterFee(
   total_units: number,
-  chargeable_units: number = total_units
+  chargeable_units: number = total_units,
+  loc: Locality = honolulu
 ): number {
-  const esdu_per_unit = total_units >= 5 ? 0.7 : 1.0;
-  return chargeable_units * esdu_per_unit * FEES.wastewater_charge_per_esdu;
+  const ww = loc.rules.fees.wastewater;
+  const esdu_per_unit = evaluateSchedule(ww.esdu_per_unit, total_units);
+  return chargeable_units * esdu_per_unit * ww.charge_per_esdu;
 }
 
-// grubbing permit
-export function grubbingPermit(sqft: number): number {
-  if (sqft < 15001) return 0;
-  if (sqft <= 16000) return 125;
-  return 125 + Math.ceil((sqft - 16000) / 1000) * 15;
+// site permits (Honolulu: ROH 18A-2.4), from the locality's fee schedules:
+// grubbing by lot area, grading and stockpiling by cubic yards
+export function grubbingPermit(sqft: number, loc: Locality = honolulu): number {
+  return evaluateSchedule(loc.rules.fees.grubbing, sqft);
 }
 
-// grading permit
-export function gradingPermit(cubic_yards: number): number {
-  if (cubic_yards <= 1000) return 505 + Math.ceil(cubic_yards / 100) * 55;
-  if (cubic_yards < 10000)
-    return 1000 + Math.ceil((cubic_yards - 1000) / 1000) * 55;
-  return 1495 + Math.ceil((cubic_yards - 10000) / 1000) * 35;
+export function gradingPermit(
+  cubic_yards: number,
+  loc: Locality = honolulu
+): number {
+  return evaluateSchedule(loc.rules.fees.grading, cubic_yards);
 }
 
-// stockpiling permit
-export function stockpilingPermit(cubic_yards: number): number {
-  if (cubic_yards < 101) return 0;
-  if (cubic_yards <= 1100) return 70;
-  return 70 + Math.ceil((cubic_yards - 1100) / 1000) * 15;
+export function stockpilingPermit(
+  cubic_yards: number,
+  loc: Locality = honolulu
+): number {
+  return evaluateSchedule(loc.rules.fees.stockpiling, cubic_yards);
 }
 
 // height step-back ("wedding cake"), side and rear yards unless front is set
@@ -2304,28 +2195,15 @@ export type StepBack = {
   front?: boolean;
 };
 
-// LUO height setbacks: § 21-3.80-1(c), § 21-3.90-1(c), Ord. 17-55,
-// § 21-3.100-1(c), § 21-9.80-5(c). BMX-4 takes the BMX-3 rule in place of its
-// street-angle plane.
-const STEPBACK_ABOVE_40 = [
-  "A-2",
-  "A-3",
-  "AMX-2",
-  "AMX-3",
-  "B-2",
-  "BMX-3",
-  "BMX-4",
-  "IMX-1",
-];
-
-export function zoneStepBack(zone_class: string): StepBack | undefined {
-  if (STEPBACK_ABOVE_40.includes(zone_class))
-    return { trigger_ft: 40, above_ft: 40, ft_per_10ft: 1 };
-  if (zone_class === "Resort")
-    return { trigger_ft: 30, above_ft: 30, ft_per_10ft: 1 };
-  if (ZONE_GROUPS.waikiki.includes(zone_class))
-    return { trigger_ft: 40, above_ft: 40, ft_per_10ft: 1, front: true };
-  return undefined;
+// height step-back by zone (Honolulu: § 21-3.80-1(c), § 21-3.90-1(c), Ord.
+// 17-55, § 21-3.100-1(c), § 21-9.80-5(c)), from the locality's zoning config;
+// undefined where the zone has none. A copy, so callers can't change the config.
+export function zoneStepBack(
+  zone_class: string,
+  loc: Locality = honolulu
+): StepBack | undefined {
+  const step_back = zoneRules(loc, zone_class)?.step_back;
+  return step_back ? { ...step_back } : undefined;
 }
 
 // the sliders' step-back if set, otherwise the zone's own
@@ -2417,7 +2295,12 @@ export function podiumEnvelope(i: {
   max_units?: number;
   // a cap on the unit count; only the floor area those units need is built
   unit_cap?: number;
+  // whose loading, bicycle parking and parking cost figures apply; Honolulu
+  // by default
+  loc?: Locality;
 }) {
+  const loc = i.loc ?? honolulu;
+  const park = loc.assumptions.market.parking;
   const plates = i.plates;
   const floors = plates.length;
   const ground = plates[0] ?? 0;
@@ -2457,7 +2340,7 @@ export function podiumEnvelope(i: {
         retail_sqft + (i.unit_cap * i.unit_size) / EFFICIENCY + 1e-6
       ),
     };
-  const stallsOn = (sqft: number) => Math.floor(sqft / PARKING.stall_sqft);
+  const stallsOn = (sqft: number) => Math.floor(sqft / park.stall_sqft);
 
   // loading spaces, sized for the most units the envelope holds
   const most_units = Math.min(
@@ -2468,16 +2351,16 @@ export function podiumEnvelope(i: {
     i.max_units ?? Infinity
   );
   const loading_spaces = i.loading
-    ? loadingSpaces(most_units, retail_sqft, i.joint_use ?? 1)
+    ? loadingSpaces(most_units, retail_sqft, i.joint_use ?? 1, loc)
     : 0;
   // § 21-6.40: bicycle parking, sized the same way
   const bicycle = i.bicycle
-    ? bicycleSpaces(most_units, retail_sqft, retail_stalls)
+    ? bicycleSpaces(most_units, retail_sqft, retail_stalls, loc)
     : { short_term: 0, long_term: 0 };
   // loading and bicycle parking take ground in the parking area
   const loading_sqft =
-    loadingSqft(loading_spaces) +
-    (bicycle.short_term + bicycle.long_term) * BICYCLE_PARKING.sqft_per_space;
+    loadingSqft(loading_spaces, loc) +
+    (bicycle.short_term + bicycle.long_term) * loc.rules.bicycle.sqft_per_space;
   // the front strip keeps parking and loading behind the building's frontage
   const front_strip = Math.min(ground, i.front_strip_sqft ?? 0);
 
@@ -2497,9 +2380,9 @@ export function podiumEnvelope(i: {
     // the building fronts the street; open ground in the strip stays unpaved
     const open = Math.max(0, ground - Math.max(footprint, front_strip));
     if (
-      stalls <= Math.floor((open - loading_sqft) / PARKING.surface_stall_sqft)
+      stalls <= Math.floor((open - loading_sqft) / park.surface_stall_sqft)
     ) {
-      const parking_sqft = stalls * PARKING.surface_stall_sqft + loading_sqft;
+      const parking_sqft = stalls * park.surface_stall_sqft + loading_sqft;
       // the building only slims as far as the lot needs
       const built = Math.max(
         footprint,
@@ -2529,7 +2412,7 @@ export function podiumEnvelope(i: {
         bicycle_long_term: bicycle.long_term,
         podium_levels: 0,
         parking_sqft,
-        parking_cost: parking_sqft * PARKING.surface_cost_per_sqft,
+        parking_cost: parking_sqft * park.surface_cost_per_sqft,
         parking_share: gross_sqft > 0 ? parking_sqft / gross_sqft : 0,
         living_stories,
       };
@@ -2561,7 +2444,7 @@ export function podiumEnvelope(i: {
   const groundLeft = (stalls: number) =>
     Math.max(
       0,
-      ground - retail_sqft - loading_sqft - stalls * PARKING.stall_sqft
+      ground - retail_sqft - loading_sqft - stalls * park.stall_sqft
     );
   const groundHousing = (stalls: number) =>
     groundLeft(stalls) >= i.unit_size / EFFICIENCY ? groundLeft(stalls) : 0;
@@ -2632,7 +2515,7 @@ export function podiumEnvelope(i: {
     parking && podium_levels === 0 ? groundHousing(stalls) : 0;
 
   const ground_parking_sqft =
-    Math.min(stalls, ground_stalls) * PARKING.stall_sqft;
+    Math.min(stalls, ground_stalls) * park.stall_sqft;
   // podium floors are built whole, however full the top one is
   const podium_sqft = parking
     ? above[Math.min(1, floors)] - above[firstResidential(podium_levels)]
@@ -2674,15 +2557,18 @@ export function podiumEnvelope(i: {
     bicycle_long_term: bicycle.long_term,
     podium_levels,
     parking_sqft,
-    parking_cost: parking_sqft * PARKING.cost_per_sqft,
+    parking_cost: parking_sqft * park.cost_per_sqft,
     parking_share: gross_sqft > 0 ? parking_sqft / gross_sqft : 0,
     living_stories,
   };
 }
 
 // parking: calculate annual parking income
-export function calcParkingIncome(stalls: number): number {
-  return stalls * PARKING.monthly_rent_per_stall * 12;
+export function calcParkingIncome(
+  stalls: number,
+  loc: Locality = honolulu
+): number {
+  return stalls * loc.assumptions.market.parking.monthly_rent_per_stall * 12;
 }
 
 // bicycle parking: racks and lockers (their floor area is in the envelope)
@@ -2691,8 +2577,8 @@ export function calcBicycleParkingCost(
   long_term: number
 ): number {
   return (
-    short_term * BICYCLE_PARKING.short_term.cost_per_space +
-    long_term * BICYCLE_PARKING.long_term.cost_per_space
+    short_term * BICYCLE_COST_PER_SPACE.short_term +
+    long_term * BICYCLE_COST_PER_SPACE.long_term
   );
 }
 
@@ -2768,6 +2654,8 @@ export function solveIRR(cashflows: number[], isMonthly: boolean): number {
 
 // construction soft costs
 export function calcSoftCosts(i: SoftCostInputs): SoftCostBreakdown {
+  const loc = i.loc ?? honolulu;
+  const fees = loc.rules.fees;
   const market_units = Math.max(0, i.max_units - i.affordable_units);
 
   // units charged for the three waivable city fees.
@@ -2783,46 +2671,46 @@ export function calcSoftCosts(i: SoftCostInputs): SoftCostBreakdown {
     i.waivable_fee_basis === "none"
       ? 0
       : i.waivable_fee_basis === "market_units"
-        ? i.max_units - Math.min(i.affordable_units, WSFC_WAIVER_UNIT_CAP)
+        ? i.max_units - Math.min(i.affordable_units, loc.rules.water.waiver_unit_cap)
         : i.max_units;
   const water = calcWaterFees({
     max_units: i.max_units,
     water_chargeable_units,
     living_stories: i.living_stories,
     fu_per_unit: i.fu_per_unit,
+    loc,
   });
 
   // permit and plan review scale with construction value per unit.
   const per_unit_cost = i.hard_cost / Math.max(i.max_units, 1);
-  const permit_fee = buildingPermitFee(per_unit_cost);
-  const plan_fee = planReviewFee(permit_fee);
+  const permit_fee = buildingPermitFee(per_unit_cost, loc);
+  const plan_fee = planReviewFee(permit_fee, loc);
 
   const cubic_yards = (i.lot_sqft * i.excavation_depth) / 27;
 
   // exempt = application fee only; in_lieu = application fee + FMV of park land
+  const park_fee = fees.park_dedication.application_fee;
   const park_dedication =
     i.park === "none"
       ? 0
       : i.park === "exempt"
-        ? FEES.park_dedication.exempt
-        : FEES.park_dedication.in_lieu + i.park_area * i.land_cost_per_sqft;
+        ? park_fee.exempt
+        : park_fee.in_lieu + i.park_area * i.land_cost_per_sqft;
 
   const b = {
-    environmental: FEES.environment.ea + FEES.environment.eis,
+    environmental: fees.environmental.ea + fees.environmental.eis,
     building_permit: chargeable_units * permit_fee,
     plan_review: chargeable_units * plan_fee,
-    wastewater: wastewaterFee(i.max_units, chargeable_units),
+    wastewater: wastewaterFee(i.max_units, chargeable_units, loc),
     wsfc: water.wsfc,
     water_meter: water.water_meter,
-    temp_occupancy: FEES.administrative.temp_occupancy_cert,
+    temp_occupancy: fees.temp_occupancy_cert,
     park_dedication,
-    escp: FEES.civil.escp,
-    utilities:
-      (FEES.civil.installation_trench + FEES.civil.service_connection) *
-      i.max_units,
-    grubbing: grubbingPermit(i.lot_sqft),
-    stockpiling: stockpilingPermit(cubic_yards),
-    grading: gradingPermit(cubic_yards),
+    escp: fees.escp,
+    utilities: (fees.installation_trench + fees.service_connection) * i.max_units,
+    grubbing: grubbingPermit(i.lot_sqft, loc),
+    stockpiling: stockpilingPermit(cubic_yards, loc),
+    grading: gradingPermit(cubic_yards, loc),
     impact: i.impact_fee_per_unit * i.max_units,
     construction_mgmt: i.hard_cost * CONSTRUCTION_MGMT_RATE,
     zoning_application: i.zoning_application_fee ?? 0,
@@ -3025,12 +2913,13 @@ export function calcDevRLV(
 export function calcPropertyTax(
   land_value: number,
   improvement_value: number,
-  exempt_improvements: boolean = false
+  exempt_improvements: boolean = false,
+  loc: Locality = honolulu
 ): number {
   const assessed = exempt_improvements
     ? land_value
     : land_value + improvement_value;
-  return assessed * FINANCING.rpt_residential;
+  return assessed * loc.rules.property_tax_rate;
 }
 
 // split a whole building tax bill across the residential and retail NOI lines

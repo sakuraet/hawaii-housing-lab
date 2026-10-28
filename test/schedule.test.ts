@@ -13,7 +13,7 @@ import {
   lotCoverage,
   planReviewFee,
   stockpilingPermit,
-} from "../src/calculations/calc-shared";
+} from "./legacy/calc-shared-v0.1.0";
 import { evaluateSchedule, flat, type Schedule } from "../src/core/schedule";
 
 // 0 to 400,000 in uneven steps, plus every band edge the formulas use

@@ -60,6 +60,9 @@ import {
   zeroOutput,
   zoneStepBack,
 } from "./calc-shared";
+import type { Locality } from "../core/locality";
+import { getLocality } from "../localities";
+import { honolulu } from "../localities/hi/honolulu";
 
 // =========================================================
 // DEFAULTS
@@ -92,12 +95,13 @@ function bill6Hard(
   max_far?: number,
   stepback?: StepBack,
   open_space_bonus = 0,
-  parking_exempt = false
+  parking_exempt = false,
+  loc: Locality = honolulu
 ) {
   const floors = Math.floor(height_limit / floor_height);
 
-  const far = max_far ?? calcFarBill6(zone_class) + open_space_bonus;
-  const coverage = lotCoverageBill6(zone_class);
+  const far = max_far ?? calcFarBill6(zone_class, loc) + open_space_bonus;
+  const coverage = lotCoverageBill6(zone_class, loc);
   // waikiki precincts must keep 35–50% of the lot open; that and the coverage
   // cap are both measured on the zoning lot, so the stricter one governs
   const far_cap = far * lot_sqft;
@@ -108,22 +112,23 @@ function bill6Hard(
     height_limit,
     lot_sqft,
     coverage_plate:
-      envelopeCoverage(zone_class, far, coverage) *
+      envelopeCoverage(zone_class, far, coverage, loc) *
       lotAfterOpenSpace(lot_sqft, open_space_bonus),
     setback,
     stepback,
   });
 
   // commercial use checker, returns 0 if the selected zone isn't compatible
-  const commercial_frac = include_retail ? commercialFracByZone(zone_class) : 0;
+  const commercial_frac = include_retail ? commercialFracByZone(zone_class, loc) : 0;
   const env = podiumEnvelope({
+    loc,
     plates,
     far_cap,
     retail_cap: commercial_frac * lot_sqft,
     retail_share,
     unit_size: mixUnitSize(unit_type),
     parking_ratio,
-    ...article6Parking(lot_sqft, parking_exempt),
+    ...article6Parking(lot_sqft, parking_exempt, loc),
   });
   const gross_residential_sqft = env.residential_sqft;
   const gross_commercial_sqft = env.retail_sqft;
@@ -153,7 +158,7 @@ function bill6Hard(
     calcBicycleParkingCost(env.bicycle_short_term, env.bicycle_long_term);
   // park land is charged only on units NOT exempt under §22-7.3(j)
   const chargeable_units = max_units - affordable_units;
-  const park_area = calcParkArea(chargeable_units, buildable_sqft);
+  const park_area = calcParkArea(chargeable_units, buildable_sqft, loc);
   const hard_cost = building_cost + parking_cost;
 
   return {
@@ -230,32 +235,33 @@ function bill6Rental(
   unit_type: string,
   affordable_ami: string,
   market_ami: string,
-  retail_rent: number
+  retail_rent: number,
+  loc: Locality = honolulu
 ) {
   const afd_rent_multiplier =
-    FINANCING.ami_escalation ** ((const_months + total_carry_months) / 12);
+    loc.assumptions.market.ami_escalation ** ((const_months + total_carry_months) / 12);
   const mkt_rent_multiplier =
-    FINANCING.ami_escalation **
+    loc.assumptions.market.ami_escalation **
     ((permitting_months + const_months + total_carry_months) / 12);
 
   const affordable_rent =
-    mixRentByAmi(affordable_ami, unit_type) * afd_rent_multiplier;
-  const market_rent = mixRentByAmi(market_ami, unit_type) * mkt_rent_multiplier;
+    mixRentByAmi(affordable_ami, unit_type, loc) * afd_rent_multiplier;
+  const market_rent = mixRentByAmi(market_ami, unit_type, loc) * mkt_rent_multiplier;
 
   const pri =
     affordable_rent * afd_rent_units * 12 + market_rent * mkt_rent_units * 12;
 
-  const parking_income = calcParkingIncome(parking_stalls);
+  const parking_income = calcParkingIncome(parking_stalls, loc);
   const admin_income =
     max_units * 0.3 * INCOME.application_fee +
     max_units * 0.7 * INCOME.lease_renewal;
 
   const pgi = pri + parking_income + admin_income;
-  const vacancy_loss = pgi * VACANCY.rental;
+  const vacancy_loss = pgi * loc.assumptions.market.vacancy.residential;
 
   const retail_pgi =
     net_commercial_sqft * retail_rent * 12 * mkt_rent_multiplier;
-  const retail_vacancy_loss = retail_pgi * VACANCY.default;
+  const retail_vacancy_loss = retail_pgi * loc.assumptions.market.vacancy.retail;
   const residential_egi = pgi - vacancy_loss;
   const retail_egi = retail_pgi - retail_vacancy_loss;
   const egi = residential_egi + retail_egi;
@@ -276,12 +282,14 @@ function bill6Sale(
   unit_type: string,
   affordable_ami_pct: number,
   market_ami_pct: number,
-  permanent_rate: number
+  permanent_rate: number,
+  // HHFDC sale prices are Honolulu's tables; only the AMI growth is local
+  loc: Locality = honolulu
 ) {
   const afd_sale_multiplier =
-    FINANCING.ami_escalation ** ((const_months + total_carry_months) / 12);
+    loc.assumptions.market.ami_escalation ** ((const_months + total_carry_months) / 12);
   const mkt_sale_multiplier =
-    FINANCING.ami_escalation **
+    loc.assumptions.market.ami_escalation **
     ((permitting_months + const_months + total_carry_months) / 12);
 
   const afd_price =
@@ -328,9 +336,10 @@ function bill6Noi(
   permitting_months: number,
   total_carry_months: number,
   property_tax: number,
-  cap_rate_override?: number
+  cap_rate_override?: number,
+  loc: Locality = honolulu
 ) {
-  const cap_rate = resolveCapRate(cap_rate_override);
+  const cap_rate = resolveCapRate(cap_rate_override, loc);
 
   // NOI is after property tax (buyer pays it, so value reflects it)
   const tax = allocatePropertyTax(property_tax, residential_egi, retail_egi);
@@ -454,12 +463,13 @@ function bill6Hold(
   amort_years: number,
   min_dscr: number,
   cap_rate: number,
-  gross_sales: number
+  gross_sales: number,
+  loc: Locality = honolulu
 ): Partial<ParcelOutput> {
   const land_cost = land_cost_sqft * lot_sqft;
   const land_value = land_cost;
   const improvement_value = hard_cost;
-  const tax_rate = FINANCING.rpt_residential;
+  const tax_rate = loc.rules.property_tax_rate;
   // the deal loan's base includes land, so equity_amount already carries
   // the developer's share of the land purchase
   const total_equity_invested = equity_amount;
@@ -507,10 +517,10 @@ function bill6Hold(
 
   for (let yr = 1; yr <= hold_years; yr++) {
     if (yr > 1) {
-      current_egi *= 1 + HOLD.annual_rent_growth;
+      current_egi *= 1 + loc.assumptions.market.annual_rent_growth;
       // expenses run on their own inflation series, not as a fixed share of EGI
-      current_opex *= 1 + HOLD.annual_opex_growth;
-      assessed_value *= 1 + HOLD.annual_assessment_growth;
+      current_opex *= 1 + loc.assumptions.market.annual_opex_growth;
+      assessed_value *= 1 + loc.assumptions.market.annual_assessment_growth;
     }
     const prop_tax = assessed_value * tax_rate;
     const current_noi = current_egi - current_opex - prop_tax;
@@ -522,7 +532,7 @@ function bill6Hold(
     }
 
     if (yr === hold_years) {
-      const forward_noi = current_noi * (1 + HOLD.annual_rent_growth);
+      const forward_noi = current_noi * (1 + loc.assumptions.market.annual_rent_growth);
       const gross_sale = forward_noi / exit_cap;
       stored_selling_costs = gross_sale * FINANCING.disposition_cost;
       const net_reversion =
@@ -576,6 +586,8 @@ function bill6Hold(
 // =========================================================
 
 export function calcbill6Single(sliders: SliderInputs): ParcelOutput {
+  // whose rules and market apply: the inputs' locality, Honolulu if unset
+  const loc = getLocality(sliders.locality);
   const lot_sqft = sliders.lot_sqft ?? 5000;
   const height_limit = sliders.height_limit ?? BILL6_DEFAULT_HEIGHT_LIMIT;
   const unit_type = sliders.unit_type ?? DEFAULT_UNIT_TYPE;
@@ -599,17 +611,17 @@ export function calcbill6Single(sliders: SliderInputs): ParcelOutput {
   const construction_rate =
     sliders.construction_rate ?? FINANCING.construction_rate;
   const leaseup_override = sliders.leaseup_months;
-  const impact_fee_per_unit = sliders.impact_fee ?? FEES.impact.per_dwelling;
+  const impact_fee_per_unit = sliders.impact_fee ?? loc.rules.fees.school_impact_per_unit;
   const waivable_fee_basis = sliders.waivable_fee_basis ?? "market_units";
   const floor_height = sliders.floor_height ?? BILL6_DEFAULT_FLOOR_HEIGHT;
   const permitting_months_val =
-    sliders.permitting_months ?? permittingMonthsByZone(zone_class);
+    sliders.permitting_months ?? permittingMonthsByZone(zone_class, loc);
   const setback = sliders.setback ?? 10;
   const hard_cost_per_sqft = sliders.hard_cost_per_sqft ?? 450;
   // Article 6 minimum unless the lever is set (§ 21-6.20)
   const parking_ratio =
     sliders.parking_ratio ??
-    (sliders.parking_exempt ? 0 : legalParkingRatio(unit_type));
+    (sliders.parking_exempt ? 0 : legalParkingRatio(unit_type, loc));
   const retail_share = sliders.retail_share ?? DEFAULT_RETAIL_SHARE;
 
   // Step 1: Hard costs
@@ -627,17 +639,18 @@ export function calcbill6Single(sliders: SliderInputs): ParcelOutput {
     parking_ratio,
     retail_share,
     max_far,
-    stepBackOf(sliders, zoneStepBack(zone_class)),
+    stepBackOf(sliders, zoneStepBack(zone_class, loc)),
     sliders.open_space_bonus ?? 0,
-    sliders.parking_exempt ?? false
+    sliders.parking_exempt ?? false,
+    loc
   );
   if (hard.max_units <= 0)
     return zeroOutput("hypothetical", zone_class, lot_sqft, height_limit);
 
   // Construction cost inflation: costs are spent throughout the build, so the average dollar lands at permitting + const/2.
-  const const_months = resolveConstMonths(zone_class, sliders.const_months);
+  const const_months = resolveConstMonths(zone_class, sliders.const_months, loc);
   const cost_inflation_multiplier =
-    FINANCING.cost_inflation **
+    loc.assumptions.market.cost_inflation **
     ((permitting_months_val + const_months / 2) / 12);
   const hard_cost = hard.hard_cost * cost_inflation_multiplier;
 
@@ -647,7 +660,7 @@ export function calcbill6Single(sliders: SliderInputs): ParcelOutput {
     lot_sqft,
     max_units: hard.max_units,
     affordable_units: hard.affordable_units,
-    excavation_depth: excavationDepthByZone(zone_class),
+    excavation_depth: excavationDepthByZone(zone_class, loc),
     park,
     park_area: hard.park_area,
     land_cost_per_sqft: land_cost,
@@ -655,6 +668,7 @@ export function calcbill6Single(sliders: SliderInputs): ParcelOutput {
     impact_fee_per_unit,
     living_stories: hard.living_stories,
     fu_per_unit: mixFixtureUnits(unit_type),
+    loc,
   });
   const soft_cost = soft.total;
 
@@ -723,7 +737,8 @@ export function calcbill6Single(sliders: SliderInputs): ParcelOutput {
     unit_type,
     affordable_ami,
     market_ami,
-    retail_rent
+    retail_rent,
+    loc
   );
 
   // Step 5: Sale value (8/26/2026 for-sale units discarded)
@@ -736,7 +751,7 @@ export function calcbill6Single(sliders: SliderInputs): ParcelOutput {
 
   // Step 7: NOI & GDV
   // full property tax from year 1 (no exemption in this pathway)
-  const property_tax = calcPropertyTax(land_cost * lot_sqft, hard_cost);
+  const property_tax = calcPropertyTax(land_cost * lot_sqft, hard_cost, false, loc);
   const noi_result = bill6Noi(
     rev.residential_egi,
     rev.retail_egi,
@@ -748,7 +763,8 @@ export function calcbill6Single(sliders: SliderInputs): ParcelOutput {
     permitting_months_val,
     total_carry_months,
     property_tax,
-    sliders.cap_rate
+    sliders.cap_rate,
+    loc
   );
 
   // Step 7b: size the construction loan to the DSCR take-out
@@ -833,7 +849,8 @@ export function calcbill6Single(sliders: SliderInputs): ParcelOutput {
           amort_years,
           min_dscr,
           noi_result.cap_rate,
-          sale.gross_sales
+          sale.gross_sales,
+          loc
         );
 
   const _roc = dev.dev_roc ?? 0;
