@@ -29,8 +29,9 @@ export interface StepBackRule {
 export interface ZoneRules {
   /** the official district name, where the code is shorthand */
   name?: string;
-  /** FAR by pathway, as a function of lot size; a pathway that is missing
-   *  here cannot build in this zone */
+  /** FAR by pathway, as a function of lot size. A pathway not listed either
+   *  sets its own FAR whatever the zone (Bill 7's statutory 4.0) or has no
+   *  FAR in this zone (0) */
   far: Partial<Record<PathwayId, Schedule>>;
   /** maximum building area as a share of the lot, by pathway */
   lot_coverage: Partial<Record<PathwayId, Schedule>>;
