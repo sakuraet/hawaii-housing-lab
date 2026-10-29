@@ -2468,5 +2468,5 @@
    "tod_precinct": "tiz"
   }
  ],
- "_source": "Sampled from UHERO/analytics app/housing/policy/gauge/data at commit da45f2df (10/8/26): for each zone (TOD: zone, regime, station area, parenthetical; others: zone, parking exemption), the smallest, median and largest lot."
+ "_source": "Sampled from UHERO's dashboard parcel data (10/8/26): for each zone (TOD: zone, regime, station area, parenthetical; others: zone, parking exemption), the smallest, median and largest lot."
 }
