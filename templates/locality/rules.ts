@@ -25,10 +25,11 @@ const todoSchedule = (): Schedule => ({
 // ── parking, loading and bicycle parking ────────────────────────────────
 
 export const parking: ParkingRules = {
-  // minimum stalls: 1 per this many sqft of dwelling area. If the code sets
-  // stalls per unit instead, convert: a 1-bedroom is 500 sqft in the model,
-  // so 1 stall per unit = 500
+  // housing minimum: set the one the code uses and delete the other
+  // 1 stall per this many sqft of dwelling area (Honolulu: 1,000)
   residential_sqft_per_stall: TODO,
+  // stalls per dwelling unit, whatever its size (Maui: 2)
+  residential_stalls_per_unit: TODO,
   // minimum stalls: 1 per this many sqft of retail
   retail_sqft_per_stall: TODO,
   // share of the summed requirement when housing and retail share stalls; 1

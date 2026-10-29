@@ -98,8 +98,8 @@ function bill6Hard(
 ) {
   const floors = Math.floor(height_limit / floor_height);
 
-  const far = max_far ?? calcFarBill6(zone_class, loc) + open_space_bonus;
-  const coverage = lotCoverageBill6(zone_class, loc);
+  const far = max_far ?? calcFarBill6(zone_class, loc, lot_sqft) + open_space_bonus;
+  const coverage = lotCoverageBill6(zone_class, loc, lot_sqft);
   // waikiki precincts must keep 35–50% of the lot open; that and the coverage
   // cap are both measured on the zoning lot, so the stricter one governs
   const far_cap = far * lot_sqft;
@@ -126,7 +126,7 @@ function bill6Hard(
     retail_share,
     unit_size: mixUnitSize(unit_type),
     parking_ratio,
-    ...article6Parking(lot_sqft, parking_exempt, loc),
+    ...article6Parking(lot_sqft, parking_exempt, loc, zone_class),
   });
   const gross_residential_sqft = env.residential_sqft;
   const gross_commercial_sqft = env.retail_sqft;
@@ -678,7 +678,7 @@ export function calcbill6Single(sliders: SliderInputs): ParcelOutput {
     waivable_fee_basis,
     impact_fee_per_unit,
     living_stories: hard.living_stories,
-    fu_per_unit: mixFixtureUnits(unit_type),
+    fu_per_unit: mixFixtureUnits(unit_type, loc),
     loc,
   });
   const soft_cost = soft.total;

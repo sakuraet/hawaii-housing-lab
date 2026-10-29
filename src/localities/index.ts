@@ -4,8 +4,12 @@
 
 import type { Locality, PathwayId } from "../core/locality";
 import { honolulu } from "./hi/honolulu";
+import { maui } from "./hi/maui";
 
-const LOCALITIES = new Map<string, Locality>([[honolulu.id, honolulu]]);
+const LOCALITIES = new Map<string, Locality>([
+  [honolulu.id, honolulu],
+  [maui.id, maui],
+]);
 
 /** the locality's id when a parcel or inputs name none */
 export const DEFAULT_LOCALITY_ID = honolulu.id;

@@ -52,8 +52,11 @@ export interface ZoneRules {
 // ── parking, loading and bicycle parking ────────────────────────────────
 
 export interface ParkingRules {
-  /** minimum stalls: 1 per this many sqft of private dwelling area */
-  residential_sqft_per_stall: number;
+  // the housing minimum is one of these two, whichever the code uses
+  /** minimum stalls: 1 per this many sqft of private dwelling area (Honolulu) */
+  residential_sqft_per_stall?: number;
+  /** minimum stalls per dwelling unit, whatever its size (Maui: 2) */
+  residential_stalls_per_unit?: number;
   /** minimum stalls: 1 per this many sqft of retail */
   retail_sqft_per_stall: number;
   /** share of the summed requirement when housing and retail share stalls */
@@ -111,6 +114,8 @@ export interface FeeRules {
   };
   park_dedication: {
     sqft_per_unit: number;
+    /** units not counted, for example the first 3 (Maui); default 0 */
+    exempt_units?: number;
     floor_area_fraction: number;
     application_fee: { exempt: number; in_lieu: number };
   };
@@ -120,8 +125,13 @@ export interface FeeRules {
 }
 
 export interface WaterRules {
-  /** water system facilities charge per fixture unit */
+  /** water system facilities charge per fixture unit, or per demand unit
+   *  where `demand_per_unit` is set */
   wsfc_per_fu: { low_rise: number; high_rise: number };
+  /** demand units per dwelling by unit type (studio, one_bb, ...), used in
+   *  place of the fixture-unit count where the charge is by projected use
+   *  (Maui: equivalent single dwellings) */
+  demand_per_unit?: Record<string, number>;
   /** living stories at or below which the low-rise rate applies */
   low_rise_max_stories: number;
   min_fu: number;

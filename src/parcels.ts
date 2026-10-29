@@ -316,7 +316,7 @@ export function pathwayEnvelope(
       return withOpenSpaceBonus(
         parcel.zone_class,
         height,
-        calcFarBill6(parcel.zone_class, loc),
+        calcFarBill6(parcel.zone_class, loc, parcel.lot_sqft),
         loc
       );
     case "bill7":
