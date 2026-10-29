@@ -58,15 +58,17 @@ export const PARK_SQFT_PER_UNIT = honolulu.rules.fees.park_dedication.sqft_per_u
 export const PARK_FLOOR_AREA_FRACTION =
   honolulu.rules.fees.park_dedication.floor_area_fraction;
 // park dedication minimum land area = lesser of so many sqft per unit and a
-// share of floor area (Honolulu: 110 sqft, 10%)
+// share of floor area (Honolulu: 110 sqft, 10%), not counting any exempt
+// units (Maui: the first 3)
 export function calcParkArea(
   max_units: number,
   buildable_sqft: number,
   loc: Locality = honolulu
 ): number {
   const park = loc.rules.fees.park_dedication;
+  const counted_units = Math.max(0, max_units - (park.exempt_units ?? 0));
   return Math.min(
-    park.sqft_per_unit * max_units,
+    park.sqft_per_unit * counted_units,
     park.floor_area_fraction * buildable_sqft
   );
 }
@@ -123,6 +125,25 @@ export function mixRentByAmi(
   return Math.floor(
     mix.reduce((sum, m) => sum + rentByAmi(ami, m.type, loc) * m.weight, 0)
   );
+}
+
+/** affordable units a project of this size must set aside under the
+ *  locality's inclusionary rule (Maui: 25% of the market-rate units, rounded
+ *  up, for 10 or more units); 0 where there is none. With W required units
+ *  out of N, W is the least whole number with W >= share x (N - W). */
+export function requiredAffordableUnits(units: number, loc: Locality = honolulu): number {
+  const rule = loc.rules.inclusionary;
+  if (!rule || units < rule.min_units) return 0;
+  const s = rule.share_of_market;
+  return Math.min(units, Math.ceil((s * units) / (1 + s) - 1e-9));
+}
+
+/** monthly rent of a required affordable unit: the average of the rents at
+ *  each AMI cap the rule spreads its units over (Maui: 80, 100, 120) */
+export function inclusionaryRent(mix_key: string, loc: Locality): number {
+  const amis = loc.rules.inclusionary?.rent_ami ?? [];
+  if (amis.length === 0) return 0;
+  return amis.reduce((sum, ami) => sum + mixRentByAmi(ami, mix_key, loc), 0) / amis.length;
 }
 
 // blended sale price for a mix key (weighted avg of each component's getAffordablePrice)
@@ -327,7 +348,8 @@ export const DEFAULT_RETAIL_SHARE = 0.1;
 // use (§ 21-6.30(g), Table 21-6.2), for pathways that must provide parking.
 // Read from its config (rules.parking); the functions below take a locality.
 export const PARKING_MINIMUM = {
-  residential_sqft_per_stall: honolulu.rules.parking.residential_sqft_per_stall,
+  // Honolulu's minimum is by floor area, so this is always set
+  residential_sqft_per_stall: honolulu.rules.parking.residential_sqft_per_stall as number,
   retail_sqft_per_stall: honolulu.rules.parking.retail_sqft_per_stall,
   joint_use: honolulu.rules.parking.joint_use,
 };
@@ -346,13 +368,19 @@ export function roundHalfUp(x: number): number {
 }
 
 /** legal minimum stalls per unit: 1 per so many sqft of private dwelling
- *  area (Honolulu: 1,000); exempt parcels (§ 21-6.20(a)) pass
- *  `parking_exempt` instead */
+ *  area (Honolulu: 1,000), or a flat number per unit where the locality sets
+ *  one (Maui: 2); exempt parcels (§ 21-6.20(a)) pass `parking_exempt`
+ *  instead */
 export function legalParkingRatio(
   unit_type: string,
   loc: Locality = honolulu
 ): number {
-  return mixUnitSize(unit_type) / loc.rules.parking.residential_sqft_per_stall;
+  const { residential_stalls_per_unit, residential_sqft_per_stall } = loc.rules.parking;
+  if (residential_stalls_per_unit != null) return residential_stalls_per_unit;
+  if (residential_sqft_per_stall == null) {
+    throw new Error(`${loc.name} (${loc.id}): no residential parking minimum`);
+  }
+  return mixUnitSize(unit_type) / residential_sqft_per_stall;
 }
 
 /** loading spaces for multifamily (by units) and retail (by floor area),
@@ -381,11 +409,14 @@ export function loadingSqft(spaces: number, loc: Locality = honolulu): number {
 
 /** Article 6 inputs to podiumEnvelope for a pathway that must provide
  *  parking: retail stalls, the joint-use rate and loading. An exempt lot
- *  (§ 21-6.20(a)) needs no stalls but still needs loading (§ 21-6.110). */
+ *  (§ 21-6.20(a)) needs no stalls but still needs loading (§ 21-6.110).
+ *  Bicycle parking follows the zone where one is given (Maui requires none);
+ *  without a zone it is required, as in the original model. */
 export function article6Parking(
   lot_sqft: number,
   parking_exempt = false,
-  loc: Locality = honolulu
+  loc: Locality = honolulu,
+  zone_class?: string
 ) {
   return {
     retail_stalls_per_sqft: parking_exempt
@@ -393,7 +424,7 @@ export function article6Parking(
       : 1 / loc.rules.parking.retail_sqft_per_stall,
     joint_use: loc.rules.parking.joint_use,
     loading: lot_sqft > loc.rules.loading.min_lot_sqft,
-    bicycle: true,
+    bicycle: zone_class == null ? true : bicycleRequired(zone_class, loc),
   };
 }
 
@@ -529,12 +560,18 @@ export function wsfcCategory(
     : "multi_high_rise";
 }
 
-// blended fixture units per dwelling unit for a mix key
-export function mixFixtureUnits(mix_key: string): number {
+// blended fixture units per dwelling unit for a mix key; the locality's
+// demand units instead where its water charge is by projected use (Maui)
+export function mixFixtureUnits(mix_key: string, loc: Locality = honolulu): number {
   const mix = UNIT_MIX[mix_key] ?? UNIT_MIX["one_bb_100"];
+  const demand = loc.rules.water.demand_per_unit;
   return mix.reduce(
     (sum, m) =>
-      sum + FU_PER_UNIT[BATHS_BY_UNIT_TYPE[m.type] ?? "bath_1"] * m.weight,
+      sum +
+      (demand
+        ? demand[m.type] ?? demand.one_bb
+        : FU_PER_UNIT[BATHS_BY_UNIT_TYPE[m.type] ?? "bath_1"]) *
+        m.weight,
     0
   );
 }
@@ -2035,12 +2072,14 @@ export function todHeightLimit(
 
 // FAR under current zoning, Ord. 26-7 (the bill6 pathway; 201H uses it too).
 // Ord. 26-7 changed the apartment districts only; business districts keep
-// Table 21-3.4. The figures are flat, so the lot size does not matter.
+// Table 21-3.4. Honolulu's figures are flat, so its lot size does not
+// matter; another county's can change with lot size (Maui A-1).
 export function calcFarBill6(
   zone_class: string,
-  loc: Locality = honolulu
+  loc: Locality = honolulu,
+  lot_sqft = 0
 ): number {
-  return zoneFar(loc, zone_class, "bill6", 0);
+  return zoneFar(loc, zone_class, "bill6", lot_sqft);
 }
 
 // maximum lot coverage before Ord. 26-7 (Standard). With a lot size, the
@@ -2057,12 +2096,13 @@ export function lotCoverage(
 }
 
 // maximum lot coverage under current zoning (Ord. 26-7 replaced the
-// apartment tiers with a flat 60%)
+// apartment tiers with a flat 60%); by lot size where a county's is not flat
 export function lotCoverageBill6(
   zone_class: string,
-  loc: Locality = honolulu
+  loc: Locality = honolulu,
+  lot_sqft = 0
 ): number {
-  return zoneCoverage(loc, zone_class, "bill6", 0);
+  return zoneCoverage(loc, zone_class, "bill6", lot_sqft);
 }
 
 // share of the lot a special district keeps as open space, by FAR (Honolulu:

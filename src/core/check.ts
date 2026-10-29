@@ -85,8 +85,33 @@ export function checkLocality(loc: Locality): string[] {
   positive("assumptions.timing.permitting_months", loc.assumptions.timing.permitting_months);
   positive("assumptions.timing.construction_months", loc.assumptions.timing.construction_months);
   positive("assumptions.market.cap_rate", loc.assumptions.market.cap_rate);
-  positive("rules.parking.residential_sqft_per_stall", loc.rules.parking.residential_sqft_per_stall);
+  // the housing parking minimum: by floor area or per unit, exactly one
+  const { residential_sqft_per_stall: per_sqft, residential_stalls_per_unit: per_unit } =
+    loc.rules.parking;
+  if ((per_sqft == null) === (per_unit == null)) {
+    add(
+      "rules.parking",
+      "set one of residential_sqft_per_stall and residential_stalls_per_unit"
+    );
+  }
+  if (per_sqft != null) positive("rules.parking.residential_sqft_per_stall", per_sqft);
+  if (per_unit != null && Number.isFinite(per_unit) && per_unit < 0) {
+    add("rules.parking.residential_stalls_per_unit", "must be 0 or more");
+  }
   positive("rules.parking.retail_sqft_per_stall", loc.rules.parking.retail_sqft_per_stall);
+
+  // a required set-aside: a share, rents at AMI levels the income table has
+  const inc = loc.rules.inclusionary;
+  if (inc) {
+    share("rules.inclusionary.share_of_market", inc.share_of_market);
+    positive("rules.inclusionary.min_units", inc.min_units);
+    if (inc.rent_ami.length === 0) add("rules.inclusionary.rent_ami", "needs at least one AMI level");
+    for (const ami of inc.rent_ami) {
+      if (!INCOME_LIMIT_AMIS.includes(ami)) {
+        add("rules.inclusionary.rent_ami", `${ami} is not an AMI level in the income limits`);
+      }
+    }
+  }
 
   // income limits: every AMI level the model uses, 8 household sizes each
   for (const ami of INCOME_LIMIT_AMIS) {

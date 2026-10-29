@@ -37,6 +37,7 @@ import {
   floorPlates,
   HOLD,
   INCOME,
+  inclusionaryRent,
   legalParkingRatio,
   lotAfterOpenSpace,
   lotCoverageBill6,
@@ -49,6 +50,7 @@ import {
   resolveCapRate,
   RETAIL_CAP_SPREAD,
   RETAIL_PREMIUM,
+  requiredAffordableUnits,
   sizeConstructionLoan,
   SliderInputs,
   solveIRR,
@@ -98,8 +100,8 @@ function bill6Hard(
 ) {
   const floors = Math.floor(height_limit / floor_height);
 
-  const far = max_far ?? calcFarBill6(zone_class, loc) + open_space_bonus;
-  const coverage = lotCoverageBill6(zone_class, loc);
+  const far = max_far ?? calcFarBill6(zone_class, loc, lot_sqft) + open_space_bonus;
+  const coverage = lotCoverageBill6(zone_class, loc, lot_sqft);
   // waikiki precincts must keep 35–50% of the lot open; that and the coverage
   // cap are both measured on the zoning lot, so the stricter one governs
   const far_cap = far * lot_sqft;
@@ -126,7 +128,7 @@ function bill6Hard(
     retail_share,
     unit_size: mixUnitSize(unit_type),
     parking_ratio,
-    ...article6Parking(lot_sqft, parking_exempt, loc),
+    ...article6Parking(lot_sqft, parking_exempt, loc, zone_class),
   });
   const gross_residential_sqft = env.residential_sqft;
   const gross_commercial_sqft = env.retail_sqft;
@@ -145,7 +147,9 @@ function bill6Hard(
 
   // 8/26/26, for-sale units are discarded, 100% rental & 0% affordable rental
   // const afd_rent_units = Math.ceil(max_units * 0.05);
-  const afd_rent_units = 0;
+  // except where the county requires a set-aside of every project (Maui's
+  // workforce housing, MCC 2.96); Honolulu has none, so this is 0 there
+  const afd_rent_units = requiredAffordableUnits(max_units, loc);
   const afd_sale_units = 0;
   const mkt_rent_units = Math.max(0, max_units - afd_rent_units);
   const mkt_sale_units = 0;
@@ -245,8 +249,12 @@ function bill6Rental(
     loc.assumptions.market.ami_escalation **
     ((permitting_months + const_months + total_carry_months) / 12);
 
+  // a county's required set-aside rents at its own AMI caps; otherwise the
+  // affordable AMI lever
   const affordable_rent =
-    mixRentByAmi(affordable_ami, unit_type, loc) * afd_rent_multiplier;
+    (loc.rules.inclusionary
+      ? inclusionaryRent(unit_type, loc)
+      : mixRentByAmi(affordable_ami, unit_type, loc)) * afd_rent_multiplier;
   const market_rent = mixRentByAmi(market_ami, unit_type, loc) * mkt_rent_multiplier;
 
   const pri =
@@ -678,7 +686,7 @@ export function calcbill6Single(sliders: SliderInputs): ParcelOutput {
     waivable_fee_basis,
     impact_fee_per_unit,
     living_stories: hard.living_stories,
-    fu_per_unit: mixFixtureUnits(unit_type),
+    fu_per_unit: mixFixtureUnits(unit_type, loc),
     loc,
   });
   const soft_cost = soft.total;

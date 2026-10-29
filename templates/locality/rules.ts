@@ -25,10 +25,11 @@ const todoSchedule = (): Schedule => ({
 // ── parking, loading and bicycle parking ────────────────────────────────
 
 export const parking: ParkingRules = {
-  // minimum stalls: 1 per this many sqft of dwelling area. If the code sets
-  // stalls per unit instead, convert: a 1-bedroom is 500 sqft in the model,
-  // so 1 stall per unit = 500
+  // housing minimum: set the one the code uses and delete the other
+  // 1 stall per this many sqft of dwelling area (Honolulu: 1,000)
   residential_sqft_per_stall: TODO,
+  // stalls per dwelling unit, whatever its size (Maui: 2)
+  residential_stalls_per_unit: TODO,
   // minimum stalls: 1 per this many sqft of retail
   retail_sqft_per_stall: TODO,
   // share of the summed requirement when housing and retail share stalls; 1
@@ -126,3 +127,17 @@ export const income_limits: Record<number, number[]> = Object.fromEntries(
     [TODO, TODO, TODO, TODO, TODO, TODO, TODO, TODO],
   ])
 );
+
+// optional: an affordable set-aside every project must provide by right,
+// such as Maui's workforce housing (MCC 2.96). Delete if the county has none;
+// otherwise uncomment, fill in, and add `inclusionary: rules.inclusionary`
+// to index.ts
+// export const inclusionary: InclusionaryRules = {
+//   // projects with at least this many units must comply
+//   min_units: TODO,
+//   // required units as a share of the market-rate units (25% = 0.25)
+//   share_of_market: TODO,
+//   // rental AMI caps (%), one equal share of the units each
+//   rent_ami: [TODO],
+//   source: "TODO",
+// };
