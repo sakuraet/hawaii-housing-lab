@@ -7,11 +7,12 @@
 // "Revenues - Fees, Rates, Assessments and Taxes" (July 1, 2026 to June 30,
 // 2027), cited below as "FY27 App. B" with its page. Water charges are from
 // the Department of Water Supply's own FY 2027 appendix. The choices made in
-// fitting these to the model are listed in the Maui notes.
+// fitting these to the model are listed in docs/notes/MAUI.md.
 
 import type {
   BicycleRules,
   FeeRules,
+  InclusionaryRules,
   LoadingRules,
   ParkingRules,
   WaterRules,
@@ -196,6 +197,24 @@ export const water: WaterRules = {
   // non-single-family building, carried here so it is counted
   fire_meter_charge: { "4": 1250, "6": 1250, "8": 1250 },
   source: `${DWS}; DWS Water Use Calculation Method (Ord. 5759)`,
+};
+
+// ── residential workforce housing (MCC 2.96) ────────────────────────────
+
+// A project creating 10 or more dwelling units must provide workforce
+// housing units equal to 25% of its market-rate units, rounded up
+// (2.96.030(A), 2.96.040(A)), so about a fifth of all units. Applied at
+// building permit, so by-right projects are covered; 201H projects too
+// (2.96.030(E)). Rental units are split in thirds: 80% AMI or less, over 80
+// to 100%, over 100 to 120% (2.96.040(C)(2)); each rents at its band's cap.
+// Not modeled: the 20% share for units conveyed to a qualified housing
+// provider in perpetuity, the in-lieu fee (2.96.040(B)(4)), the Wailuku
+// redevelopment area exemption, and Hāna, Lānaʻi and Molokaʻi's adjusted AMI
+export const inclusionary: InclusionaryRules = {
+  min_units: 10,
+  share_of_market: 0.25,
+  rent_ami: [80, 100, 120],
+  source: "MCC 2.96.030(A), 2.96.040(A), (C)(2) (Ord. 5875, 2025)",
 };
 
 // ── property tax and income limits ──────────────────────────────────────

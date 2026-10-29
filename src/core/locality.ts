@@ -142,6 +142,21 @@ export interface WaterRules {
   source: string;
 }
 
+// ── required affordable units ───────────────────────────────────────────
+
+/** a set-aside every project of some size must provide under current
+ *  zoning (Maui: residential workforce housing, MCC 2.96) */
+export interface InclusionaryRules {
+  /** projects with at least this many units must comply */
+  min_units: number;
+  /** required units as a share of the market-rate units, rounded up */
+  share_of_market: number;
+  /** rental units' AMI caps (%), one equal share each; each unit rents at
+   *  the top of its band */
+  rent_ami: number[];
+  source: string;
+}
+
 // ── assumptions ─────────────────────────────────────────────────────────
 
 /** per-zone estimates: how deep projects dig */
@@ -215,6 +230,8 @@ export interface Locality {
     property_tax_rate: number;
     /** income limits by AMI % (10–140), each a row for household sizes 1–8 */
     income_limits: Record<number, number[]>;
+    /** affordable units every project must provide; absent = none (Honolulu) */
+    inclusionary?: InclusionaryRules;
   };
 
   assumptions: {

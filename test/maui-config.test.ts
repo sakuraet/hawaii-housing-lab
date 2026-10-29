@@ -1,8 +1,8 @@
 // Maui's config (src/localities/hi/maui) against the code it comes from:
 // zoning (MCC 19.12, 19.14, 19.18, 19.20), parking and loading (MCC 19.36B),
 // park dedication (MCC 18.16.320), fees (FY 2027 Appendix B), water (DWS
-// FY 2027 Appendix B) and the 2025 HHFDC income limits, then a parcel run
-// end to end.
+// FY 2027 Appendix B), workforce housing (MCC 2.96) and the 2025 HHFDC
+// income limits, then a parcel run end to end.
 
 import { describe, expect, it } from "vitest";
 
@@ -13,11 +13,14 @@ import {
   calcWaterFees,
   gradingPermit,
   grubbingPermit,
+  inclusionaryRent,
   legalParkingRatio,
   loadingSpaces,
   lotCoverageBill6,
   mixFixtureUnits,
+  mixRentByAmi,
   planReviewFee,
+  requiredAffordableUnits,
   wastewaterFee,
 } from "../src/calculations/calc-shared";
 import { checkLocality } from "../src/core/check";
@@ -148,6 +151,33 @@ describe("Maui water and wastewater", () => {
   });
 });
 
+describe("Maui workforce housing (MCC 2.96)", () => {
+  it.each([
+    // total units, workforce units: 25% of the market units, rounded up
+    [9, 0],
+    [10, 2],
+    [25, 5],
+    [26, 6],
+    [28, 6],
+    [100, 20],
+  ])("%i units: %i workforce", (units, workforce) => {
+    expect(requiredAffordableUnits(units, maui)).toBe(workforce);
+    // at or above the 10-unit threshold, it meets 25% of the market units
+    if (units >= 10) {
+      expect(workforce).toBeGreaterThanOrEqual(Math.ceil(0.25 * (units - workforce)));
+    }
+  });
+
+  it("Honolulu requires none", () => {
+    expect(requiredAffordableUnits(100)).toBe(0);
+  });
+
+  it("rents at the average of the 80, 100 and 120% AMI caps", () => {
+    const at = (ami: number) => mixRentByAmi(ami, "one_bb_100", maui);
+    expect(inclusionaryRent("one_bb_100", maui)).toBeCloseTo((at(80) + at(100) + at(120)) / 3, 9);
+  });
+});
+
 describe("a Maui parcel runs end to end", () => {
   // an A-2 lot of 20,000 sqft with the district's 60 ft height (made up,
   // not a real parcel): FAR 0.9 caps floor area at 18,000 sqft, under the
@@ -167,6 +197,12 @@ describe("a Maui parcel runs end to end", () => {
 
   it("no bicycle parking", () => {
     expect(r.bicycle_spaces ?? 0).toBe(0);
+  });
+
+  it("6 of the 28 units are workforce housing (25% of the 22 market units)", () => {
+    expect(r.affordable_units).toBe(6);
+    expect(r.afd_rent_units).toBe(6);
+    expect(r.mkt_rent_units).toBe(22);
   });
 
   it("every result is a number", () => {

@@ -23,6 +23,7 @@ export const maui: Locality = {
     water: rules.water,
     property_tax_rate: rules.property_tax_rate,
     income_limits: rules.income_limits,
+    inclusionary: rules.inclusionary,
   },
   assumptions: {
     timing: assumptions.timing,

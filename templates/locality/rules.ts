@@ -127,3 +127,17 @@ export const income_limits: Record<number, number[]> = Object.fromEntries(
     [TODO, TODO, TODO, TODO, TODO, TODO, TODO, TODO],
   ])
 );
+
+// optional: an affordable set-aside every project must provide by right,
+// such as Maui's workforce housing (MCC 2.96). Delete if the county has none;
+// otherwise uncomment, fill in, and add `inclusionary: rules.inclusionary`
+// to index.ts
+// export const inclusionary: InclusionaryRules = {
+//   // projects with at least this many units must comply
+//   min_units: TODO,
+//   // required units as a share of the market-rate units (25% = 0.25)
+//   share_of_market: TODO,
+//   // rental AMI caps (%), one equal share of the units each
+//   rent_ami: [TODO],
+//   source: "TODO",
+// };

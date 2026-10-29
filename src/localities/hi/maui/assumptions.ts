@@ -1,6 +1,6 @@
 // County of Maui: estimates we chose (not law). Where no Maui figure has
 // been found, the value is Honolulu's, marked "Honolulu's" below, so the
-// model runs; each is a choice to revisit (see the Maui notes). AMI growth
+// model runs; each is a choice to revisit (see docs/notes/MAUI.md). AMI growth
 // and hold-period rent growth are Maui's own.
 
 import type {

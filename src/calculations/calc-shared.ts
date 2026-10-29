@@ -127,6 +127,25 @@ export function mixRentByAmi(
   );
 }
 
+/** affordable units a project of this size must set aside under the
+ *  locality's inclusionary rule (Maui: 25% of the market-rate units, rounded
+ *  up, for 10 or more units); 0 where there is none. With W required units
+ *  out of N, W is the least whole number with W >= share x (N - W). */
+export function requiredAffordableUnits(units: number, loc: Locality = honolulu): number {
+  const rule = loc.rules.inclusionary;
+  if (!rule || units < rule.min_units) return 0;
+  const s = rule.share_of_market;
+  return Math.min(units, Math.ceil((s * units) / (1 + s) - 1e-9));
+}
+
+/** monthly rent of a required affordable unit: the average of the rents at
+ *  each AMI cap the rule spreads its units over (Maui: 80, 100, 120) */
+export function inclusionaryRent(mix_key: string, loc: Locality): number {
+  const amis = loc.rules.inclusionary?.rent_ami ?? [];
+  if (amis.length === 0) return 0;
+  return amis.reduce((sum, ami) => sum + mixRentByAmi(ami, mix_key, loc), 0) / amis.length;
+}
+
 // blended sale price for a mix key (weighted avg of each component's getAffordablePrice)
 export function mixAffordablePrice(
   mix_key: string,
