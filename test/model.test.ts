@@ -538,7 +538,7 @@ describe("open-space bonus", () => {
 
 // ── TOD pathway (§ 21-9.100-5) ─────────────────────────────────────────────
 
-// Real TOD parcels from analytics' gauge data, one per case, plus synthetic
+// Real TOD parcels from UHERO's dashboard data, one per case, plus synthetic
 // ones for the gates no real parcel hits.
 const TOD = {
   ipdtCore: { tmk: "15005040", zone_class: "BMX-3", lot_sqft: 20071, height: 200, tod_regime: "ipdt", slu_urban: true, station_area: "Downtown", tod_precinct: "core" },

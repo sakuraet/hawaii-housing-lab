@@ -1,5 +1,5 @@
 {
- "_source": "Calculator (Project View) slider inputs at each pathway's defaults, built from UHERO/analytics app/housing/policy/calculator at commit da45f2df (10/8/26), with land_cost moved to the new $130/sqft default Bill 7 given the calculator's new default zone, A-1, and 201H's Max FAR moved to the Ord. 26-7 figure its hard cost to $450/sqft and its rents to 80% / 120% AMI.",
+ "_source": "Calculator (Project View) slider inputs at each pathway's defaults, built from UHERO's dashboard codebase (10/8/26), with land_cost moved to the new $130/sqft default Bill 7 given the calculator's new default zone, A-1, and 201H's Max FAR moved to the Ord. 26-7 figure its hard cost to $450/sqft and its rents to 80% / 120% AMI.",
  "bill6": {
   "program": "bill6",
   "lot_sqft": 10000,

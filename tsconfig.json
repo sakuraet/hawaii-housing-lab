@@ -1,5 +1,6 @@
 {
-  // Matches analytics's compiler settings, so the model compiles the same way. 
+  // Matches the compiler settings of UHERO's dashboard codebase, so the model
+  // compiles the same way.
   // Emitting is left to tsup; this config is for type checking only.
   "compilerOptions": {
     "target": "es2022",

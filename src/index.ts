@@ -1,7 +1,7 @@
 // @uhero/policy-simulator — public entry point.
 // Everything the package offers is exported from this file, and nothing else
 // is part of its API.
-// The model is copied from uhero_analytics (see README, "Source").
+// The model comes from UHERO's @uhero/feasim package (see NOTICE).
 
 // the model: pathway pro formas, inputs/outputs types, defaults, zone helpers
 export * from "./calculations";
