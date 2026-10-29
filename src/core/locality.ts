@@ -11,8 +11,10 @@
 
 import type { Schedule } from "./schedule";
 
-/** a pathway's program id; matches ProgramId in calculations/calc-shared */
-export type PathwayId = "bill6" | "standard" | "bill7" | "tod" | "h201";
+/** a pathway's program id; matches ProgramId in calculations/calc-shared.
+ *  "current" is current zoning in any county; "bill6" is Honolulu's name for
+ *  its current zoning (Ord. 26-7), and the two run the same there */
+export type PathwayId = "current" | "bill6" | "standard" | "bill7" | "tod" | "h201";
 
 /** height step-back ("wedding cake") above a trigger height */
 export interface StepBackRule {
@@ -25,16 +27,33 @@ export interface StepBackRule {
 
 // ── zoning ──────────────────────────────────────────────────────────────
 
+/** a district's current zoning, in whichever terms its code sets density.
+ *  A limit the code doesn't set is left out: a district with neither `far`
+ *  nor `lot_area_per_unit` is bounded by height, coverage and setbacks only */
+export interface CurrentZoningRules {
+  /** maximum floor area ratio, by lot size (Maui A-2: 0.9) */
+  far?: Schedule;
+  /** lot area required per dwelling unit (sqft), by lot size; the unit
+   *  count is the lot area over this, rounded down */
+  lot_area_per_unit?: Schedule;
+  /** maximum building area as a share of the lot, by lot size; 1 where the
+   *  code sets no limit */
+  lot_coverage: Schedule;
+}
+
 /** one zoning district's rules */
 export interface ZoneRules {
   /** the official district name, where the code is shorthand */
   name?: string;
-  /** FAR by pathway, as a function of lot size. A pathway not listed either
-   *  sets its own FAR whatever the zone (Bill 7's statutory 4.0) or has no
-   *  FAR in this zone (0) */
-  far: Partial<Record<PathwayId, Schedule>>;
-  /** maximum building area as a share of the lot, by pathway */
-  lot_coverage: Partial<Record<PathwayId, Schedule>>;
+  /** current zoning; every county but Honolulu sets it. Honolulu's comes
+   *  from `far.bill6` and `lot_coverage.bill6` instead */
+  current?: CurrentZoningRules;
+  /** FAR by Honolulu pathway, as a function of lot size. A pathway not
+   *  listed either sets its own FAR whatever the zone (Bill 7's statutory
+   *  4.0) or has no FAR in this zone (0) */
+  far?: Partial<Record<PathwayId, Schedule>>;
+  /** maximum building area as a share of the lot, by Honolulu pathway */
+  lot_coverage?: Partial<Record<PathwayId, Schedule>>;
   /** ground-floor commercial as a share of lot area; 0 = not permitted */
   commercial_coverage: number;
   /** open-space bonus FAR ceiling; absent = no bonus */
@@ -212,7 +231,7 @@ export interface Locality {
   id: string;
   name: string;
   state: StateRules;
-  /** pathways this place has; Honolulu has all five, other counties bill6 */
+  /** pathways this place has; every place has "current", Honolulu all six */
   pathways: PathwayId[];
   /** what a zone missing from `rules.zones` gets: "fallback" keeps the
    *  original model's behavior (no FAR, 60% coverage) and is for Honolulu;

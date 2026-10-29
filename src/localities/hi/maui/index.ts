@@ -1,6 +1,6 @@
 // County of Maui: the Locality the engine reads for Maui, Molokaʻi and Lānaʻi
 // parcels. Rules are in zones.ts and rules.ts, estimates in assumptions.ts.
-// Current zoning (bill6) only; a zone not in zones.ts stops the run.
+// Current zoning only; a zone not in zones.ts stops the run.
 
 import type { Locality } from "../../../core/locality";
 import { hawaii } from "../state";
@@ -12,7 +12,7 @@ export const maui: Locality = {
   id: "hi-maui",
   name: "County of Maui",
   state: hawaii,
-  pathways: ["bill6"],
+  pathways: ["current"],
   unknown_zone: "error",
   rules: {
     zones,

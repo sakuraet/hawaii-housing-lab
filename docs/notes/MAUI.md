@@ -1,29 +1,30 @@
 # County of Maui config: notes, reasoning and sources
 
-Maui is a registered county in the model: parcels with `locality: "hi-maui"` run the current-zoning (`bill6`) pathway end to end. This note explains every value in Maui's config: what it is, where it came from, why it was fitted to the model the way it was, and what is left to decide. Read it alongside the code; each choice below is also noted in a comment where it is made.
+Maui is a registered county in the model: parcels with `locality: "hi-maui"` run the current-zoning pathway (`current`) end to end. This note explains every value in Maui's config: what it is, where it came from, why it was fitted to the model the way it was, and what is left to decide. Read it alongside the code; each choice below is also noted in a comment where it is made.
 
 - **Where it lives:** `src/localities/hi/maui/` (`zones.ts` zoning, `rules.ts` law and fee schedules, `assumptions.ts` estimates, `index.ts` the `Locality`), tested in `test/maui-config.test.ts`.
 - **Coverage:** the County of Maui is Maui island, Molokaʻi and Lānaʻi. One config covers all three; where rules differ by island or community plan area, the note says how that's handled.
-- **Pathways:** current zoning only (`pathways: ["bill6"]`). Standard (pre-Bill 6), Bill 7, TOD and Waikīkī are Honolulu ordinances and don't apply. Asking for another pathway throws.
+- **Pathways:** current zoning only (`pathways: ["current"]`). `bill6` is Honolulu's name for its current zoning (Ord. 26-7), and Standard (pre-Bill 6), Bill 7, TOD and Waikīkī are Honolulu ordinances too, so they don't apply. Asking for another pathway throws.
 - **Check:** a made-up A-2 lot of 20,000 sqft at 60 ft gives 18,000 sqft of floor area (FAR 0.9), 28 units and 56 stalls (2 per unit), 6 of them workforce housing (MCC 2.96).
 
 ## Contents
 
 1. [How the data was gathered](#how-the-data-was-gathered)
 2. [Choices to revisit](#choices-to-revisit)
-3. [Zoning](#zoning)
-4. [Parking, loading and bicycle parking](#parking-loading-and-bicycle-parking)
-5. [Workforce housing (MCC 2.96)](#workforce-housing-mcc-296)
-6. [Fees](#fees)
-7. [Water](#water)
-8. [Wastewater](#wastewater)
-9. [Property tax](#property-tax)
-10. [Income limits and affordable rents](#income-limits-and-affordable-rents)
-11. [Estimates](#estimates)
-12. [Engine changes](#engine-changes)
-13. [The team's rule sheet, row by row](#the-teams-rule-sheet-row-by-row)
-14. [Tests](#tests)
-15. [Sources](#sources)
+3. [Known limitations](#known-limitations)
+4. [Zoning](#zoning)
+5. [Parking, loading and bicycle parking](#parking-loading-and-bicycle-parking)
+6. [Workforce housing (MCC 2.96)](#workforce-housing-mcc-296)
+7. [Fees](#fees)
+8. [Water](#water)
+9. [Wastewater](#wastewater)
+10. [Property tax](#property-tax)
+11. [Income limits and affordable rents](#income-limits-and-affordable-rents)
+12. [Estimates](#estimates)
+13. [Engine changes](#engine-changes)
+14. [The team's rule sheet, row by row](#the-teams-rule-sheet-row-by-row)
+15. [Tests](#tests)
+16. [Sources](#sources)
 
 ## How the data was gathered
 
@@ -66,9 +67,23 @@ These are judgment calls made to fit Maui's rules into the model. The ones most 
 | State parking cap (HB 1919, 2026) | Not modeled | 0.5 stalls per unit from 7/1/2027 | Passed the House; no sign it became law |
 | Hāna, Lānaʻi and Molokaʻi AMI | County-wide HHFDC table | Adjusted medians allowed under 2.96 | Workforce rents there may be set on a different median |
 
+## Known limitations
+
+- Wastewater uses Wailuku-Kahului's rate for the whole county; Kīhei's is $4.65, and areas outside both systems pay none. The 255 gpd figure should be confirmed with the Wastewater Reclamation Division.
+- Hard cost ($450/sqft), land cost ($130/sqft) and HHFDC sale prices are still Honolulu engine defaults.
+- Market estimates (cap rate, vacancy, cost escalation, opex and assessment growth, parking costs, timing) are Honolulu's; only AMI and rent growth are Maui's own.
+- Not modeled: the open-space bonus (MCC 19.56), discretionary parking reductions (MCC 19.36B.110), per-project road trenching permits, fire plan review (17.5%) and meter installation billed at actual cost.
+- Proposed bedroom-based parking (Resolution 25-152) would change the parking minimum if adopted.
+- Workforce housing (MCC 2.96) is always built on site at 25% of market units. The 20% conveyance option, the in-lieu fee, the Wailuku Redevelopment Area exemption and adjusted AMI for Hāna, Lānaʻi and Molokaʻi aren't modeled, and workforce units get full fee and park relief under the fee toggle where Maui gives only partial relief.
+- Setbacks and minimum lot sizes aren't checked; every zone uses the model's default 10 ft setback.
+- B-1, B-CT, SBR and the Wailuku Redevelopment Area districts aren't configured, so parcels there stop with an error.
+- Height comes from each parcel's `height`, so the parcel data must carry the right limit for its community plan area.
+- The school impact fee is $0, and property tax uses the Apartment class only (no Long-Term Rental tiers).
+- Only the current-zoning pathway runs; 201H and the MCC 2.97 workforce fast track aren't modeled for Maui.
+
 ## Zoning
 
-`zones.ts` lists the eight zone codes (seven districts) that allow multifamily housing by right. Only the `bill6` (current zoning) FAR and lot coverage are set, because other counties run only that pathway; the name `bill6` is Honolulu's and is kept until the generic "current zoning" refactor.
+`zones.ts` lists the eight zone codes (seven districts) that allow multifamily housing by right. Each zone's `current` rules hold its FAR and lot coverage (`currentLimits` in `core/zoning.ts` reads them). Every Maui district limits density by FAR, so none sets `lot_area_per_unit`.
 
 | District | FAR | Lot coverage | Height | Min. lot | Yards (ft) | Source |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -296,7 +311,7 @@ Honolulu's AMI growth (4%) is measured on median family income, while Maui's (3.
 
 ## Engine changes
 
-Six small changes let the engine read Maui's rules. Each is optional or a default that leaves Honolulu's results the same, and the v0.2.1 snapshots still match.
+Six small changes let the engine read Maui's rules. Since then, Maui's zones moved from Honolulu's `far.bill6` and `lot_coverage.bill6` to the generic `current` rules (see [ADDING_A_COUNTY.md](ADDING_A_COUNTY.md)), so the lot-size lookup in the third row now happens in `currentLimits`. Each is optional or a default that leaves Honolulu's results the same, and the v0.2.1 snapshots still match.
 
 | Change | Where | Why Maui needs it | Why Honolulu is unchanged |
 | --- | --- | --- | --- |

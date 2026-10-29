@@ -23,7 +23,7 @@ describe("the check catches an unfinished config", () => {
   unfinished.unknown_zone = "error";
   unfinished.rules.zones["A-2"].commercial_coverage = Number.NaN;
   unfinished.rules.zones["A-2"].source = "TODO";
-  unfinished.rules.zones["A-2"].lot_coverage.bill6 = { bands: [{ upTo: 7500, inclusive: false, base: 1.5 }], source: "" };
+  unfinished.rules.zones["A-2"].lot_coverage!.bill6 = { bands: [{ upTo: 7500, inclusive: false, base: 1.5 }], source: "" };
   unfinished.rules.income_limits = { ...unfinished.rules.income_limits, 80: [1, 2, 3] };
   unfinished.assumptions.timing.permitting_months = 0;
   const problems = checkLocality(unfinished);
@@ -40,9 +40,9 @@ describe("the check catches an unfinished config", () => {
     expect(problems.some((p) => p.startsWith(`hi-test ${expected}`))).toBe(true);
   });
 
-  it("a strict county needs current-zoning FAR in every zone", () => {
+  it("a strict county needs current zoning in every zone", () => {
     // Honolulu's resort and industrial zones have none under Ord. 26-7
-    expect(problems).toContain("hi-test rules.zones.Resort.far.bill6: missing");
+    expect(problems).toContain("hi-test rules.zones.Resort.current: missing");
   });
 
   it("a bad id is caught", () => {

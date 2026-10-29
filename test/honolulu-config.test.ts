@@ -106,8 +106,8 @@ describe("Honolulu config: coverage of zones", () => {
 });
 
 describe("Honolulu config: zoning matches the code", () => {
-  const far = (z: string, p: PathwayId) => rules.zones[z].far[p];
-  const cov = (z: string, p: PathwayId) => rules.zones[z].lot_coverage[p];
+  const far = (z: string, p: PathwayId) => rules.zones[z].far?.[p];
+  const cov = (z: string, p: PathwayId) => rules.zones[z].lot_coverage?.[p];
 
   it.each(ZONES)("%s: FAR in every pathway", (z) => {
     for (const lot of LOTS) {

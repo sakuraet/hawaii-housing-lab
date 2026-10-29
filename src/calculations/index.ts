@@ -71,7 +71,7 @@ import {
 } from "./calc-tod";
 import { assertPathway, getLocality } from "../localities";
 
-const PROGRAMS: ProgramId[] = ["bill6", "standard", "bill7", "tod", "h201"];
+const PROGRAMS: ProgramId[] = ["current", "bill6", "standard", "bill7", "tod", "h201"];
 
 // =========================================================
 // RE-EXPORTS
@@ -190,7 +190,7 @@ function prefersWithout(
 }
 
 function calcProgram(sliders: SliderInputs): ParcelOutput {
-  // stop a pathway the locality does not have (other counties: bill6 only)
+  // stop a pathway the locality does not have (other counties: current only)
   assertPathway(getLocality(sliders.locality), PROGRAMS.includes(sliders.program) ? sliders.program : "bill6");
   switch (sliders.program) {
     case "standard":
@@ -201,6 +201,8 @@ function calcProgram(sliders: SliderInputs): ParcelOutput {
       return calcH201Single(sliders);
     case "bill7":
       return calcBill7Single(sliders);
+    // current zoning: the same calculator in every county
+    case "current":
     case "bill6":
     default:
       return calcbill6Single(sliders);

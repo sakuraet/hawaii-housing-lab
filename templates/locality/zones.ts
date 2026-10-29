@@ -3,8 +3,16 @@
 // it (for example "A-2"). Fill in every TODO; replace "TODO" sources with the
 // code section, for example "MCC 19.12.030".
 //
-// FAR and lot coverage are schedules: a list of bands by lot size (sqft). A
-// flat figure is one band:
+// Each district's `current` rules are its current zoning. Density is set
+// the way the county's code sets it, one or both of:
+//   far                maximum floor area ratio (Maui A-2: 0.9)
+//   lot_area_per_unit  lot area required per dwelling unit, sqft (a code
+//                      that says "one unit per 3,000 sqft of lot area")
+// Leave out a limit the code doesn't set; with neither, the building is
+// bounded by height, lot coverage and setbacks alone.
+//
+// FAR, lot area per unit and lot coverage are schedules: a list of bands by
+// lot size (sqft). A flat figure is one band:
 //   { bands: [{ upTo: null, inclusive: true, base: 2.0 }], source: "..." }
 // A figure that changes with lot size has one band per range, smallest first,
 // the last with upTo: null:
@@ -14,8 +22,8 @@
 //     ], source: "..." }
 // See src/core/schedule.ts for rates (a value that grows with lot size).
 //
-// Only `bill6` (current zoning) is needed: other counties run that pathway
-// only. Honolulu's zones.ts is a full worked example.
+// Other counties run the current-zoning pathway only. Maui's zones.ts is a
+// worked example with FAR.
 
 import type { ZoneRules } from "../../../core/locality";
 
@@ -27,13 +35,14 @@ export const zones: Record<string, ZoneRules> = {
   "TODO-ZONE": {
     // the district's official name, if the code above is shorthand (optional)
     name: "TODO",
-    far: {
-      // maximum floor area ratio under current zoning
-      bill6: { bands: [{ upTo: null, inclusive: true, base: TODO }], source: "TODO" },
-    },
-    lot_coverage: {
-      // maximum building area as a share of the lot, 0 to 1 (60% = 0.6)
-      bill6: { bands: [{ upTo: null, inclusive: true, base: TODO }], source: "TODO" },
+    current: {
+      // maximum floor area ratio; delete if the code sets none
+      far: { bands: [{ upTo: null, inclusive: true, base: TODO }], source: "TODO" },
+      // lot area required per dwelling unit (sqft); delete if the code sets none
+      lot_area_per_unit: { bands: [{ upTo: null, inclusive: true, base: TODO }], source: "TODO" },
+      // maximum building area as a share of the lot, 0 to 1 (60% = 0.6); 1
+      // if the code sets no limit
+      lot_coverage: { bands: [{ upTo: null, inclusive: true, base: TODO }], source: "TODO" },
     },
     // ground-floor commercial as a share of lot area, 0 to 1; 0 if the
     // district does not allow ground-floor retail

@@ -1,7 +1,7 @@
 // Checks that a locality's config is complete and plausible: every value
 // filled in (no TODO or NaN left from the template), every rule sourced,
 // schedules well formed, shares between 0 and 1. Each problem names the
-// value's path, for example `rules.zones.A-2.far.bill6.bands[0].base`.
+// value's path, for example `rules.zones.A-2.current.far.bands[0].base`.
 
 import type { Locality } from "./locality";
 
@@ -50,15 +50,20 @@ export function checkLocality(loc: Locality): string[] {
 
   // identity and pathways
   if (!/^[a-z]{2}-[a-z0-9-]+$/.test(loc.id)) add("id", 'should be a state code and a place, like "hi-maui"');
-  if (!loc.pathways.includes("bill6")) add("pathways", "every locality needs bill6 (current zoning)");
+  if (!loc.pathways.includes("current")) add("pathways", "every locality needs current (current zoning)");
 
-  // a strict locality needs current-zoning FAR and coverage for every zone
+  // a strict locality needs current zoning for every zone: its `current`
+  // rules, or Honolulu's form (a bill6 FAR and coverage)
   const zones = Object.entries(loc.rules.zones);
   if (zones.length === 0) add("rules.zones", "no zoning districts listed");
   if (loc.unknown_zone === "error") {
     for (const [zone, z] of zones) {
-      if (!z.far.bill6) add(`rules.zones.${zone}.far.bill6`, "missing");
-      if (!z.lot_coverage.bill6) add(`rules.zones.${zone}.lot_coverage.bill6`, "missing");
+      if (z.current || z.far?.bill6 || z.lot_coverage?.bill6) {
+        if (!z.current && !z.far?.bill6) add(`rules.zones.${zone}.far.bill6`, "missing");
+        if (!z.current && !z.lot_coverage?.bill6) add(`rules.zones.${zone}.lot_coverage.bill6`, "missing");
+      } else {
+        add(`rules.zones.${zone}.current`, "missing");
+      }
     }
   }
 
@@ -68,9 +73,17 @@ export function checkLocality(loc: Locality): string[] {
   };
   for (const [zone, z] of zones) {
     share(`rules.zones.${zone}.commercial_coverage`, z.commercial_coverage);
-    for (const [pathway, s] of Object.entries(z.lot_coverage)) {
+    for (const [pathway, s] of Object.entries(z.lot_coverage ?? {})) {
       s?.bands.forEach((b, i) => share(`rules.zones.${zone}.lot_coverage.${pathway}.bands[${i}].base`, b.base));
     }
+    z.current?.lot_coverage.bands.forEach((b, i) =>
+      share(`rules.zones.${zone}.current.lot_coverage.bands[${i}].base`, b.base)
+    );
+    // lot area per unit is a divisor, so it must be more than 0
+    z.current?.lot_area_per_unit?.bands.forEach((b, i) => {
+      if (Number.isFinite(b.base) && b.base <= 0 && !b.rate)
+        add(`rules.zones.${zone}.current.lot_area_per_unit.bands[${i}].base`, "must be more than 0");
+    });
     z.open_space?.bands.forEach((b, i) => share(`rules.zones.${zone}.open_space.bands[${i}].base`, b.base));
   }
   share("rules.parking.joint_use", loc.rules.parking.joint_use);

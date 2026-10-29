@@ -11,7 +11,9 @@ export const honolulu: Locality = {
   id: "hi-honolulu",
   name: "City and County of Honolulu",
   state: hawaii,
-  pathways: ["bill6", "standard", "bill7", "tod", "h201"],
+  // "current" is the same as "bill6" here: Honolulu's current zoning is
+  // Ord. 26-7, read from each zone's far.bill6 and lot_coverage.bill6
+  pathways: ["current", "bill6", "standard", "bill7", "tod", "h201"],
   // the original model gives an unlisted zone no FAR and 60% coverage
   unknown_zone: "fallback",
   rules: {

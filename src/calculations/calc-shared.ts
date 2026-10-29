@@ -1567,7 +1567,8 @@ const HHFDC_TABLES: Record<string, HhfdcTable> = {
 // TYPES
 // =========================================================
 
-export type ProgramId = "bill7" | "standard" | "tod" | "h201" | "bill6";
+// "current" is current zoning in any county; in Honolulu it is bill6
+export type ProgramId = "bill7" | "standard" | "tod" | "h201" | "bill6" | "current";
 
 export interface SliderInputs {
   program: ProgramId;

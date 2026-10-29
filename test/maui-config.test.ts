@@ -8,7 +8,6 @@ import { describe, expect, it } from "vitest";
 
 import {
   buildingPermitFee,
-  calcFarBill6,
   calcParkArea,
   calcWaterFees,
   gradingPermit,
@@ -16,7 +15,6 @@ import {
   inclusionaryRent,
   legalParkingRatio,
   loadingSpaces,
-  lotCoverageBill6,
   mixFixtureUnits,
   mixRentByAmi,
   planReviewFee,
@@ -25,12 +23,15 @@ import {
 } from "../src/calculations/calc-shared";
 import { checkLocality } from "../src/core/check";
 import { calcParcel } from "../src/parcels";
-import { zoneRules } from "../src/core/zoning";
+import { currentLimits, zoneRules } from "../src/core/zoning";
 import { maui } from "../src/localities/hi/maui";
 
 const ACRE = 43560;
 
-describe("Maui zoning (current zoning, bill6)", () => {
+describe("Maui zoning (current zoning)", () => {
+  const far = (zone: string, lot: number) => currentLimits(maui, zone, lot).far;
+  const coverage = (zone: string, lot: number) => currentLimits(maui, zone, lot).lot_coverage;
+
   it.each([
     // zone, FAR, lot coverage
     ["A-2", 0.9, 0.35],
@@ -40,16 +41,18 @@ describe("Maui zoning (current zoning, bill6)", () => {
     ["Hotel", 1.5, 0.35],
     ["B-2", 2.0, 1.0],
     ["B-3", 4.0, 1.0],
-  ])("%s: FAR %s, coverage %s", (zone, far, coverage) => {
-    expect(calcFarBill6(zone, maui, 20000)).toBe(far);
-    expect(lotCoverageBill6(zone, maui, 20000)).toBe(coverage);
+  ])("%s: FAR %s, coverage %s", (zone, f, c) => {
+    expect(far(zone as string, 20000)).toBe(f);
+    expect(coverage(zone as string, 20000)).toBe(c);
+    // no district limits units by lot area
+    expect(currentLimits(maui, zone as string, 20000).max_units).toBeUndefined();
   });
 
   it("A-1: FAR 50% under 3 acres, 40% at 3 acres or more; coverage 25%", () => {
-    expect(calcFarBill6("A-1", maui, 10000)).toBe(0.5);
-    expect(calcFarBill6("A-1", maui, 3 * ACRE - 1)).toBe(0.5);
-    expect(calcFarBill6("A-1", maui, 3 * ACRE)).toBe(0.4);
-    expect(lotCoverageBill6("A-1", maui, 10000)).toBe(0.25);
+    expect(far("A-1", 10000)).toBe(0.5);
+    expect(far("A-1", 3 * ACRE - 1)).toBe(0.5);
+    expect(far("A-1", 3 * ACRE)).toBe(0.4);
+    expect(coverage("A-1", 10000)).toBe(0.25);
   });
 
   it("a district with no FAR is not listed, so it stops the run", () => {
@@ -183,7 +186,7 @@ describe("a Maui parcel runs end to end", () => {
   // not a real parcel): FAR 0.9 caps floor area at 18,000 sqft, under the
   // 35% coverage x 6 floors envelope (42,000 sqft)
   const parcel = { locality: "hi-maui", lot_sqft: 20000, zone_class: "A-2", height: 60 };
-  const r = calcParcel("bill6", parcel);
+  const r = calcParcel("current", parcel);
 
   it("floor area at FAR 0.9", () => {
     expect(r.buildable_sqft).toBe(18000);
@@ -211,8 +214,9 @@ describe("a Maui parcel runs end to end", () => {
     }
   });
 
-  it("Maui has current zoning only", () => {
+  it("Maui has current zoning only; bill6 is Honolulu's", () => {
     expect(() => calcParcel("tod", parcel)).toThrow(/no "tod" pathway/);
+    expect(() => calcParcel("bill6", parcel)).toThrow(/no "bill6" pathway/);
   });
 });
 

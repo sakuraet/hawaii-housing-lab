@@ -1,4 +1,6 @@
-// Bill 6 Development calculator:
+// Bill 6 Development calculator: current zoning. Honolulu's is Ord. 26-7
+// ("bill6"); another county's is its own code, read from the zones'
+// `current` rules (the "current" pathway runs this calculator too).
 //
 // Key Bill 6 rules:
 // - Same Sttandard Development rules except:
@@ -13,7 +15,6 @@ import {
   calcConstructionInterest,
   calcDevRLV,
   calcDscrMaxLoan,
-  calcFarBill6,
   calcLeaseupCarry,
   calcParkArea,
   calcParkingIncome,
@@ -40,7 +41,6 @@ import {
   inclusionaryRent,
   legalParkingRatio,
   lotAfterOpenSpace,
-  lotCoverageBill6,
   mixAffordablePrice,
   mixFixtureUnits,
   mixRentByAmi,
@@ -61,6 +61,7 @@ import {
   zoneStepBack,
 } from "./calc-shared";
 import type { Locality } from "../core/locality";
+import { currentLimits } from "../core/zoning";
 import { getLocality } from "../localities";
 import { honolulu } from "../localities/hi/honolulu";
 
@@ -96,12 +97,16 @@ function bill6Hard(
   stepback?: StepBack,
   open_space_bonus = 0,
   parking_exempt = false,
-  loc: Locality = honolulu
+  loc: Locality = honolulu,
+  // a cap on dwelling units from the inputs; else current zoning's own
+  unit_cap?: number
 ) {
   const floors = Math.floor(height_limit / floor_height);
 
-  const far = max_far ?? calcFarBill6(zone_class, loc, lot_sqft) + open_space_bonus;
-  const coverage = lotCoverageBill6(zone_class, loc, lot_sqft);
+  // current zoning's FAR, unit density and coverage for this lot
+  const limits = currentLimits(loc, zone_class, lot_sqft);
+  const far = max_far ?? limits.far + open_space_bonus;
+  const coverage = limits.lot_coverage;
   // waikiki precincts must keep 35–50% of the lot open; that and the coverage
   // cap are both measured on the zoning lot, so the stricter one governs
   const far_cap = far * lot_sqft;
@@ -129,6 +134,8 @@ function bill6Hard(
     unit_size: mixUnitSize(unit_type),
     parking_ratio,
     ...article6Parking(lot_sqft, parking_exempt, loc, zone_class),
+    // a county that limits units by lot area per unit (none in Honolulu)
+    unit_cap: unit_cap ?? limits.max_units,
   });
   const gross_residential_sqft = env.residential_sqft;
   const gross_commercial_sqft = env.retail_sqft;
@@ -660,7 +667,8 @@ export function calcbill6Single(sliders: SliderInputs): ParcelOutput {
     stepBackOf(sliders, zoneStepBack(zone_class, loc)),
     sliders.open_space_bonus ?? 0,
     sliders.parking_exempt ?? false,
-    loc
+    loc,
+    sliders.max_units
   );
   if (hard.max_units <= 0)
     return zeroOutput("hypothetical", zone_class, lot_sqft, height_limit);

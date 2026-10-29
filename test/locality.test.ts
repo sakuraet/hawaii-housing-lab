@@ -98,12 +98,12 @@ describe("the bill6 pathway reads every group from the parcel's county", () => {
   const cases: [string, (l: Locality) => Locality, (r: ReturnType<typeof calcParcel>) => void][] = [
     [
       "zoning FAR",
-      (l) => zoneA2(l, (z) => { z.far.bill6 = flat(1.5, "test"); }),
+      (l) => zoneA2(l, (z) => { z.far!.bill6 = flat(1.5, "test"); }),
       (r) => expect(r.buildable_sqft).toBeLessThan(honoluluResult.buildable_sqft),
     ],
     [
       "lot coverage",
-      (l) => zoneA2(l, (z) => { z.lot_coverage.bill6 = flat(0.3, "test"); }),
+      (l) => zoneA2(l, (z) => { z.lot_coverage!.bill6 = flat(0.3, "test"); }),
       (r) => expect(r).not.toEqual(honoluluResult),
     ],
     [
