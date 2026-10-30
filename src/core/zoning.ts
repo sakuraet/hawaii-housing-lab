@@ -60,6 +60,13 @@ export interface CurrentLimits {
   residential_stalls_per_unit?: number;
 }
 
+/** whole units from a density calculation: rounded down, or up where the
+ *  fraction reaches `round_up_at` */
+function unitCount(units: number, round_up_at?: number): number {
+  const whole = Math.floor(units + 1e-9);
+  return round_up_at != null && units - whole >= round_up_at - 1e-9 ? whole + 1 : whole;
+}
+
 /** current zoning's limits for a zone and lot: the zone's `current` rules,
  *  or for a zone without them (Honolulu), its bill6 (Ord. 26-7) FAR and
  *  coverage */
@@ -79,7 +86,7 @@ export function currentLimits(
   return {
     far: current.far ? evaluateSchedule(current.far, lot_sqft) : Infinity,
     ...(per_unit && {
-      max_units: Math.floor(lot_sqft / evaluateSchedule(per_unit, lot_sqft) + 1e-9),
+      max_units: unitCount(lot_sqft / evaluateSchedule(per_unit, lot_sqft), current.units_round_up_at),
     }),
     lot_coverage: evaluateSchedule(current.lot_coverage, lot_sqft),
     ...(current.yards && { yards: current.yards }),

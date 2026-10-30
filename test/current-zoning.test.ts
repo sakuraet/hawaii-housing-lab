@@ -59,6 +59,17 @@ testCounty.rules.zones = {
   // no FAR or density limit: height, coverage and setbacks only
   ENV: district({ lot_coverage: flat(0.5, "test") }),
   "ENV-FAR": district({ far: flat(0.25, "test"), lot_coverage: flat(0.5, "test") }),
+  // RM-3, with a fractional unit of 65% or more counting as a whole one
+  "RM-3R": district({
+    lot_area_per_unit: flat(3000, "test"),
+    units_round_up_at: 0.65,
+    lot_coverage: flat(0.4, "test"),
+  }),
+  // ENV, with side and rear yards of half the building's height
+  "ENV-H": district({
+    lot_coverage: flat(0.5, "test"),
+    yards: { front_ft: 15, rear_ft: 5, side_ft: 5, side_rear_height_fraction: 0.5 },
+  }),
 };
 registerLocality(testCounty);
 
@@ -92,6 +103,31 @@ describe("density by lot area per unit", () => {
 
   it("a lot too small for one unit builds nothing", () => {
     expect(run("RM-3", 2500, 45).max_units).toBe(0);
+  });
+
+  it("a fractional unit counts where the zone rounds up from a share", () => {
+    // 19,950 / 3,000 = 6.65 units: 7 here, 6 in RM-3
+    expect(currentLimits(testCounty, "RM-3R", 19950).max_units).toBe(7);
+    expect(currentLimits(testCounty, "RM-3", 19950).max_units).toBe(6);
+    // 6.6 units stays 6
+    expect(currentLimits(testCounty, "RM-3R", 19800).max_units).toBe(6);
+  });
+});
+
+describe("yards by building height", () => {
+  it("side and rear yards of half the height match a uniform setback of that size", () => {
+    // 3 stories of 10 ft: side and rear 15 ft, as is the front
+    const p = { locality: testCounty.id, zone_class: "ENV-H", lot_sqft: 10000, height: 30 };
+    const uniform = { ...p, zone_class: "ENV" };
+    const h = calcParcel("current", p, { floor_height: 10 });
+    expect(h.buildable_sqft).toBeCloseTo(
+      calcParcel("current", uniform, { floor_height: 10, setback: 15 }).buildable_sqft,
+      6
+    );
+    // narrower than the 5 ft side and rear yards alone would give
+    expect(h.buildable_sqft).toBeLessThan(
+      calcParcel("current", uniform, { floor_height: 10, setback: 5 }).buildable_sqft
+    );
   });
 });
 

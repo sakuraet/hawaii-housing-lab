@@ -5,12 +5,14 @@
 import type { Locality, PathwayId } from "../core/locality";
 import { honolulu } from "./hi/honolulu";
 import { hawaiiCounty } from "./hi/hawaii";
+import { kauai } from "./hi/kauai";
 import { maui } from "./hi/maui";
 
 const LOCALITIES = new Map<string, Locality>([
   [honolulu.id, honolulu],
   [maui.id, maui],
   [hawaiiCounty.id, hawaiiCounty],
+  [kauai.id, kauai],
 ]);
 
 /** the locality's id when a parcel or inputs name none */

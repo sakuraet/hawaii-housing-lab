@@ -84,6 +84,10 @@ export function checkLocality(loc: Locality): string[] {
       if (Number.isFinite(b.base) && b.base <= 0 && !b.rate)
         add(`rules.zones.${zone}.current.lot_area_per_unit.bands[${i}].base`, "must be more than 0");
     });
+    if (z.current?.units_round_up_at != null)
+      share(`rules.zones.${zone}.current.units_round_up_at`, z.current.units_round_up_at);
+    if (z.current?.yards?.side_rear_height_fraction != null)
+      share(`rules.zones.${zone}.current.yards.side_rear_height_fraction`, z.current.yards.side_rear_height_fraction);
     z.open_space?.bands.forEach((b, i) => share(`rules.zones.${zone}.open_space.bands[${i}].base`, b.base));
   }
   share("rules.parking.joint_use", loc.rules.parking.joint_use);

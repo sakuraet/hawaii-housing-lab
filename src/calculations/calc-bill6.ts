@@ -108,13 +108,17 @@ function bill6Hard(
   const limits = currentLimits(loc, zone_class, lot_sqft);
   const far = max_far ?? limits.far + open_space_bonus;
   const coverage = limits.lot_coverage;
-  // the zone's yards unless the lever is set; a side yard that grows with
-  // stories is taken at the most stories the height allows
+  // the zone's yards unless the lever is set; a yard that grows with stories
+  // or height is taken at the most stories the height allows
   const zone_yards = setback == null ? limits.yards : undefined;
+  const by_height = (zone_yards?.side_rear_height_fraction ?? 0) * floors * floor_height;
   const yards = zone_yards && {
     front: zone_yards.front_ft,
-    rear: zone_yards.rear_ft,
-    side: zone_yards.side_ft + (zone_yards.side_ft_per_added_story ?? 0) * Math.max(0, floors - 1),
+    rear: Math.max(zone_yards.rear_ft, by_height),
+    side: Math.max(
+      zone_yards.side_ft + (zone_yards.side_ft_per_added_story ?? 0) * Math.max(0, floors - 1),
+      by_height
+    ),
   };
   // waikiki precincts must keep 35–50% of the lot open; that and the coverage
   // cap are both measured on the zoning lot, so the stricter one governs
