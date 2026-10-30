@@ -21,8 +21,8 @@ Copy `templates/locality/` to `src/localities/hi/<county>/`, for example `src/lo
 - Replace each source with where the figure comes from, for example `"MCC 19.12.030"` or a fee schedule's title and year.
 - Units are in the comments: shares are 0 to 1 (60% = 0.6), areas are sqft, money is dollars.
 - A figure that changes with lot size, project size or value is a schedule with one band per range; `zones.ts` explains the format.
-- Set each district's density the way its code does, in `current`: `far` (a floor area ratio), `lot_area_per_unit` (sqft of lot per dwelling, as in "one unit per 3,000 sqft"), both (the stricter governs), or neither (height and coverage alone). Delete the one the code doesn't use.
-- If the code sets yards, add them to `current.yards` (front, rear, side, and any side yard added per story); otherwise the model's 10 ft setback applies on every side. A zone with its own parking minimum sets `current.residential_stalls_per_unit`.
+- Set each district's density the way its code does, in `current`: `far` (a floor area ratio), `lot_area_per_unit` (sqft of lot per dwelling, as in "one unit per 3,000 sqft"), both (the stricter governs), or neither (height and coverage alone). Delete the one the code doesn't use. For units per acre, `lot_area_per_unit` is 43,560 over the units; where the code counts a fraction of a unit from some share (Kauaʻi: 65%), set `current.units_round_up_at`.
+- If the code sets yards, add them to `current.yards` (front, rear, side, any side yard added per story, and any side and rear yard set as a share of the building's height); otherwise the model's 10 ft setback applies on every side. A zone with its own parking minimum sets `current.residential_stalls_per_unit`.
 - Zone keys must match the zone codes in the county's parcel data exactly, including capitals and hyphens.
 - If the code doesn't have a rule the template asks for, use the value that means "none" (for example `1` for no joint-use reduction) and say so in the source.
 - In `index.ts`, set `id` to `"hi-<county>"`, `name` to the official name, and rename `county` to the county's name (for example `maui`).

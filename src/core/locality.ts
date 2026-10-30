@@ -34,6 +34,9 @@ export interface YardRules {
   side_ft: number;
   /** side yard added for each story above the first (Hawaiʻi County RM: 2) */
   side_ft_per_added_story?: number;
+  /** side and rear yards are at least this share of the building's height,
+   *  where that is more (Kauaʻi residential: 1/2) */
+  side_rear_height_fraction?: number;
 }
 
 /** a district's current zoning, in whichever terms its code sets density.
@@ -43,8 +46,11 @@ export interface CurrentZoningRules {
   /** maximum floor area ratio, by lot size (Maui A-2: 0.9) */
   far?: Schedule;
   /** lot area required per dwelling unit (sqft), by lot size; the unit
-   *  count is the lot area over this, rounded down */
+   *  count is the lot area over this, rounded down (see units_round_up_at) */
   lot_area_per_unit?: Schedule;
+  /** a fractional unit at or above this share counts as a whole unit
+   *  (Kauaʻi: 0.65); absent = always rounded down */
+  units_round_up_at?: number;
   /** maximum building area as a share of the lot, by lot size; 1 where the
    *  code sets no limit */
   lot_coverage: Schedule;

@@ -7,7 +7,8 @@
 // the way the county's code sets it, one or both of:
 //   far                maximum floor area ratio (Maui A-2: 0.9)
 //   lot_area_per_unit  lot area required per dwelling unit, sqft (a code
-//                      that says "one unit per 3,000 sqft of lot area")
+//                      that says "one unit per 3,000 sqft of lot area";
+//                      for "20 units per acre", 43,560 / 20)
 // Leave out a limit the code doesn't set; with neither, the building is
 // bounded by height, lot coverage and setbacks alone.
 //
@@ -40,12 +41,17 @@ export const zones: Record<string, ZoneRules> = {
       far: { bands: [{ upTo: null, inclusive: true, base: TODO }], source: "TODO" },
       // lot area required per dwelling unit (sqft); delete if the code sets none
       lot_area_per_unit: { bands: [{ upTo: null, inclusive: true, base: TODO }], source: "TODO" },
+      // optional: a fractional unit at or above this share counts as whole
+      // (Kauaʻi: 0.65); without it, fractions are dropped
+      // units_round_up_at: TODO,
       // maximum building area as a share of the lot, 0 to 1 (60% = 0.6); 1
       // if the code sets no limit
       lot_coverage: { bands: [{ upTo: null, inclusive: true, base: TODO }], source: "TODO" },
       // optional: minimum yards (ft); without them the model's 10 ft setback
       // applies on every side
       // yards: { front_ft: TODO, rear_ft: TODO, side_ft: TODO, side_ft_per_added_story: TODO },
+      // (side_rear_height_fraction: side and rear yards of at least this
+      // share of the building's height, as Kauaʻi's "or half the height")
       // optional: a housing parking minimum for this zone only, stalls per
       // unit, in place of the county's (rules.ts)
       // residential_stalls_per_unit: TODO,
