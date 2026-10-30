@@ -1,7 +1,6 @@
 // County of Kauaʻi: the Locality the engine reads for Kauaʻi parcels. Rules
 // are in zones.ts and rules.ts, estimates in assumptions.ts. Current zoning
-// only; a zone not in zones.ts stops the run. The choices made, and the
-// loading rules, fees and water charges still carried from Maui, are in
+// only; a zone not in zones.ts stops the run. The choices made are in
 // docs/notes/KAUAI.md.
 
 import type { Locality } from "../../../core/locality";

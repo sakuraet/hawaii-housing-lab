@@ -1,11 +1,24 @@
 // Kauaʻi's config (src/localities/hi/kauai) against the code it comes from:
-// zoning and parking (Kauaʻi County Code Chapter 8, the CZO), property tax
-// (FY 2026–27 rates, Res. 2026-11) and the 2025 HHFDC income limits, then
-// parcels run end to end. Loading, fees and water are Maui's for now.
+// zoning and parking (Kauaʻi County Code Chapter 8, the CZO), fees (Chapters
+// 9, 12, 22 and 25), water (DOW Rules Part 5), property tax (FY 2026–27
+// rates, Res. 2026-11) and the 2025 HHFDC income limits, then parcels run end
+// to end.
 
 import { describe, expect, it } from "vitest";
 
-import { legalParkingRatio, mixRentByAmi, requiredAffordableUnits } from "../src/calculations/calc-shared";
+import {
+  buildingPermitFee,
+  calcParkArea,
+  gradingPermit,
+  grubbingPermit,
+  legalParkingRatio,
+  loadingSpaces,
+  mixFixtureUnits,
+  mixRentByAmi,
+  planReviewFee,
+  requiredAffordableUnits,
+  wastewaterFee,
+} from "../src/calculations/calc-shared";
 import { checkLocality } from "../src/core/check";
 import { currentLimits, zoneRules } from "../src/core/zoning";
 import { kauai } from "../src/localities/hi/kauai";
@@ -24,6 +37,9 @@ describe("Kauaʻi zoning: density by units per acre", () => {
     ["R-20", 20000, 9],
     // 15,000 / 4,356 = 3.44
     ["R-10", 15000, 3],
+    // 1 acre: 6 units in R-6, 1 in R-1
+    ["R-6", 43560, 6],
+    ["R-1", 43560, 1],
     // commercial districts take R-10's and R-20's density
     ["CN", 20000, 4],
     ["CG", 15000, 7],
@@ -38,7 +54,8 @@ describe("Kauaʻi zoning: density by units per acre", () => {
     expect(limits("R-20", 4.65 * 2178).max_units).toBe(5);
   });
 
-  it("coverage of buildings and pavement: R-10 and CN 80%, R-20 and CG 90%", () => {
+  it("coverage of buildings and pavement: R-1 to R-6 60%, R-10 and CN 80%, R-20 and CG 90%", () => {
+    expect(limits("R-4", 15000).lot_coverage).toBe(0.6);
     expect(limits("R-10", 15000).lot_coverage).toBe(0.8);
     expect(limits("R-20", 15000).lot_coverage).toBe(0.9);
     expect(limits("CN", 15000).lot_coverage).toBe(0.8);
@@ -55,16 +72,59 @@ describe("Kauaʻi zoning: density by units per acre", () => {
     expect(limits("CG", 15000).yards).toEqual({ front_ft: 5, rear_ft: 0, side_ft: 0 });
   });
 
-  it("districts not yet configured stop the run", () => {
-    for (const zone of ["R-4", "R-40", "RR-20", "IL"]) {
+  it("districts without multiple-family by right stop the run", () => {
+    for (const zone of ["R-40", "RR-10", "RR-20", "IL"]) {
       expect(() => zoneRules(loc, zone)).toThrow(/no zoning rules/);
     }
   });
 });
 
-describe("Kauaʻi parking, tax and income limits", () => {
-  it("2 stalls per unit (8-4.5)", () => {
+describe("Kauaʻi parking and loading", () => {
+  it("2 stalls per unit (8-4.5(a)(5))", () => {
     expect(legalParkingRatio("one_bb_100", loc)).toBe(2);
+  });
+
+  it("no loading requirement", () => {
+    expect(loadingSpaces(300, 60000, 1, loc)).toBe(0);
+  });
+});
+
+describe("Kauaʻi fees (KCC Ch. 9, 12, 22, 25)", () => {
+  it("building permit fee by valuation, Table 1-A", () => {
+    expect(buildingPermitFee(500, loc)).toBe(15);
+    expect(buildingPermitFee(2000, loc)).toBe(45);
+    expect(buildingPermitFee(25000, loc)).toBe(229);
+    expect(buildingPermitFee(50000, loc)).toBe(404);
+    expect(buildingPermitFee(100000, loc)).toBe(704);
+    expect(buildingPermitFee(1000000, loc)).toBe(5204);
+    // "or fraction thereof": $100,001 is one more $1,000 step
+    expect(buildingPermitFee(100001, loc)).toBe(709);
+    // $350,000 unit: $704 + 250 x $5
+    expect(buildingPermitFee(350000, loc)).toBe(1954);
+  });
+
+  it("plan review is 15% of the permit fee (109.5)", () => {
+    expect(planReviewFee(1954, loc)).toBeCloseTo(293.1, 9);
+  });
+
+  it("grading is 0.5% of the work, at an assumed $30 per cubic yard (22-7.12)", () => {
+    expect(gradingPermit(1000, loc)).toBeCloseTo(150, 9);
+    expect(grubbingPermit(2 * 43560, loc)).toBe(0);
+  });
+
+  it("sewer: $593 connection + $1,930 capacity per multi-family unit (25-11.1, 25-12.1)", () => {
+    expect(wastewaterFee(10, 10, loc)).toBe(25230);
+  });
+
+  it("park land: 1.75 acres per 1,000 at 2.1 people per unit, all but one unit (9-2.8)", () => {
+    expect(calcParkArea(10, 100000, loc)).toBeCloseTo(9 * 160.083, 3);
+  });
+});
+
+describe("Kauaʻi water, tax and income limits", () => {
+  it("$9,880 facilities reserve charge per multi-family unit (Part 5, III.3(b))", () => {
+    expect(mixFixtureUnits("one_bb_100", loc)).toBe(1);
+    expect(loc.rules.water.wsfc_per_fu.low_rise).toBe(9880);
   });
 
   it("Non-Owner-Occupied Residential, top tier: $9.40 per $1,000", () => {
