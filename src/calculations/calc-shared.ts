@@ -2278,7 +2278,8 @@ export function stepBackOf(
   };
 }
 
-// floor plate of each storey, ground first
+// floor plate of each storey, ground first. `yards` replaces the uniform
+// `setback` where the zone sets its own front, rear and side yards
 export function floorPlates(i: {
   floors: number;
   floor_height: number;
@@ -2287,7 +2288,9 @@ export function floorPlates(i: {
   coverage_plate: number;
   setback: number;
   stepback?: StepBack;
+  yards?: { front: number; rear: number; side: number };
 }): number[] {
+  const yards = i.yards ?? { front: i.setback, rear: i.setback, side: i.setback };
   const plates: number[] = [];
   for (let k = 1; k <= i.floors; k++) {
     let extra = 0;
@@ -2303,9 +2306,9 @@ export function floorPlates(i: {
           i.coverage_plate,
           yardFootprint(
             i.lot_sqft,
-            i.setback + (i.stepback?.front ? extra : 0),
-            i.setback + extra,
-            i.setback + extra
+            yards.front + (i.stepback?.front ? extra : 0),
+            yards.rear + extra,
+            yards.side + extra
           )
         )
       )
@@ -2372,8 +2375,11 @@ export function podiumEnvelope(i: {
   // housing and retail share the stalls (Table 21-6.2)
   const joint =
     i.parking_ratio > 0 && retail_stalls > 0 ? (i.joint_use ?? 1) : 1;
+  // a fraction of 0.5 or more rounds up, or any fraction where the
+  // locality says so (Hawaiʻi County, § 25-4-52(a))
+  const round = loc.rules.parking.round_up ? (x: number) => Math.ceil(x - 1e-9) : roundHalfUp;
   const stallsFor = (units: number) =>
-    roundHalfUp(joint * (i.parking_ratio * units + retail_stalls));
+    round(joint * (i.parking_ratio * units + retail_stalls));
   // most units whose stalls fit `capacity`; stallsFor rises with units
   const unitsFor = (capacity: number) => {
     if (stallsFor(0) > capacity) return 0;

@@ -27,6 +27,15 @@ export interface StepBackRule {
 
 // ── zoning ──────────────────────────────────────────────────────────────
 
+/** minimum yards (ft) */
+export interface YardRules {
+  front_ft: number;
+  rear_ft: number;
+  side_ft: number;
+  /** side yard added for each story above the first (Hawaiʻi County RM: 2) */
+  side_ft_per_added_story?: number;
+}
+
 /** a district's current zoning, in whichever terms its code sets density.
  *  A limit the code doesn't set is left out: a district with neither `far`
  *  nor `lot_area_per_unit` is bounded by height, coverage and setbacks only */
@@ -39,6 +48,11 @@ export interface CurrentZoningRules {
   /** maximum building area as a share of the lot, by lot size; 1 where the
    *  code sets no limit */
   lot_coverage: Schedule;
+  /** minimum yards; absent = the setback lever (10 ft unless set) */
+  yards?: YardRules;
+  /** housing parking minimum in this zone, stalls per unit, in place of the
+   *  locality's (Hawaiʻi County CDH: 1) */
+  residential_stalls_per_unit?: number;
 }
 
 /** one zoning district's rules */
@@ -76,6 +90,9 @@ export interface ParkingRules {
   residential_sqft_per_stall?: number;
   /** minimum stalls per dwelling unit, whatever its size (Maui: 2) */
   residential_stalls_per_unit?: number;
+  /** a fraction of a stall always rounds up (Hawaiʻi County); otherwise
+   *  0.5 or more rounds up (Honolulu) */
+  round_up?: boolean;
   /** minimum stalls: 1 per this many sqft of retail */
   retail_sqft_per_stall: number;
   /** share of the summed requirement when housing and retail share stalls */

@@ -43,6 +43,12 @@ export const zones: Record<string, ZoneRules> = {
       // maximum building area as a share of the lot, 0 to 1 (60% = 0.6); 1
       // if the code sets no limit
       lot_coverage: { bands: [{ upTo: null, inclusive: true, base: TODO }], source: "TODO" },
+      // optional: minimum yards (ft); without them the model's 10 ft setback
+      // applies on every side
+      // yards: { front_ft: TODO, rear_ft: TODO, side_ft: TODO, side_ft_per_added_story: TODO },
+      // optional: a housing parking minimum for this zone only, stalls per
+      // unit, in place of the county's (rules.ts)
+      // residential_stalls_per_unit: TODO,
     },
     // ground-floor commercial as a share of lot area, 0 to 1; 0 if the
     // district does not allow ground-floor retail

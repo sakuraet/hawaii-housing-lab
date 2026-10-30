@@ -89,7 +89,8 @@ function bill6Hard(
   rental_split: number,
   sale_split: number,
   include_retail: boolean,
-  setback: number,
+  // the setback lever, ft; unset = the zone's yards, or 10 ft
+  setback: number | undefined,
   hard_cost_per_sqft: number,
   parking_ratio: number,
   retail_share: number,
@@ -107,6 +108,14 @@ function bill6Hard(
   const limits = currentLimits(loc, zone_class, lot_sqft);
   const far = max_far ?? limits.far + open_space_bonus;
   const coverage = limits.lot_coverage;
+  // the zone's yards unless the lever is set; a side yard that grows with
+  // stories is taken at the most stories the height allows
+  const zone_yards = setback == null ? limits.yards : undefined;
+  const yards = zone_yards && {
+    front: zone_yards.front_ft,
+    rear: zone_yards.rear_ft,
+    side: zone_yards.side_ft + (zone_yards.side_ft_per_added_story ?? 0) * Math.max(0, floors - 1),
+  };
   // waikiki precincts must keep 35–50% of the lot open; that and the coverage
   // cap are both measured on the zoning lot, so the stricter one governs
   const far_cap = far * lot_sqft;
@@ -119,8 +128,9 @@ function bill6Hard(
     coverage_plate:
       envelopeCoverage(zone_class, far, coverage, loc) *
       lotAfterOpenSpace(lot_sqft, open_space_bonus),
-    setback,
+    setback: setback ?? 10,
     stepback,
+    yards,
   });
 
   // commercial use checker, returns 0 if the selected zone isn't compatible
@@ -641,12 +651,16 @@ export function calcbill6Single(sliders: SliderInputs): ParcelOutput {
   const floor_height = sliders.floor_height ?? BILL6_DEFAULT_FLOOR_HEIGHT;
   const permitting_months_val =
     sliders.permitting_months ?? loc.assumptions.timing.permitting_months;
-  const setback = sliders.setback ?? 10;
+  const setback = sliders.setback;
   const hard_cost_per_sqft = sliders.hard_cost_per_sqft ?? 450;
-  // Article 6 minimum unless the lever is set (§ 21-6.20)
+  // Article 6 minimum unless the lever is set (§ 21-6.20); a zone's own
+  // minimum where it has one (Hawaiʻi County CDH)
   const parking_ratio =
     sliders.parking_ratio ??
-    (sliders.parking_exempt ? 0 : legalParkingRatio(unit_type, loc));
+    (sliders.parking_exempt
+      ? 0
+      : (currentLimits(loc, zone_class, lot_sqft).residential_stalls_per_unit ??
+        legalParkingRatio(unit_type, loc)));
   const retail_share = sliders.retail_share ?? DEFAULT_RETAIL_SHARE;
 
   // Step 1: Hard costs

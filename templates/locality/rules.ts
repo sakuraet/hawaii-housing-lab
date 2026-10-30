@@ -30,6 +30,9 @@ export const parking: ParkingRules = {
   residential_sqft_per_stall: TODO,
   // stalls per dwelling unit, whatever its size (Maui: 2)
   residential_stalls_per_unit: TODO,
+  // optional: true if any fraction of a stall rounds up (Hawaiʻi County);
+  // leave out if 0.5 or more rounds up, as in Honolulu
+  // round_up: true,
   // minimum stalls: 1 per this many sqft of retail
   retail_sqft_per_stall: TODO,
   // share of the summed requirement when housing and retail share stalls; 1

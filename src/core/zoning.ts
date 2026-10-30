@@ -1,7 +1,7 @@
 // Reading a locality's zoning rules: the lookups the engine calls instead of
 // hard-coded zone tables.
 
-import type { Locality, PathwayId, ZoneAssumptions, ZoneRules } from "./locality";
+import type { Locality, PathwayId, YardRules, ZoneAssumptions, ZoneRules } from "./locality";
 import { evaluateSchedule } from "./schedule";
 
 /** a zone's rules; undefined for an unlisted zone under the "fallback"
@@ -54,6 +54,10 @@ export interface CurrentLimits {
   max_units?: number;
   /** maximum building area as a share of the lot */
   lot_coverage: number;
+  /** minimum yards; absent where the zone sets none (the setback lever) */
+  yards?: YardRules;
+  /** the zone's own housing parking minimum, stalls per unit */
+  residential_stalls_per_unit?: number;
 }
 
 /** current zoning's limits for a zone and lot: the zone's `current` rules,
@@ -78,6 +82,10 @@ export function currentLimits(
       max_units: Math.floor(lot_sqft / evaluateSchedule(per_unit, lot_sqft) + 1e-9),
     }),
     lot_coverage: evaluateSchedule(current.lot_coverage, lot_sqft),
+    ...(current.yards && { yards: current.yards }),
+    ...(current.residential_stalls_per_unit != null && {
+      residential_stalls_per_unit: current.residential_stalls_per_unit,
+    }),
   };
 }
 

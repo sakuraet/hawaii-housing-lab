@@ -398,7 +398,8 @@ export const DEFAULT_INPUTS: Record<ProgramId, SliderInputs> = (() => {
   };
   return {
     standard,
-    current: { ...standard, program: "current" },
+    // no setback: the zone's yards apply, or 10 ft where it sets none
+    current: { ...standard, program: "current", setback: undefined },
     bill6: { ...standard, program: "bill6" },
     tod: { ...standard, program: "tod", floor_height: 10, parking_ratio: 0 },
     h201: {
