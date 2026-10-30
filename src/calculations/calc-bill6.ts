@@ -1,4 +1,6 @@
-// Bill 6 Development calculator:
+// Bill 6 Development calculator: current zoning. Honolulu's is Ord. 26-7
+// ("bill6"); another county's is its own code, read from the zones'
+// `current` rules (the "current" pathway runs this calculator too).
 //
 // Key Bill 6 rules:
 // - Same Sttandard Development rules except:
@@ -13,7 +15,6 @@ import {
   calcConstructionInterest,
   calcDevRLV,
   calcDscrMaxLoan,
-  calcFarBill6,
   calcLeaseupCarry,
   calcParkArea,
   calcParkingIncome,
@@ -40,7 +41,6 @@ import {
   inclusionaryRent,
   legalParkingRatio,
   lotAfterOpenSpace,
-  lotCoverageBill6,
   mixAffordablePrice,
   mixFixtureUnits,
   mixRentByAmi,
@@ -61,6 +61,7 @@ import {
   zoneStepBack,
 } from "./calc-shared";
 import type { Locality } from "../core/locality";
+import { currentLimits } from "../core/zoning";
 import { getLocality } from "../localities";
 import { honolulu } from "../localities/hi/honolulu";
 
@@ -88,7 +89,8 @@ function bill6Hard(
   rental_split: number,
   sale_split: number,
   include_retail: boolean,
-  setback: number,
+  // the setback lever, ft; unset = the zone's yards, or 10 ft
+  setback: number | undefined,
   hard_cost_per_sqft: number,
   parking_ratio: number,
   retail_share: number,
@@ -96,12 +98,24 @@ function bill6Hard(
   stepback?: StepBack,
   open_space_bonus = 0,
   parking_exempt = false,
-  loc: Locality = honolulu
+  loc: Locality = honolulu,
+  // a cap on dwelling units from the inputs; else current zoning's own
+  unit_cap?: number
 ) {
   const floors = Math.floor(height_limit / floor_height);
 
-  const far = max_far ?? calcFarBill6(zone_class, loc, lot_sqft) + open_space_bonus;
-  const coverage = lotCoverageBill6(zone_class, loc, lot_sqft);
+  // current zoning's FAR, unit density and coverage for this lot
+  const limits = currentLimits(loc, zone_class, lot_sqft);
+  const far = max_far ?? limits.far + open_space_bonus;
+  const coverage = limits.lot_coverage;
+  // the zone's yards unless the lever is set; a side yard that grows with
+  // stories is taken at the most stories the height allows
+  const zone_yards = setback == null ? limits.yards : undefined;
+  const yards = zone_yards && {
+    front: zone_yards.front_ft,
+    rear: zone_yards.rear_ft,
+    side: zone_yards.side_ft + (zone_yards.side_ft_per_added_story ?? 0) * Math.max(0, floors - 1),
+  };
   // waikiki precincts must keep 35–50% of the lot open; that and the coverage
   // cap are both measured on the zoning lot, so the stricter one governs
   const far_cap = far * lot_sqft;
@@ -114,8 +128,9 @@ function bill6Hard(
     coverage_plate:
       envelopeCoverage(zone_class, far, coverage, loc) *
       lotAfterOpenSpace(lot_sqft, open_space_bonus),
-    setback,
+    setback: setback ?? 10,
     stepback,
+    yards,
   });
 
   // commercial use checker, returns 0 if the selected zone isn't compatible
@@ -129,6 +144,8 @@ function bill6Hard(
     unit_size: mixUnitSize(unit_type),
     parking_ratio,
     ...article6Parking(lot_sqft, parking_exempt, loc, zone_class),
+    // a county that limits units by lot area per unit (none in Honolulu)
+    unit_cap: unit_cap ?? limits.max_units,
   });
   const gross_residential_sqft = env.residential_sqft;
   const gross_commercial_sqft = env.retail_sqft;
@@ -634,12 +651,16 @@ export function calcbill6Single(sliders: SliderInputs): ParcelOutput {
   const floor_height = sliders.floor_height ?? BILL6_DEFAULT_FLOOR_HEIGHT;
   const permitting_months_val =
     sliders.permitting_months ?? loc.assumptions.timing.permitting_months;
-  const setback = sliders.setback ?? 10;
+  const setback = sliders.setback;
   const hard_cost_per_sqft = sliders.hard_cost_per_sqft ?? 450;
-  // Article 6 minimum unless the lever is set (§ 21-6.20)
+  // Article 6 minimum unless the lever is set (§ 21-6.20); a zone's own
+  // minimum where it has one (Hawaiʻi County CDH)
   const parking_ratio =
     sliders.parking_ratio ??
-    (sliders.parking_exempt ? 0 : legalParkingRatio(unit_type, loc));
+    (sliders.parking_exempt
+      ? 0
+      : (currentLimits(loc, zone_class, lot_sqft).residential_stalls_per_unit ??
+        legalParkingRatio(unit_type, loc)));
   const retail_share = sliders.retail_share ?? DEFAULT_RETAIL_SHARE;
 
   // Step 1: Hard costs
@@ -660,7 +681,8 @@ export function calcbill6Single(sliders: SliderInputs): ParcelOutput {
     stepBackOf(sliders, zoneStepBack(zone_class, loc)),
     sliders.open_space_bonus ?? 0,
     sliders.parking_exempt ?? false,
-    loc
+    loc,
+    sliders.max_units
   );
   if (hard.max_units <= 0)
     return zeroOutput("hypothetical", zone_class, lot_sqft, height_limit);

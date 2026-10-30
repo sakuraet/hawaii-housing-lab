@@ -1,7 +1,8 @@
 // County of Maui: zoning districts that allow multifamily housing by right
 // (MCC Title 19, Article II), from the code as published on Municode,
-// version of Sep 14, 2026. Only `bill6` (current zoning) is set: other
-// counties run that pathway only.
+// version of Sep 14, 2026. Each zone's `current` rules are its current
+// zoning, the only pathway Maui runs. Every district here limits density by
+// FAR; none sets a lot area per unit.
 //
 // Height is not set here: it varies within a district by community plan
 // area (B-2: 90 ft on Maui island, 45 ft in West Maui, Hāna and on Lānaʻi,
@@ -9,7 +10,8 @@
 //
 // Not listed, so a parcel in them stops with an error:
 //   B-1, B-CT  no FAR or lot coverage limit (the envelope is set by height
-//              and setbacks alone), which the engine cannot run yet. B-1
+//              and setbacks alone). The engine can now run a district with
+//              no FAR, but not yet Maui's setbacks, so they wait. B-1
 //              allows dwellings only above or below a business use
 //              (MCC 19.16.030); B-CT allows multifamily except on Lānaʻi and
 //              Molokaʻi (MCC 19.15.020)
@@ -40,8 +42,7 @@ function district(
 ): ZoneRules {
   return {
     name,
-    far: { bill6: far },
-    lot_coverage: { bill6: flat(coverage, source) },
+    current: { far, lot_coverage: flat(coverage, source) },
     commercial_coverage: 0,
     // Maui does not require bicycle parking (MCC 19.36B)
     bicycle_required: false,

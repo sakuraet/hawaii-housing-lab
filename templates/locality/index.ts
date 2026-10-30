@@ -18,8 +18,8 @@ export const county: Locality = {
   // TODO: the county's official name, for example "County of Maui"
   name: "TODO",
   state: hawaii,
-  // other counties have current zoning (bill6) only for now
-  pathways: ["bill6"],
+  // other counties have current zoning only for now
+  pathways: ["current"],
   // stop with an error on a zone this config does not list, so a missing
   // rule is noticed rather than silently given no FAR
   unknown_zone: "error",

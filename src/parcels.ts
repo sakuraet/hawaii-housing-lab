@@ -29,6 +29,7 @@ import {
   TOD_MIN_LOT_SQFT,
 } from "./calculations/calc-shared";
 import type { Locality } from "./core/locality";
+import { currentLimits } from "./core/zoning";
 import { assertPathway, getLocality } from "./localities";
 
 /** Bill 7's height cap, ft, and statutory FAR. */
@@ -292,6 +293,7 @@ function todTierEnvelope(
 
 // height used when a parcel has no recorded height (not TOD: see todEnvelope)
 const DEFAULT_HEIGHT: Record<Exclude<ProgramId, "tod">, number> = {
+  current: BILL6_DEFAULT_HEIGHT_LIMIT,
   bill6: BILL6_DEFAULT_HEIGHT_LIMIT,
   bill7: BILL7_DEFAULT_HEIGHT_LIMIT,
   standard: STD_DEFAULT_HEIGHT_LIMIT,
@@ -310,6 +312,14 @@ export function pathwayEnvelope(
   if (program === "tod") return todEnvelope(parcel, opts);
   const height = parcel.height > 0 ? parcel.height : DEFAULT_HEIGHT[program];
   switch (program) {
+    // current zoning in any county: its FAR (Infinity where the code sets
+    // none) and any unit cap from lot area per unit. Honolulu's is Ord.
+    // 26-7, so there it is the same as bill6
+    case "current": {
+      const limits = currentLimits(loc, parcel.zone_class, parcel.lot_sqft);
+      const envelope = withOpenSpaceBonus(parcel.zone_class, height, limits.far, loc);
+      return limits.max_units == null ? envelope : { ...envelope, max_units: limits.max_units };
+    }
     // 201H builds on current zoning, so it takes the Ord. 26-7 FAR too
     case "bill6":
     case "h201":
@@ -388,6 +398,8 @@ export const DEFAULT_INPUTS: Record<ProgramId, SliderInputs> = (() => {
   };
   return {
     standard,
+    // no setback: the zone's yards apply, or 10 ft where it sets none
+    current: { ...standard, program: "current", setback: undefined },
     bill6: { ...standard, program: "bill6" },
     tod: { ...standard, program: "tod", floor_height: 10, parking_ratio: 0 },
     h201: {
@@ -468,7 +480,7 @@ export function parcelInputs(
     inputs.open_space_bonus = envelope.open_space_bonus;
   }
   // § 21-6.20(a) exemption
-  if (program === "bill6" || program === "standard" || program === "h201")
+  if (program === "current" || program === "bill6" || program === "standard" || program === "h201")
     inputs.parking_exempt = parcel.parking_exempt;
   if (parcel.locality !== undefined) inputs.locality = parcel.locality;
   return inputs;
