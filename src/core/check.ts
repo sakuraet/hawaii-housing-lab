@@ -90,6 +90,11 @@ export function checkLocality(loc: Locality): string[] {
       share(`rules.zones.${zone}.current.yards.side_rear_height_fraction`, z.current.yards.side_rear_height_fraction);
     z.open_space?.bands.forEach((b, i) => share(`rules.zones.${zone}.open_space.bands[${i}].base`, b.base));
   }
+
+  // a zone alias must name a listed zone
+  for (const [label, zone] of Object.entries(loc.zone_names?.aliases ?? {})) {
+    if (!(zone in loc.rules.zones)) add(`zone_names.aliases.${label}`, `"${zone}" is not a listed zone`);
+  }
   share("rules.parking.joint_use", loc.rules.parking.joint_use);
   share("rules.fees.park_dedication.floor_area_fraction", loc.rules.fees.park_dedication.floor_area_fraction);
   share("assumptions.market.vacancy.residential", loc.assumptions.market.vacancy.residential);

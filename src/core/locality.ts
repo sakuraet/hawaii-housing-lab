@@ -248,6 +248,17 @@ export interface StateRules {
   source: string;
 }
 
+/** zone names in parcel data that are not `rules.zones`' keys */
+export interface ZoneNameRules {
+  /** a zone written as the key is the zone named by the value
+   *  (Maui "H": "Hotel") */
+  aliases?: Record<string, string>;
+  /** overlays are written after the base zone, after this character, and
+   *  are not modeled, so they are dropped (Kauaʻi "R-10/ST-P": "R-10") */
+  overlay_separator?: string;
+  source: string;
+}
+
 /** whoever zones the parcel: a county in Hawaiʻi */
 export interface Locality {
   /** state code + place, for example "hi-honolulu" */
@@ -260,6 +271,9 @@ export interface Locality {
    *  original model's behavior (no FAR, 60% coverage) and is for Honolulu;
    *  "error" stops the run, so a missing rule is noticed in a new county */
   unknown_zone: "fallback" | "error";
+  /** how parcel data writes zones, where it differs from `rules.zones`'
+   *  keys; absent = the same */
+  zone_names?: ZoneNameRules;
 
   rules: {
     zones: Record<string, ZoneRules>;

@@ -45,7 +45,7 @@ These are judgment calls made to fit Maui's rules into the model. The ones most 
 | Choice | Current value | Alternative | Why it matters |
 | --- | --- | --- | --- |
 | Market estimates (cap rate, vacancy, cost escalation, opex and assessment growth, parking costs, timing) | Honolulu's figures | Maui-specific sources | These drive land value directly; none have a Maui source yet |
-| Engine defaults: hard cost, land cost, sale prices | $450/sqft hard cost, $130/sqft land, Honolulu HHFDC sale tables | Maui figures (post-fire rebuilding may push costs up) | They live in the engine, not the county config, so Maui currently inherits Honolulu's |
+| Engine defaults: hard cost, land cost, sale prices | $450/sqft hard cost, $130/sqft land, Honolulu HHFDC sale tables | Maui figures (post-fire rebuilding may push costs up) | They live in the engine, not the county config, so Maui currently inherits Honolulu's. Published land and cost figures didn't change any verdict; see the [cost cross-check](#cost-cross-check-november-2026) |
 | Workforce housing: how it's met | On-site rentals, 25% of market units, rents at the 80/100/120% AMI caps | 20% if conveyed to a qualified provider in perpetuity; or the in-lieu fee | The in-lieu fee may be cheaper than building the units; the model doesn't compare them |
 | Workforce units' fees and park land | Charged like Honolulu's affordable units under the fee toggle (waived fees, no park land) | Maui's actual treatment: 50% building permit fee, 250 sqft park land per unit | The toggle waives these units' fees in full; Maui gives only partial relief |
 | Parking minimum | 2 stalls per unit | 1 stall for a studio or one-bedroom if Resolution 25-152 passes | Would halve parking for the default one-bedroom mix; check its status before submission |
@@ -309,6 +309,43 @@ Affordable rent is a statewide rule: 30% of income, utilities included (`state.a
 
 Honolulu's AMI growth (4%) is measured on median family income, while Maui's (3.9%) is measured on the HHFDC 100% row the model actually uses for rents. Maui's median family income grew more slowly over the same years ($84,900 to $110,900, 2.25% a year).
 
+### Cost cross-check (November 2026)
+
+We compared the engine's defaults with published Maui land and construction figures to see whether Maui-specific values would change the results. They wouldn't change any verdict, so the config and the engine defaults stay as they are.
+
+**The test.** We ran the 1,133 parcels in Maui's configured zones from a county-wide parcel table, on current zoning, with every other input at its default. Every combination rates all 1,133 parcels "poor":
+
+| Land ($/sqft) | Hard cost $430/sqft: median return on cost | $450/sqft (default) | $500/sqft |
+| --- | --- | --- | --- |
+| $130 (default) | 3.68% | 3.59% | 3.38% |
+| $22 | 4.38% | 4.25% | 3.97% |
+| $3.30 | 4.56% | 4.43% | 4.12% |
+
+- **$22/sqft land:** the county's Kulamalu purchase, $3.8M for 4 acres, about $950,000 an acre. This is one purchase of entitled land near town.
+- **$3.30/sqft land:** the median asking price on Land.com, $144,000 an acre. These are listings, skewed toward large rural parcels.
+- **$430/sqft hard cost:** the top of RLB's multifamily range for Honolulu ($255–430/sqft). No Maui multifamily figure per square foot was found.
+- **$500/sqft hard cost:** a test value for a Maui premium, not a published multifamily figure.
+
+**Total cost per unit.** Two county-funded affordable projects reported in April 2025 cost more than the model's $22 land case and about the same as its default:
+
+| | Total cost per unit |
+| --- | --- |
+| Hale O Piʻikea, Kīhei: $140M for 223 units | About $628,000 |
+| Kehalani Affordable Apartments, Wailuku: $25M for 35 units | About $714,000 |
+| Model, parcels with 20+ units, $130 land and $450 hard cost (middle half) | $670,000–708,000, median $701,000 |
+| Model, parcels with 20+ units, $22 land and $450 hard cost (middle half) | $588,000–607,000, median $593,000 |
+
+This is a rough check. We don't know what each project's budget includes, or how its unit sizes compare with the model's.
+
+**What we take from it.**
+
+- The $450/sqft default doesn't look too high for Maui, so hard cost alone doesn't explain the "poor" verdicts.
+- A lower land cost raises the return by less than a percentage point, which isn't enough to change a verdict.
+- The remaining gap looks like it's on the revenue side: rents at the 120% AMI level don't support $600,000–700,000 a unit. On the 20,000 sqft A-2 lot at $22 land, 1 stall per unit and rents at 140% AMI together reach only 5.23%, still "poor".
+- Neither land figure is good enough to become a Maui default. Published vacant land medians are per lot and can't be converted to a price per square foot.
+
+Single-family construction quotes weren't compared, because the engine models multifamily buildings.
+
 ## Engine changes
 
 Six small changes let the engine read Maui's rules. Since then, Maui's zones moved from Honolulu's `far.bill6` and `lot_coverage.bill6` to the generic `current` rules (see [ADDING_A_COUNTY.md](ADDING_A_COUNTY.md)), so the lot-size lookup in the third row now happens in `currentLimits`. Each is optional or a default that leaves Honolulu's results the same, and the v0.2.1 snapshots still match.
@@ -396,4 +433,8 @@ Every row of the team's Maui County Rule Sheet, with what the config does. "Matc
 | [DOE school impact fee report (2019)](https://www.hawaiipublicschools.org/Reports/LEG19_School%20Impact%20Fees.pdf) | School impact fee range | Via the rule sheet |
 | [Molokaʻi Planning Commission minutes, Jan 14, 2026](https://www.mauicounty.gov/AgendaCenter/ViewFile/Minutes/_01142026-546) | Resolution 25-152 (bedroom-based parking proposal) | PDF, directly |
 | [Hawaiʻi Legislature, HB 1919 (2026)](https://www.capitol.hawaii.gov/session/measure_indiv.aspx?billtype=HB&billnumber=1919&year=2026) | State parking cap status | Via the rule sheet |
+| [Maui Now, Apr 23, 2025](https://mauinow.com/2025/04/23/9-projects-with-over-800-housing-units-could-get-funding-from-maui-county-for-construction-rising-costs/) | Cost cross-check: Hale O Piʻikea and Kehalani project costs | Via a research summary; not opened directly |
+| [Hawaii Business: Oʻahu construction costs (RLB)](https://www.hawaiibusiness.com/oahu-construction-building-costs-up-affect-bid-prices-hawaii-real-estate/) | Cost cross-check: Honolulu multifamily hard cost range | Via a research summary; not opened directly |
+| [Maui Tomorrow: Kulamalu land purchase](https://maui-tomorrow.org/?p=1387) | Cost cross-check: $950,000 an acre | Via a research summary; not opened directly |
+| [Land.com: Maui County residential property](https://www.land.com/Maui-County-HI/residential-property) | Cost cross-check: $144,000 an acre, asking prices | Via a research summary; not opened directly |
 | The team's Maui County Rule Sheet (October 2026) | Checklist and cross-check for every rule | Internal working sheet |
