@@ -14,6 +14,12 @@ export const maui: Locality = {
   state: hawaii,
   pathways: ["current"],
   unknown_zone: "error",
+  // the zoning map labels the Hotel district "H"; zones.ts names it "Hotel",
+  // as the code's table does ("H-2 & Hotel")
+  zone_names: {
+    aliases: { H: "Hotel" },
+    source: "MCC 19.14 (hotel districts)",
+  },
   rules: {
     zones,
     parking: rules.parking,

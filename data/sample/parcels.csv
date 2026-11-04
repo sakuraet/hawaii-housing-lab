@@ -1,0 +1,17 @@
+# Made-up parcels for tests and the demo, not real lots: the TMKs, sizes and
+# values are invented. Columns are described in src/scenarios/parcels.ts.
+locality,tmk,lot_sqft,zone_class,height,land_value,building_value,existing_use,existing_units,transit_distance_mi,parking_exempt
+hi-honolulu,SAMPLE-HON-001,20000,A-2,60,2600000,400000,commercial,0,0.3,true
+hi-honolulu,SAMPLE-HON-002,10000,BMX-3,60,1500000,250000,commercial,0,0.4,true
+hi-honolulu,SAMPLE-HON-003,7500,AMX-2,40,900000,0,vacant,0,1.2,false
+hi-honolulu,SAMPLE-HON-004,5000,R-5,25,850000,350000,single_family,1,0.6,false
+hi-honolulu,SAMPLE-HON-005,6000,R-5,25,950000,300000,single_family,1,2.5,false
+hi-maui,SAMPLE-MAU-001,15000,A-2,45,1400000,0,vacant,0,,
+hi-maui,SAMPLE-MAU-002,12000,B-2,35,1100000,200000,commercial,0,,
+hi-maui,SAMPLE-MAU-003,7500,R-3,30,700000,320000,single_family,1,,
+hi-hawaii,SAMPLE-HAW-001,20000,RM-2,45,500000,0,vacant,0,0.8,
+hi-hawaii,SAMPLE-HAW-002,15000,CN-7.5,40,450000,150000,commercial,0,,
+hi-hawaii,SAMPLE-HAW-003,10000,RS-10,30,250000,280000,single_family,1,,
+hi-kauai,SAMPLE-KAU-001,20000,R-20,40,900000,0,vacant,0,,
+hi-kauai,SAMPLE-KAU-002,15000,CG,50,800000,250000,commercial,0,,
+hi-kauai,SAMPLE-KAU-003,10000,R-4,30,550000,300000,single_family,1,,

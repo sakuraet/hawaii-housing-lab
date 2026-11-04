@@ -17,6 +17,13 @@ export const kauai: Locality = {
   // stop with an error on a zone this config does not list, so a missing
   // rule is noticed rather than silently given no density limit
   unknown_zone: "error",
+  // the zoning map writes overlays after the base district ("R-10/ST-P",
+  // "R-6/PD"); constraint, special treatment and project development
+  // overlays are not modeled, so a parcel takes its base district's rules
+  zone_names: {
+    overlay_separator: "/",
+    source: "CZO 8-2.1 (districts); overlays not modeled, see zones.ts",
+  },
   rules: {
     zones,
     parking: rules.parking,

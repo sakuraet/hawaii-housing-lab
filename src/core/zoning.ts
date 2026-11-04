@@ -14,6 +14,26 @@ export function zoneRules(loc: Locality, zone_class: string): ZoneRules | undefi
   return zone;
 }
 
+/** the `rules.zones` key for a zone as parcel data writes it: the label as
+ *  is where it is a key; else its alias; else, with overlays dropped, the
+ *  base zone or its alias. The label itself when none of these is a key, so
+ *  the lookup that follows reports it */
+export function zoneKey(loc: Locality, label: string): string {
+  const names = loc.zone_names;
+  const known = (z: string) => z in loc.rules.zones;
+  const alias = (z: string) => names?.aliases?.[z];
+  if (known(label)) return label;
+  const aliased = alias(label);
+  if (aliased !== undefined) return aliased;
+  const sep = names?.overlay_separator;
+  if (sep && label.includes(sep)) {
+    const base = label.slice(0, label.indexOf(sep));
+    if (known(base)) return base;
+    return alias(base) ?? label;
+  }
+  return label;
+}
+
 /** lot coverage the original model gives a zone with no coverage rule */
 export const FALLBACK_LOT_COVERAGE = 0.6;
 

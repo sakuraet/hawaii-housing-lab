@@ -91,3 +91,10 @@ export * from "./parcels";
 
 // feasibility classifier applied to a model output
 export * from "./feasibility";
+
+// the statewide parcel table the scenarios run on, and running it
+export * from "./scenarios/parcels";
+export * from "./scenarios/run";
+
+// matching parcel data's zone names to a county's config
+export { zoneKey } from "./core/zoning";

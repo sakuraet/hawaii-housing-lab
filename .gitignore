@@ -42,6 +42,8 @@ data/*
 *.xlsx
 *.sqlite
 *.db
+# small samples are kept, whatever their format
+!data/sample/**
 
 # --- Build / output artifacts -------------------------------------------------
 dist/
