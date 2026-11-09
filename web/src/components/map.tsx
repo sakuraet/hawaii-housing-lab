@@ -2,31 +2,26 @@
 
 import "leaflet/dist/leaflet.css";
 
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { LEVEL_COLOR, overallLevel, type ParcelOutput } from "feasim-challenge";
 import {
   circleMarker,
+  control,
   latLngBounds,
   layerGroup,
+  map as leafletMap,
   CircleMarker as LeafletCircleMarker,
   polygon,
+  tileLayer,
   tooltip,
   type LatLngBounds,
   type LatLngTuple,
+  type Map as LeafletMap,
   type Polygon as LeafletPolygon,
   type PathOptions,
   type PointTuple,
 } from "leaflet";
 import { createPortal } from "react-dom";
-import {
-  CircleMarker,
-  MapContainer,
-  Pane,
-  TileLayer,
-  useMap,
-  useMapEvent,
-  ZoomControl,
-} from "react-leaflet";
 
 import type { ParcelRow } from "@/lib/parcels";
 
@@ -105,74 +100,22 @@ function loadOutlines(): Promise<Map<string, Outline>> {
   return outlinesPromise;
 }
 
-// same colours as the dots
-function outlineStyle(color: string, selected: boolean): PathOptions {
+// same colours for dots and lots; dots get a slightly heavier edge
+function parcelStyle(color: string, selected: boolean, weight: number): PathOptions {
   return {
     color: selected ? "#111827" : "#ffffff",
     fillColor: color,
     fillOpacity: selected ? 0.85 : 0.55,
-    weight: selected ? 2 : 0.5,
+    weight: selected ? 2 : weight,
     opacity: selected ? 1 : 0.8,
   };
 }
 
-// ── Dot ───────────────────────────────────────────────────────────────────
-// ~10k of these, so each takes only primitives and memoizes what it hands to
-// react-leaflet (which compares center / pathOptions / eventHandlers by
-// reference). A slider move that leaves a dot's colour and size alone then
-// costs that dot nothing — no re-render, no setStyle, no redraw.
-
-interface DotProps {
-  parcel: ParcelRow;
-  color: string;
-  radius: number;
-  selected: boolean;
-  onSelect: (tmk: string) => void;
-  onHover: (tmk: string | null) => void;
-}
-
-const ParcelDot = memo(function ParcelDot({
-  parcel,
-  color,
-  radius,
-  selected,
-  onSelect,
-  onHover,
-}: DotProps) {
-  const center = useMemo<LatLngTuple>(
-    () => [parcel.lat, parcel.lng],
-    [parcel.lat, parcel.lng]
-  );
-  const pathOptions = useMemo(
-    () => ({
-      color: selected ? "#111827" : "#ffffff",
-      fillColor: color,
-      fillOpacity: selected ? 0.85 : 0.55,
-      weight: selected ? 2 : 0.6,
-      opacity: selected ? 1 : 0.8,
-    }),
-    [selected, color]
-  );
-  const eventHandlers = useMemo(
-    () => ({
-      click: () => onSelect(parcel.tmk),
-      mouseover: () => onHover(parcel.tmk),
-      mouseout: () => onHover(null),
-    }),
-    [onSelect, onHover, parcel.tmk]
-  );
-
-  return (
-    <CircleMarker
-      center={center}
-      radius={radius}
-      pathOptions={pathOptions}
-      eventHandlers={eventHandlers}
-    />
-  );
-});
+type ParcelLayer = LeafletPolygon | LeafletCircleMarker;
 
 // ── Component ─────────────────────────────────────────────────────────────
+// Plain Leaflet: the map is made once for its container, and the pieces
+// below add their layers to it and remove them when they unmount.
 
 export function ParcelMap({
   parcels,
@@ -183,9 +126,44 @@ export function ParcelMap({
   selectedParcelId,
   onSelectParcel,
 }: Props) {
+  const [map, setMap] = useState<LeafletMap | null>(null);
+
+  // the Leaflet map, made when its container mounts and removed with it
+  const attach = useCallback((el: HTMLDivElement | null) => {
+    if (!el) return;
+    const m = leafletMap(el, {
+      center: [21.295, -157.835],
+      zoom: 13,
+      scrollWheelZoom: true,
+      zoomControl: false,
+      // draw the ~10k dots on one <canvas> rather than as 10k SVG paths
+      preferCanvas: true,
+    });
+    // Esri light gray canvas (no API key)
+    tileLayer(
+      "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}",
+      {
+        attribution: "Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ",
+        maxNativeZoom: 16,
+        maxZoom: 19,
+      }
+    ).addTo(m);
+    // top left is the one corner the dashboard's cards leave free: the
+    // summary and parcel card take the right, the legend the bottom left,
+    // and on phones the summary bar starts clear of this corner
+    control.zoom({ position: "topleft" }).addTo(m);
+    m.createPane(DOT_PANE);
+    m.createPane(OUTLINE_PANE);
+    setMap(m);
+    return () => {
+      m.remove();
+      setMap(null);
+    };
+  }, []);
+
   // One hover tooltip for the whole map, on the parcel under the pointer,
-  // instead of a Tooltip bound to every marker. A click only selects the
-  // parcel; its details are in the parcel card beside the map.
+  // instead of one bound to every marker. A click only selects the parcel;
+  // its details are in the parcel card beside the map.
   const [hovered, setHovered] = useState<string | null>(null);
 
   // phones have no hover, and a tap would leave the tooltip stuck open
@@ -203,81 +181,151 @@ export function ParcelMap({
   );
 
   return (
-    <MapContainer
-      center={[21.295, -157.835]}
-      zoom={13}
-      scrollWheelZoom={true}
-      zoomControl={false}
-      // draw the ~10k dots on one <canvas> rather than as 10k SVG paths
-      preferCanvas={true}
-      style={{ height: "100%", width: "100%" }}
-      className="z-0"
-    >
-      {/* Esri light gray canvas (no API key) */}
-      <TileLayer
-        attribution="Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ"
-        url="https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}"
-        maxNativeZoom={16}
-        maxZoom={19}
-      />
-
-      {/* top left is the one corner the dashboard's cards leave free: the
-          summary and parcel card take the right, the legend the bottom left,
-          and on phones the summary bar starts clear of this corner */}
-      <ZoomControl position="topleft" />
-
-      <FlyToArea rows={focusRows} area={area} />
-      <ZoomToParcel parcel={centerParcel} />
-      <FitContainer />
-
-      <Pane name={DOT_PANE}>
-        {parcels.map(({ parcel, result, notApplicable }) => (
-          <ParcelDot
-            key={parcel.tmk}
-            parcel={parcel}
-            color={feasibilityColor(result, notApplicable)}
-            radius={getRadius(result.max_units)}
-            selected={parcel.tmk === selectedParcelId}
+    <>
+      <div ref={attach} className="z-0 h-full w-full" />
+      {map && (
+        <>
+          <FlyToArea map={map} rows={focusRows} area={area} />
+          <ZoomToParcel map={map} parcel={centerParcel} />
+          <FitContainer map={map} />
+          <ParcelDots
+            map={map}
+            parcels={parcels}
+            rows={rows}
+            selectedParcelId={selectedParcelId}
             onSelect={onSelectParcel}
             onHover={handleHover}
           />
-        ))}
-      </Pane>
-
-      <ParcelOutlines
-        parcels={parcels}
-        rows={rows}
-        selectedParcelId={selectedParcelId}
-        onSelect={onSelectParcel}
-        onHover={handleHover}
-      />
-
-      {hoveredItem && (
-        <ParcelTooltip key={hoveredItem.parcel.tmk} item={hoveredItem} />
+          <ParcelOutlines
+            map={map}
+            parcels={parcels}
+            rows={rows}
+            selectedParcelId={selectedParcelId}
+            onSelect={onSelectParcel}
+            onHover={handleHover}
+          />
+          {hoveredItem && (
+            <ParcelTooltip
+              key={hoveredItem.parcel.tmk}
+              map={map}
+              item={hoveredItem}
+            />
+          )}
+        </>
       )}
-    </MapContainer>
+    </>
   );
 }
 
-// ── Lot outlines ──────────────────────────────────────────────────────────
-// Drawn with Leaflet directly: one layer group per pathway
+// ── Parcel layers ─────────────────────────────────────────────────────────
+// Dots and lot outlines are both one Leaflet layer per parcel of the current
+// pathway, grouped and added to the map together
 
-function ParcelOutlines({
-  parcels,
-  rows,
-  selectedParcelId,
-  onSelect,
-  onHover,
-}: {
+interface LayerProps {
+  map: LeafletMap;
   parcels: ParcelMapItem[];
   rows: ParcelRow[];
   selectedParcelId: string | null;
   onSelect: (tmk: string) => void;
   onHover: (tmk: string | null) => void;
-}) {
-  const map = useMap();
+}
+
+// adds the layers to the map with click and hover handlers, and takes them
+// off again when the layers change or the map goes
+function useParcelLayers(
+  map: LeafletMap,
+  layers: Map<string, ParcelLayer> | null,
+  onSelect: (tmk: string) => void,
+  onHover: (tmk: string | null) => void
+) {
+  // Latest handlers for the layer events, which are bound once per layer
+  const onSelectRef = useRef(onSelect);
+  const onHoverRef = useRef(onHover);
+  useEffect(() => {
+    onSelectRef.current = onSelect;
+    onHoverRef.current = onHover;
+  }, [onSelect, onHover]);
+
+  useEffect(() => {
+    if (!layers) return;
+    for (const [tmk, layer] of layers) {
+      layer.on("click", () => onSelectRef.current(tmk));
+      layer.on("mouseover", () => onHoverRef.current(tmk));
+      layer.on("mouseout", () => onHoverRef.current(null));
+    }
+    const group = layerGroup([...layers.values()]).addTo(map);
+    return () => {
+      group.remove();
+      for (const layer of layers.values())
+        layer.off("click mouseover mouseout");
+    };
+  }, [map, layers]);
+}
+
+// colours and sizes each layer from its parcel's result
+function useParcelStyles(
+  layers: Map<string, ParcelLayer> | null,
+  parcels: ParcelMapItem[],
+  selectedParcelId: string | null,
+  weight: number
+) {
+  // Style key last applied to each layer, so an unchanged parcel is skipped
+  const applied = useRef(new WeakMap<object, string>());
+  useEffect(() => {
+    if (!layers) return;
+    for (const { parcel, result, notApplicable } of parcels) {
+      const layer = layers.get(parcel.tmk);
+      if (!layer) continue;
+      const color = feasibilityColor(result, notApplicable);
+      const selected = parcel.tmk === selectedParcelId;
+      const radius = getRadius(result.max_units);
+      const key = `${color}|${selected}|${radius}`;
+      if (applied.current.get(layer) === key) continue;
+      applied.current.set(layer, key);
+
+      layer.setStyle(parcelStyle(color, selected, weight));
+      if (layer instanceof LeafletCircleMarker) layer.setRadius(radius);
+      // draw the selected parcel's dark edge over its neighbours'
+      if (selected) layer.bringToFront();
+    }
+  }, [layers, parcels, selectedParcelId, weight]);
+}
+
+function ParcelDots({
+  map,
+  parcels,
+  rows,
+  selectedParcelId,
+  onSelect,
+  onHover,
+}: LayerProps) {
+  const layers = useMemo(() => {
+    const out = new Map<string, ParcelLayer>();
+    for (const row of rows)
+      out.set(row.tmk, circleMarker([row.lat, row.lng], { pane: DOT_PANE }));
+    return out;
+  }, [rows]);
+  useParcelLayers(map, layers, onSelect, onHover);
+  useParcelStyles(layers, parcels, selectedParcelId, 0.6);
+  return null;
+}
+
+function ParcelOutlines({
+  map,
+  parcels,
+  rows,
+  selectedParcelId,
+  onSelect,
+  onHover,
+}: LayerProps) {
   const [zoom, setZoom] = useState(() => map.getZoom());
-  useMapEvent("zoomend", () => setZoom(map.getZoom()));
+  useEffect(() => {
+    const onZoom = () => setZoom(map.getZoom());
+    map.on("zoomend", onZoom);
+    return () => {
+      map.off("zoomend", onZoom);
+    };
+  }, [map]);
   const wantOutlines = zoom >= OUTLINE_ZOOM;
 
   const [outlines, setOutlines] = useState<Map<string, Outline> | null>(null);
@@ -298,10 +346,10 @@ function ParcelOutlines({
   // Outlines only replace the dots once they have arrived
   const showOutlines = wantOutlines && outlines != null;
 
-  // One layer per parcel of the current pathway
+  // a lot without an outline is drawn as a dot in the outline pane
   const layers = useMemo(() => {
     if (!outlines) return null;
-    const out = new Map<string, LeafletPolygon | LeafletCircleMarker>();
+    const out = new Map<string, ParcelLayer>();
     for (const row of rows) {
       const outline = outlines.get(row.tmk);
       out.set(
@@ -313,55 +361,10 @@ function ParcelOutlines({
     }
     return out;
   }, [outlines, rows]);
+  useParcelLayers(map, layers, onSelect, onHover);
+  useParcelStyles(layers, parcels, selectedParcelId, 0.5);
 
-  // Latest handlers for the layer events, which are bound once per layer
-  const onSelectRef = useRef(onSelect);
-  const onHoverRef = useRef(onHover);
-  useEffect(() => {
-    onSelectRef.current = onSelect;
-    onHoverRef.current = onHover;
-  }, [onSelect, onHover]);
-
-  useEffect(() => {
-    if (!layers) return;
-    if (!map.getPane(OUTLINE_PANE)) map.createPane(OUTLINE_PANE);
-    for (const [tmk, layer] of layers) {
-      layer.on("click", () => onSelectRef.current(tmk));
-      layer.on("mouseover", () => onHoverRef.current(tmk));
-      layer.on("mouseout", () => onHoverRef.current(null));
-    }
-    const group = layerGroup([...layers.values()]).addTo(map);
-    return () => {
-      group.remove();
-      for (const layer of layers.values())
-        layer.off("click mouseover mouseout");
-    };
-  }, [map, layers]);
-
-  // Style key last applied to each layer, so an unchanged lot is skipped
-  const applied = useRef(new WeakMap<object, string>());
-  useEffect(() => {
-    if (!layers) return;
-    for (const { parcel, result, notApplicable } of parcels) {
-      const layer = layers.get(parcel.tmk);
-      if (!layer) continue;
-      const color = feasibilityColor(result, notApplicable);
-      const selected = parcel.tmk === selectedParcelId;
-      const radius = getRadius(result.max_units);
-      const key = `${color}|${selected}|${radius}`;
-      if (applied.current.get(layer) === key) continue;
-      applied.current.set(layer, key);
-
-      layer.setStyle(outlineStyle(color, selected));
-      if (layer instanceof LeafletCircleMarker) layer.setRadius(radius);
-      // draw the selected lot's dark edge over its neighbours'
-      if (selected) layer.bringToFront();
-    }
-  }, [layers, parcels, selectedParcelId]);
-
-  // Show one pane, hide the other. The dot pane is created by <Pane> before
-  // any zoom-in can happen, and the outline pane by the effect above before
-  // `showOutlines` can turn true, so both exist whenever this matters
+  // Show one pane, hide the other; both are made with the map
   useEffect(() => {
     const dots = map.getPane(DOT_PANE);
     const lots = map.getPane(OUTLINE_PANE);
@@ -374,8 +377,7 @@ function ParcelOutlines({
 
 // Leaflet only re-measures on a window resize; the dashboard's side panels
 // open and close without one, so watch the container itself
-function FitContainer() {
-  const map = useMap();
+function FitContainer({ map }: { map: LeafletMap }) {
   useEffect(() => {
     const observer = new ResizeObserver(() => map.invalidateSize());
     observer.observe(map.getContainer());
@@ -398,8 +400,13 @@ function cardPadding() {
 }
 
 // zoom to one parcel, rendered after FlyToArea
-function ZoomToParcel({ parcel }: { parcel: ParcelRow | null }) {
-  const map = useMap();
+function ZoomToParcel({
+  map,
+  parcel,
+}: {
+  map: LeafletMap;
+  parcel: ParcelRow | null;
+}) {
   useEffect(() => {
     if (!parcel) return;
     const point: LatLngTuple = [parcel.lat, parcel.lng];
@@ -412,16 +419,17 @@ function ZoomToParcel({ parcel }: { parcel: ParcelRow | null }) {
 }
 
 // Frame the region holding most of the pathway's parcels whenever a pathway
-// loads. Fly and zoom if the pathway's main region differs from the currently
-// selected pathway.
+// loads, or the county's islands when it has no parcels. Fly there if the
+// map was already framed somewhere else.
 function FlyToArea({
+  map,
   rows,
   area,
 }: {
+  map: LeafletMap;
   rows: ParcelRow[];
   area?: [[number, number], [number, number]];
 }) {
-  const map = useMap();
   const framed = useRef<LatLngBounds | null>(null);
 
   useEffect(() => {
@@ -440,12 +448,16 @@ function FlyToArea({
   return null;
 }
 
-// react-leaflet's <Tooltip> only opens bound to a layer, so open a Leaflet
-// tooltip on the map directly and render the content into it
 // the hover preview: parcel number and street address; the details are in
-// the parcel card a click opens
-function ParcelTooltip({ item: { parcel } }: { item: ParcelMapItem }) {
-  const map = useMap();
+// the parcel card a click opens. Opened on the map directly, with its
+// content rendered into it
+function ParcelTooltip({
+  map,
+  item: { parcel },
+}: {
+  map: LeafletMap;
+  item: ParcelMapItem;
+}) {
   const [content] = useState(() => document.createElement("div"));
   useEffect(() => {
     const tip = tooltip({
