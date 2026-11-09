@@ -3,9 +3,10 @@
 How the model goes from "does this parcel pencil?" to "how many more homes
 would Hawaiʻi get over five years under this policy?". This is the piece the
 challenge scores: a statewide, five-year estimate against a baseline, for the
-baseline and at least three of the five benchmark scenarios, with ranges.
+baseline and at least three of the five benchmark scenarios.
 
-Status: design only. Nothing here is built yet.
+Status: the parcel table and the current-zoning runner are built. The rest is
+design.
 
 ## Where this sits
 
@@ -22,7 +23,7 @@ parcel engine       calcParcel(): the pro forma, feasibility (exists)
 production layer    feasibility → expected units started in 5 years
    │                (src/production)
    ▼
-aggregation         county → state; baseline vs scenario; P10/P50/P90
+aggregation         county → state; baseline vs scenario
 ```
 
 The parcel engine does not change shape. Each benchmark scenario becomes a
@@ -180,6 +181,9 @@ with a wide range.
 
 ## Production: from feasibility to units
 
+A teammate owns the estimated housing production formula. This section is a
+starting point and may change with that work.
+
 The engine says whether a project pencils, not whether it gets built. Over
 five years only some feasible parcels redevelop.
 
@@ -209,15 +213,12 @@ five.
 Expected values, not parcel predictions: the challenge deprioritizes parcel
 precision, and the output says so.
 
-## Uncertainty and sensitivity
+## Sensitivity
 
-- **Ranges:** Monte Carlo over the assumptions most likely to move results:
-  hard cost, rent, cap rate, interest rate, market parking ratio, curve
-  steepness, base rate (from its calibration error). Seeded, so runs
-  reproduce. Report P10 / P50 / P90 of units and of the change from
-  baseline, by county and state.
-- **Drivers:** one-at-a-time swings of each assumption (a tornado chart), so
-  the deck and the comparison paper can say what moves each scenario.
+- **Drivers:** one-at-a-time swings of the assumptions most likely to move
+  results (hard cost, rent, cap rate, interest rate, market parking ratio), so
+  the deck and the comparison paper can say what moves each scenario. The
+  challenge asks how sensitive results are to key inputs.
 - **What the model cannot tell:** demand limits (absorption across many
   projects at once), construction labor capacity, infrastructure (sewer and
   water capacity, which binds on the neighbor islands), land assembly,
@@ -249,7 +250,7 @@ src/production/
   takeup.ts          curve(), base rates, calibration
   run.ts             runScenario(parcels, scenario, draw) → ParcelResult[]
   aggregate.ts       county and state totals, deltas vs baseline
-  uncertainty.ts     seeded draws, P10/P50/P90, tornado
+  sensitivity.ts     one-at-a-time swings of each assumption
 src/calculations/
   calc-adu.ts        the ADU pro forma
 ```
@@ -269,8 +270,7 @@ the configs; `calcAdu`.
 - direction: on a fixed set of parcels, fee and parking cuts never lower
   feasible units; TOD only changes parcels inside the threshold;
 - calibration: the baseline reproduces its target in each county;
-- aggregation: county totals sum to the state; the same seed gives the same
-  P10/P50/P90;
+- aggregation: county totals sum to the state;
 - a clean-checkout run on `data/sample/`.
 
 ## Order of work
@@ -279,13 +279,14 @@ Seven weeks to December 16, 2026.
 
 1. Parcel table and sample for all four counties; land cost from assessed
    value. Done: `src/scenarios/parcels.ts`, `data/sample/parcels.csv`.
-2. Production layer and aggregation with the baseline; calibrate.
+2. Production layer and aggregation with the baseline; calibrate. A teammate
+   owns the production formula.
 3. Fees and parking, the two cheapest scenarios (their levers mostly exist).
 4. TOD, the third benchmark: distance to the nearest major stop for each
    parcel.
-5. Uncertainty and the tornado.
+5. Sensitivity.
 6. The Oʻahu policy variants beside the benchmarks, as time allows.
-7. Tool UI, docs, deck and video on the results.
+7. Tool UI in `app/`, docs, deck and video on the results.
 
 ## Decisions to make
 

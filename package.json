@@ -17,11 +17,16 @@
     "access": "public"
   },
   "repository": "github:UHERO/policy-simulator-package",
+  "workspaces": [
+    "app"
+  ],
   "scripts": {
     "build": "tsup src/index.ts --format esm,cjs --dts --clean",
     "prepare": "npm run build",
     "test": "vitest run",
-    "prepublishOnly": "tsc --noEmit && vitest run"
+    "prepublishOnly": "tsc --noEmit && vitest run",
+    "dev": "npm run dev --workspace app",
+    "build:app": "npm run build --workspace app"
   },
   "devDependencies": {
     "tsup": "^9.0.0",
