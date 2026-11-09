@@ -1,5 +1,5 @@
 {
-  "name": "@uhero/policy-simulator",
+  "name": "feasim-challenge",
   "version": "0.1.0",
   "description": "UHERO's development feasibility model for Oahu housing policy pathways",
   "private": false,
@@ -17,11 +17,16 @@
     "access": "public"
   },
   "repository": "github:UHERO/policy-simulator-package",
+  "workspaces": [
+    "web"
+  ],
   "scripts": {
     "build": "tsup src/index.ts --format esm,cjs --dts --clean",
     "prepare": "npm run build",
     "test": "vitest run",
-    "prepublishOnly": "tsc --noEmit && vitest run"
+    "prepublishOnly": "tsc --noEmit && vitest run",
+    "dev": "npm run dev --workspace web",
+    "build:web": "npm run build --workspace web"
   },
   "devDependencies": {
     "tsup": "^9.0.0",

@@ -30,9 +30,20 @@ Run these from the repository root, on a clean checkout:
 
 | Step  | Command   | Notes |
 | ----- | --------- | ----- |
-| Setup | `npm ci`  | Installs the exact dev dependencies in `package-lock.json` and builds the model into `dist/` |
-| Run   | `[TBD]`   | The interactive tool is not built yet |
+| Setup | `npm ci`  | Installs the exact dependencies in `package-lock.json` and builds the model into `dist/` |
+| Run   | `npm run dev` | Starts the tool at http://localhost:3000; so far it only shows the engine running on a made-up lot |
 | Test  | `npm test` | Runs the automated tests (Vitest) |
+
+## Repository layout
+
+| Folder | What's in it |
+| ------ | ------------ |
+| `src/`, `test/` | The engine, county configs, scenarios and their tests |
+| `web/` | The interactive tool (Next.js), which imports the engine as the `feasim-challenge` package |
+| `scripts/` | Scripts that collect the data, build the parcel table and run it through the engine; see [scripts/README.md](scripts/README.md) |
+| `data/sample/` | A small made-up sample; all other data stays out of the repo |
+| `docs/` | Model, data and submission documents |
+| `templates/` | The starting point for adding a county |
 
 **Requirements:** Node.js 24 and npm. CI runs the same commands on Ubuntu with Node.js 24 (see `.github/workflows/ci.yml`).
 
