@@ -1,16 +1,24 @@
-# Data pipeline
+# Scripts
 
-The scripts that collect and clean the data the model runs on go here. The engine in `src/` and the tool in `app/` only read what this folder produces, so they stay separate from how the data is gathered.
+Command-line scripts that build the parcel table and run it through the engine. The engine in `src/` and the tool in `web/` only read what these scripts produce, so they stay separate from how the data is gathered.
 
-## What goes here
+| Script | What it does |
+| --- | --- |
+| `run-parcels.mjs` | Runs a parcel table through the engine on current zoning and writes the results to `out/parcel-runs/` |
+| `build-parcels.mjs` | Combines O ªahu's parcels and the neighbor-island export into one parcel table |
+| Data collection scripts | To be added: see [Collecting the data](#collecting-the-data) |
+
+## Collecting the data
+
+The scripts that collect and clean the data the model runs on go in this folder:
 
 - Scripts that download each dataset from its original source and clean it.
 - The script that joins the datasets into the parcel table.
-- The environment file for these scripts, such as `pipeline/environment.yml`, with versions pinned.
+- The environment file for these scripts, such as `scripts/environment.yml`, with versions pinned.
 
-The folders inside this one are up to whoever writes the scripts.
+Subfolders are up to whoever writes the scripts.
 
-## What the pipeline has to produce
+### What they have to produce
 
 One table at `data/parcels_statewide.csv`, one row per parcel, in all four counties. All of these columns must be in the header, in any order, and any extra columns are ignored:
 
@@ -30,7 +38,9 @@ One table at `data/parcels_statewide.csv`, one row per parcel, in all four count
 
 Leave a cell blank where the value isn't known. Fields can't contain quotes or commas. `src/scenarios/parcels.ts` is the source of truth for this format.
 
-To check a table, run these from the repo root:
+### Checking a table
+
+Run these from the repo root:
 
 ```bash
 npm run build
@@ -40,9 +50,9 @@ npm run build
 node scripts/run-parcels.mjs data/parcels_statewide.csv
 ```
 
-`out/parcel-runs/problems.txt` lists any rows the parser rejected, and `not_modeled.csv` lists zones with no rules in the county configs.
+`out/parcel-runs/problems.txt` lists any rows the parser rejected, and `not_modeled.csv` lists zones with no rules in the county configs. Git ignores `out/`.
 
-## Rules
+### Rules
 
 These come from the challenge's [Official Rules](https://housingchallenge.turnout.rocks/rules.html):
 
@@ -51,6 +61,6 @@ These come from the challenge's [Official Rules](https://housingchallenge.turnou
 - **Every dataset needs a record in `docs/DATA_PROVENANCE.md`:** source, version, access date, license or terms, and cleaning steps. Check each dataset's terms before using it.
 - **Leave out what the model doesn't need,** such as owner names.
 
-## How to run it
+### How to run it
 
 To be filled in with the command that builds the table from a clean checkout.

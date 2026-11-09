@@ -286,7 +286,7 @@ Seven weeks to December 16, 2026.
    parcel.
 5. Sensitivity.
 6. The Oʻahu policy variants beside the benchmarks, as time allows.
-7. Tool UI in `app/`, docs, deck and video on the results.
+7. Tool UI in `web/`, docs, deck and video on the results.
 
 ## Decisions to make
 

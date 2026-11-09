@@ -39,3 +39,7 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# map data, built by the data scripts (see public/data/README.md)
+/public/data/*
+!/public/data/README.md

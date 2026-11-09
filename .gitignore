@@ -58,6 +58,6 @@ sbom.spdx.json
 # (Python, Node, Go, R, Rust, etc.)
 # ==============================================================================
 node_modules/
-# Python, for pipeline/
+# Python, for the data scripts in scripts/
 __pycache__/
 *.pyc

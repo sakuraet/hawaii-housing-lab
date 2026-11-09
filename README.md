@@ -39,9 +39,8 @@ Run these from the repository root, on a clean checkout:
 | Folder | What's in it |
 | ------ | ------------ |
 | `src/`, `test/` | The engine, county configs, scenarios and their tests |
-| `app/` | The interactive tool (Next.js), which imports the engine as a package |
-| `pipeline/` | Scripts that collect the data and build the parcel table; see [pipeline/README.md](pipeline/README.md) |
-| `scripts/` | Command-line tools for running a parcel table through the engine |
+| `web/` | The interactive tool (Next.js), which imports the engine as the `feasim-challenge` package |
+| `scripts/` | Scripts that collect the data, build the parcel table and run it through the engine; see [scripts/README.md](scripts/README.md) |
 | `data/sample/` | A small made-up sample; all other data stays out of the repo |
 | `docs/` | Model, data and submission documents |
 | `templates/` | The starting point for adding a county |
