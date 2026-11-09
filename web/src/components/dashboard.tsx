@@ -33,6 +33,11 @@ import { ControlPanel } from "@/components/control-panel";
 import { MapLegend } from "@/components/legend";
 import { ParcelInfoOverlay } from "@/components/parcel-card";
 import { ProjectSummaryView } from "@/components/project-summary-view";
+import {
+  countyOf,
+  DEFAULT_COUNTY,
+  type CountyId,
+} from "@/localities/counties";
 import { ScenarioSummaryOverlay } from "@/components/summary";
 import {
   dataKeyFor,
@@ -244,8 +249,18 @@ export function PolicyGaugeDashboard() {
   // happens in a lower-priority render instead of blocking it.
   const mapInputs = useDeferredValue(inputs);
 
+  // the county on the map; its parcels are the only ones run
+  const [county, setCounty] = useState<CountyId>(DEFAULT_COUNTY);
   const loadedParcels = useParcels(mapInputs.program);
-  const activeParcels = loadedParcels ?? NO_PARCELS;
+  const activeParcels = useMemo(
+    () =>
+      loadedParcels
+        ? loadedParcels.filter(
+            (row) => (row.locality ?? "hi-honolulu") === county
+          )
+        : NO_PARCELS,
+    [loadedParcels, county]
+  );
   const parcelsLoading = loadedParcels === null;
 
   // once the first pathway is on screen, warm the other pathways' chunks so
@@ -448,7 +463,9 @@ export function PolicyGaugeDashboard() {
     userPicked && selectedParcel
       ? selectedParcel.parcel.region
       : mainArea.region;
-  const areaTitle = areaRegion ? REGION_NAME[areaRegion] : "Oʻahu";
+  const areaTitle = areaRegion
+    ? REGION_NAME[areaRegion]
+    : countyOf(county).label;
 
   const titledSummary = useMemo(
     () => ({
@@ -517,6 +534,13 @@ export function PolicyGaugeDashboard() {
             todTierIpdt={todTierIpdt}
             onTodTierIpdtChange={setTodTierIpdt}
             onTourStart={handleTourStart}
+            county={county}
+            onCountyChange={setCounty}
+            countyNote={
+              !parcelsLoading && activeParcels.length === 0
+                ? "No parcel data for this county yet."
+                : undefined
+            }
           />
         </aside>
 
@@ -559,6 +583,7 @@ export function PolicyGaugeDashboard() {
           parcels={mapParcels}
           rows={activeParcels}
           focusRows={mainArea.rows}
+          area={countyOf(county).bounds}
           selectedParcelId={selectedParcelId}
           onSelectParcel={handleSelectParcel}
         />

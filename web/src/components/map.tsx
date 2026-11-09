@@ -45,6 +45,8 @@ interface Props {
   focusRows: ParcelRow[];
   /** a parcel to zoom to, after `focusRows` (back from its full page) */
   centerParcel?: ParcelRow | null;
+  /** [south-west, north-east] corners to frame when `focusRows` is empty */
+  area?: [[number, number], [number, number]];
   selectedParcelId: string | null;
   onSelectParcel: (parcelId: string) => void;
 }
@@ -177,6 +179,7 @@ export function ParcelMap({
   rows,
   focusRows,
   centerParcel = null,
+  area,
   selectedParcelId,
   onSelectParcel,
 }: Props) {
@@ -223,7 +226,7 @@ export function ParcelMap({
           and on phones the summary bar starts clear of this corner */}
       <ZoomControl position="topleft" />
 
-      <FlyToArea rows={focusRows} />
+      <FlyToArea rows={focusRows} area={area} />
       <ZoomToParcel parcel={centerParcel} />
       <FitContainer />
 
@@ -411,19 +414,28 @@ function ZoomToParcel({ parcel }: { parcel: ParcelRow | null }) {
 // Frame the region holding most of the pathway's parcels whenever a pathway
 // loads. Fly and zoom if the pathway's main region differs from the currently
 // selected pathway.
-function FlyToArea({ rows }: { rows: ParcelRow[] }) {
+function FlyToArea({
+  rows,
+  area,
+}: {
+  rows: ParcelRow[];
+  area?: [[number, number], [number, number]];
+}) {
   const map = useMap();
   const framed = useRef<LatLngBounds | null>(null);
 
   useEffect(() => {
-    if (rows.length === 0) return;
-    const bounds = latLngBounds(rows.map((p) => [p.lat, p.lng] as LatLngTuple));
+    if (rows.length === 0 && !area) return;
+    const bounds =
+      rows.length > 0
+        ? latLngBounds(rows.map((p) => [p.lat, p.lng] as LatLngTuple))
+        : latLngBounds(area!);
     if (framed.current?.equals(bounds)) return;
     const padding = cardPadding();
     if (framed.current) map.flyToBounds(bounds, { ...padding, duration: 1 });
     else map.fitBounds(bounds, padding);
     framed.current = bounds;
-  }, [map, rows]);
+  }, [map, rows, area]);
 
   return null;
 }

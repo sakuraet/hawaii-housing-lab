@@ -526,7 +526,7 @@ export function GuidedTour({
         type="button"
         onClick={start}
         className={cn(
-          "inline-flex shrink-0 items-center gap-1.5 rounded-md border border-slate-200 bg-white px-2.5 py-1 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-100",
+          "inline-flex shrink-0 items-center gap-1.5 rounded-md border border-white/30 bg-white/10 px-2.5 py-1 text-sm font-semibold text-white backdrop-blur transition-colors hover:bg-white/20",
           className
         )}
       >

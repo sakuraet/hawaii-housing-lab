@@ -10,6 +10,8 @@ export type Region = "south" | "east" | "north" | "central" | "west";
 
 // One parcel of the gauge's map data (the physical envelope)
 export interface ParcelRow {
+  /** the county's locality id; Honolulu if unset */
+  locality?: string;
   tmk: string;
   zone_class: string;
   lot_sqft: number;

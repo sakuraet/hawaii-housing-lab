@@ -18,6 +18,7 @@ import { ProgramSelector } from "@/components/program-selector";
 import { ToolbarButton } from "@/components/toolbar-button";
 import { PolicyTour } from "@/components/tour/policy-tour";
 import type { GaugeInputs } from "@/localities/honolulu/pathway-defaults";
+import { COUNTIES, countyOf, type CountyId } from "@/localities/counties";
 
 interface Props {
   inputs: GaugeInputs;
@@ -35,6 +36,11 @@ interface Props {
   onTodTierPdtChange?: (tier: TodTier) => void;
   todTierIpdt?: TodTier;
   onTodTierIpdtChange?: (tier: TodTier) => void;
+  /** the county on the map */
+  county: CountyId;
+  onCountyChange: (county: CountyId) => void;
+  /** a note under the county box, e.g. that its data isn't loaded yet */
+  countyNote?: string;
   /** the tour was opened from the panel's header */
   onTourStart?: () => void;
   /** header text, for the full page */
@@ -731,9 +737,12 @@ export function ControlPanel({
   todTierIpdt,
   onTodTierIpdtChange,
   onTourStart,
+  county,
+  onCountyChange,
+  countyNote,
   title = "Citywide View",
   subtitle,
-  description = "Adjust policy levers to see how they affect residential development feasibility across Honolulu parcels.",
+  description = `Adjust policy levers to see how they affect residential development feasibility across ${countyOf(county).label} parcels.`,
   tour = "gauge",
   tourAutoStart = true,
 }: Props) {
@@ -785,16 +794,18 @@ export function ControlPanel({
   return (
     <div className="relative flex h-full flex-col overflow-y-auto bg-white">
       {/* Header */}
-      <div className="relative shrink-0 px-6 pb-6 pt-8 sm:px-8 sm:pt-10">
+      <div className="relative min-h-[220px] shrink-0 px-6 pb-10 pt-8 sm:min-h-[250px] sm:px-8 sm:pb-12 sm:pt-10">
+        <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(12,26,44,0.85),rgba(30,64,88,0.6))]" />
+        <div className="absolute inset-x-0 bottom-0 h-24 bg-[linear-gradient(to_bottom,transparent,rgb(255,255,255))]" />
 
         <div className="relative z-10 flex flex-col gap-3">
           <div className="flex items-center justify-between gap-3">
             <div className="min-w-0">
-              <h1 className="text-xl font-bold text-slate-900 sm:text-2xl">
+              <h1 className="text-xl font-bold text-white sm:text-2xl">
                 {title}
               </h1>
               {subtitle && (
-                <div className="mt-0.5 text-sm text-slate-500">{subtitle}</div>
+                <div className="mt-0.5 text-sm text-slate-200">{subtitle}</div>
               )}
             </div>
             <PolicyTour
@@ -803,19 +814,32 @@ export function ControlPanel({
               autoStart={tourAutoStart}
             />
           </div>
-          <p className="mb-3 text-xs leading-relaxed text-slate-600 sm:text-sm">
+          <p className="mb-3 text-xs leading-relaxed text-slate-300 sm:text-sm">
             {description}
           </p>
-          <ProgramSelector
-            programs={PROGRAMS}
-            value={inputs.program}
-            onChange={(id) => set("program", id as ProgramId)}
-          />
+          <div className="flex flex-col gap-3">
+            <ProgramSelector
+              label="County"
+              tourId="county-selector"
+              programs={COUNTIES}
+              value={county}
+              onChange={onCountyChange}
+              note={countyNote}
+            />
+            {/* the pathways are Honolulu ordinances */}
+            {county === "hi-honolulu" && (
+              <ProgramSelector
+                programs={PROGRAMS}
+                value={inputs.program}
+                onChange={(id) => set("program", id as ProgramId)}
+              />
+            )}
+          </div>
         </div>
       </div>
 
       {/* Policy levers */}
-      <div className="z-10 space-y-4 px-6 pb-8 sm:px-8">
+      <div className="z-10 -mt-4 space-y-4 px-6 pb-8 sm:px-8">
         {factors.length > 0 ? (
           <div
             data-tour="levers"
