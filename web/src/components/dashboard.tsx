@@ -28,6 +28,7 @@ import {
 import InlineLoaderSimple from "@/components/ui/loading-inline-tag";
 
 import type { ParcelRow, Region } from "@/lib/parcels";
+import type { ProgramId } from "feasim-challenge";
 import { runGauge, type ParcelResult } from "@/lib/run-parcels";
 import { ControlPanel } from "@/components/control-panel";
 import { MapLegend } from "@/components/legend";
@@ -76,17 +77,23 @@ const REGION_NAME: Record<Region, string> = {
 };
 
 /** The region holding the most of these parcels, with its parcels. */
+// Oʻahu's parcels are grouped by region, the other counties' by island
+const areaOf = (row: ParcelRow): string | undefined => row.region ?? row.island;
+const areaName = (area: string) => REGION_NAME[area as Region] ?? area;
+
 function mainRegion(rows: ParcelRow[]): {
-  region: Region | null;
+  region: string | null;
   rows: ParcelRow[];
 } {
-  const byRegion = new Map<Region, ParcelRow[]>();
+  const byRegion = new Map<string, ParcelRow[]>();
   for (const row of rows) {
-    const group = byRegion.get(row.region);
+    const area = areaOf(row);
+    if (area === undefined) continue;
+    const group = byRegion.get(area);
     if (group) group.push(row);
-    else byRegion.set(row.region, [row]);
+    else byRegion.set(area, [row]);
   }
-  let main: { region: Region | null; rows: ParcelRow[] } = {
+  let main: { region: string | null; rows: ParcelRow[] } = {
     region: null,
     rows: NO_PARCELS,
   };
@@ -97,15 +104,43 @@ function mainRegion(rows: ParcelRow[]): {
 }
 
 // ── Runs over every parcel ─────────────────────────────────────────────────
-// one pathway's results for every parcel cached (rungauge.ts)
+// Honolulu runs the chosen pathway; every other county runs its own current
+// zoning (the engine's "current" pathway with the county's locality), as the
+// parcel runner does
+const isHonolulu = (county: CountyId) => county === "hi-honolulu";
+const pathwayFor = (program: string, county: CountyId): ProgramId =>
+  isHonolulu(county) ? pathwayOf(program) : "current";
+
+// the levers moved from the Honolulu pathway's defaults: the other counties
+// run on their own defaults, so only a moved lever carries over
+function movedLevers(sliders: GaugeInputs): GaugeInputs {
+  const defaults = PROGRAM_DEFAULTS[sliders.program] ?? BILL6_DEFAULTS;
+  const moved = { program: "current" } as GaugeInputs;
+  for (const key of Object.keys(sliders) as (keyof GaugeInputs)[]) {
+    if (key === "program") continue;
+    if (JSON.stringify(sliders[key]) !== JSON.stringify(defaults[key]))
+      moved[key] = sliders[key] as never;
+  }
+  return moved;
+}
+
+// one pathway's results for every parcel cached (run-parcels.ts)
 function runPathway(
   program: string,
   parcels: ParcelRow[],
   sliders: GaugeInputs,
   tierPdt: TodTier,
-  tierIpdt: TodTier
+  tierIpdt: TodTier,
+  county: CountyId
 ): ParcelResult[] {
   if (parcels.length === 0) return [];
+  if (!isHonolulu(county)) {
+    const calc = (parcel: ParcelRow, s: GaugeInputs) => {
+      const row = { ...parcel, locality: county };
+      return calcParcel("current", row, parcelLevers("current", row, movedLevers(s)));
+    };
+    return runGauge(dataKeyFor(program, county), parcels, sliders, calc);
+  }
   const pathway = pathwayOf(program);
   const calc = (parcel: ParcelRow, s: GaugeInputs) => {
     const opts =
@@ -126,6 +161,10 @@ function runPathway(
     calc
   );
 }
+
+// the pathway the TOD rules follow: Honolulu's choice, "current" elsewhere
+const programIn = (program: string, county: CountyId) =>
+  isHonolulu(county) ? program : "current";
 
 // TOD only: each parcel's envelope status at its regime's tier
 function todStatusOf(
@@ -251,7 +290,7 @@ export function PolicyGaugeDashboard() {
 
   // the county on the map; its parcels are the only ones run
   const [county, setCounty] = useState<CountyId>(DEFAULT_COUNTY);
-  const loadedParcels = useParcels(mapInputs.program);
+  const loadedParcels = useParcels(mapInputs.program, county);
   const activeParcels = useMemo(
     () =>
       loadedParcels
@@ -357,16 +396,22 @@ export function PolicyGaugeDashboard() {
         activeParcels,
         mapInputs,
         todTierPdt,
-        todTierIpdt
+        todTierIpdt,
+        county
       ),
-    [activeParcels, mapInputs, todTierPdt, todTierIpdt]
+    [activeParcels, mapInputs, todTierPdt, todTierIpdt, county]
   );
 
   // TOD only: each parcel's envelope status at its regime's tier
   const todStatus = useMemo(
     () =>
-      todStatusOf(mapInputs.program, parcelResults, todTierPdt, todTierIpdt),
-    [parcelResults, mapInputs.program, todTierPdt, todTierIpdt]
+      todStatusOf(
+        programIn(mapInputs.program, county),
+        parcelResults,
+        todTierPdt,
+        todTierIpdt
+      ),
+    [parcelResults, mapInputs.program, todTierPdt, todTierIpdt, county]
   );
 
   const mapParcels = useMemo(
@@ -391,13 +436,13 @@ export function PolicyGaugeDashboard() {
     if (!selectedParcel) return null;
     const parcel = selectedParcel.parcel;
     return pathwayEnvelope(
-      pathwayOf(mapInputs.program),
-      parcel,
-      mapInputs.program === "tod"
+      pathwayFor(mapInputs.program, county),
+      isHonolulu(county) ? parcel : { ...parcel, locality: county },
+      mapInputs.program === "tod" && isHonolulu(county)
         ? { tier: parcel.tod_regime === "pdt" ? todTierPdt : todTierIpdt }
         : {}
     );
-  }, [selectedParcel, mapInputs.program, todTierPdt, todTierIpdt]);
+  }, [selectedParcel, mapInputs.program, todTierPdt, todTierIpdt, county]);
 
 
   // levers that follow the selected parcel until moved
@@ -416,9 +461,9 @@ export function PolicyGaugeDashboard() {
   const summary = useMemo(
     () => ({
       ...summarize(parcelResults, todStatus),
-      program: mapInputs.program,
+      program: isHonolulu(county) ? mapInputs.program : "current",
     }),
-    [parcelResults, mapInputs.program, todStatus]
+    [parcelResults, mapInputs.program, todStatus, county]
   );
 
   // the same pathway with every lever at its default (TOD at the base tier):
@@ -430,25 +475,27 @@ export function PolicyGaugeDashboard() {
       activeParcels,
       defaults,
       "base",
-      "base"
+      "base",
+      county
     );
     return summarize(
       results,
-      todStatusOf(mapInputs.program, results, "base", "base")
+      todStatusOf(programIn(mapInputs.program, county), results, "base", "base")
     );
-  }, [activeParcels, mapInputs.program]);
+  }, [activeParcels, mapInputs.program, county]);
 
   // TOD only: the selected parcel's regime for its card, and whether housing
   // is not applicable there at its tier
   const todLabel = useMemo(() => {
-    if (mapInputs.program !== "tod" || !selectedParcel) return undefined;
+    if (programIn(mapInputs.program, county) !== "tod" || !selectedParcel)
+      return undefined;
     const regime = selectedParcel.parcel.tod_regime;
     if (!regime) return undefined;
     const name = regime === "pdt" ? "PD-T" : "IPD-T";
     return todStatus.get(selectedParcel.parcel.tmk) === "not_applicable"
       ? `${name}: Not Applicable`
       : name;
-  }, [mapInputs.program, selectedParcel, todStatus]);
+  }, [mapInputs.program, selectedParcel, todStatus, county]);
 
   // a parking lever set below the Article 6 minimum needs a variance
   const parkingWarning =
@@ -461,11 +508,9 @@ export function PolicyGaugeDashboard() {
   // The header names a place
   const areaRegion =
     userPicked && selectedParcel
-      ? selectedParcel.parcel.region
+      ? areaOf(selectedParcel.parcel)
       : mainArea.region;
-  const areaTitle = areaRegion
-    ? REGION_NAME[areaRegion]
-    : countyOf(county).label;
+  const areaTitle = areaRegion ? areaName(areaRegion) : countyOf(county).label;
 
   const titledSummary = useMemo(
     () => ({
@@ -584,6 +629,11 @@ export function PolicyGaugeDashboard() {
           rows={activeParcels}
           focusRows={mainArea.rows}
           area={countyOf(county).bounds}
+          outlinesFile={
+            isHonolulu(county)
+              ? "parcel-shapes.json"
+              : `parcel-shapes-${county}.json`
+          }
           selectedParcelId={selectedParcelId}
           onSelectParcel={handleSelectParcel}
         />
@@ -700,7 +750,7 @@ export function PolicyGaugeDashboard() {
             }`}
           >
             <MapLegend
-              showNotApplicable={mapInputs.program === "tod"}
+              showNotApplicable={programIn(mapInputs.program, county) === "tod"}
               compact={mapNarrow}
             />
           </div>

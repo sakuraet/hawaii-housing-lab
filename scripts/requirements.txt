@@ -1,0 +1,10 @@
+# Python packages for the data scripts, the same versions as environment.yml (Python 3.12).
+# environment.yml (conda) is the main way to install them; this file lets pip install them too,
+# and lets Dependabot watch them. pyogrio's wheels include the GDAL library.
+#   pip install -r scripts/requirements.txt
+pandas==3.1.0
+geopandas==1.2.0
+pyogrio==0.13.0
+shapely==2.2.0
+numpy==2.5.4
+pyproj==3.8.0

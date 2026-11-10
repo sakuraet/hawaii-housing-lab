@@ -1,0 +1,35 @@
+county,zone,area,height_ft,source
+Honolulu,*,height-map,,"ROH Ch. 21: heights are set on the zoning maps and special districts; read from the City's Zoning - Map Height Limit layer"
+Honolulu,A-1,,30,ROH Table 21-3.3 (A-1: 30 ft; A-2 and A-3 per zoning map)
+Honolulu,AMX-1,,30,ROH Table 21-3.3 (AMX-1: 30 ft; AMX-2 and AMX-3 per zoning map)
+Hawaii,RM-*,hilo,120,HCC 25-5-33(b)
+Hawaii,RM-*,,45,HCC 25-5-33(a)
+Hawaii,RCX-*,,45,HCC 25-5-43
+Hawaii,V-*,keauhou-kahaluu,90,HCC 25-5-93(c)
+Hawaii,V-*,hilo,120,HCC 25-5-93(b)
+Hawaii,V-*,,45,HCC 25-5-93(a)
+Hawaii,CN-*,,40,HCC 25-5-103
+Hawaii,CG-*,hilo,120,HCC 25-5-113(b)
+Hawaii,CG-*,,45,HCC 25-5-113(a)
+Hawaii,CV-*,,30,HCC 25-5-123
+Hawaii,CDH,,120,HCC 25-7-23
+Kauai,R-*,,40,"CZO 8-4.5(b)(2): multiple-family buildings, 40 ft to the highest wall plate and 4 stories"
+Kauai,CG*,,50,CZO 8-6.3(f)(1)
+Kauai,CN*,,35,"CZO 8-6.3(f)(2): 35 ft and 2 stories"
+Maui,A-1,,35,MCC 19.12.050
+Maui,A-2,,60,MCC 19.12.050
+Maui,B-2,molokai,35,MCC 19.18.050
+Maui,B-2,west-maui,45,MCC 19.18.050
+Maui,B-2,hana,45,MCC 19.18.050
+Maui,B-2,lanai,45,MCC 19.18.050
+Maui,B-2,,90,MCC 19.18.050
+Maui,B-3,molokai,35,MCC 19.20.050
+Maui,B-3,west-maui,45,MCC 19.20.050
+Maui,B-3,hana,45,MCC 19.20.050
+Maui,B-3,lanai,45,MCC 19.20.050
+Maui,B-3,,144,MCC 19.20.050
+Maui,H-1,,35,MCC 19.14.050
+Maui,H-M,,90,MCC 19.14.050
+Maui,H-2,,160,MCC 19.14.050
+Maui,Hotel,,160,MCC 19.14.050
+Maui,H,,160,"MCC 19.14.050 (the zoning map's label for the Hotel district)"
