@@ -14,10 +14,12 @@ updates:
       interval: "weekly"
 
   # --- Python -----------------------------------------------------------------
-  # - package-ecosystem: "uv"
-  #   directory: "/"
-  #   schedule:
-  #     interval: "weekly"
+  # The data scripts' packages (scripts/requirements.txt). environment.yml pins
+  # the same versions for conda; keep the two in step when an update lands.
+  - package-ecosystem: "pip"
+    directory: "/scripts"
+    schedule:
+      interval: "weekly"
 
   # --- JavaScript / TypeScript ------------------------------------------------
   - package-ecosystem: "npm"

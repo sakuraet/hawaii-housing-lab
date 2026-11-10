@@ -12,6 +12,8 @@ One command builds everything, from a clean checkout. Run it from the repo root.
    conda env create -f scripts/environment.yml
    ```
 
+   Or, with Python 3.12 and pip, `pip install -r scripts/requirements.txt`, which pins the same versions. Dependabot watches `requirements.txt`; keep the two files in step when it updates one.
+
 2. Install the engine's dependencies once:
 
    ```bash
