@@ -1,8 +1,10 @@
 // County of Maui: parking, loading, bicycle parking, fees, water charges,
 // property tax and income limits.
 //
-// Parking, loading, park dedication and the tax classes are from the code on
-// Municode (version of Sep 14, 2026). The code leaves the fee amounts to the
+// Loading, park dedication and the tax classes are from the code on Municode
+// (version of Sep 14, 2026). The housing parking minimum is from Ordinance
+// 5983 (Bill 47 CD1, effective Apr 20, 2026), which Municode's version did
+// not yet include. The code leaves the fee amounts to the
 // annual budget; they are from the County of Maui FY 2027 Appendix B,
 // "Revenues - Fees, Rates, Assessments and Taxes" (July 1, 2026 to June 30,
 // 2027), cited below as "FY27 App. B" with its page. Water charges are from
@@ -22,9 +24,11 @@ import { flat } from "../../../core/schedule";
 // ── parking, loading and bicycle parking (MCC 19.36B) ───────────────────
 
 export const parking: ParkingRules = {
-  // 2 stalls for a dwelling unit under 3,000 sqft, whatever its bedrooms
-  // (more only for larger units)
-  residential_stalls_per_unit: 2,
+  // by bedrooms per dwelling unit (Ord. 5983): studio and one-bedroom 1,
+  // two- and three-bedroom 2, four or more 3 plus 1 for each bedroom over
+  // four (the model's largest type has four). Before Ord. 5983 it went by
+  // floor area: 2 stalls for any unit under 3,000 sqft
+  residential_stalls_by_type: { studio: 1, one_bb: 1, two_bb: 2, three_bb: 2, four_bb: 3 },
   // general merchandising, general office, personal and business services:
   // 1 per 500 sqft, at least 3 (the minimum of 3 is not modeled; eating and
   // drinking places need 1 per 100 sqft of dining area)
@@ -32,7 +36,7 @@ export const parking: ParkingRules = {
   // no joint-use reduction in the code; the director may reduce required
   // parking by up to 50% case by case (19.36B.110(A)), which is not modeled
   joint_use: 1,
-  source: "MCC 19.36B.020; MCC 19.36B.110(A)",
+  source: "MCC 19.36B.020 as amended by Ord. 5983 (2026); MCC 19.36B.110(A)",
 };
 
 export const loading: LoadingRules = {

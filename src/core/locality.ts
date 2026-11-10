@@ -91,11 +91,15 @@ export interface ZoneRules {
 // ── parking, loading and bicycle parking ────────────────────────────────
 
 export interface ParkingRules {
-  // the housing minimum is one of these two, whichever the code uses
+  // the housing minimum is one of these three, whichever the code uses
   /** minimum stalls: 1 per this many sqft of private dwelling area (Honolulu) */
   residential_sqft_per_stall?: number;
-  /** minimum stalls per dwelling unit, whatever its size (Maui: 2) */
+  /** minimum stalls per dwelling unit, whatever its size (Kauaʻi: 2) */
   residential_stalls_per_unit?: number;
+  /** minimum stalls per dwelling unit by unit type (`studio`, `one_bb`,
+   *  `two_bb`, `three_bb`, `four_bb`), averaged over the unit mix (Maui:
+   *  by bedrooms) */
+  residential_stalls_by_type?: Record<string, number>;
   /** a fraction of a stall always rounds up (Hawaiʻi County); otherwise
    *  0.5 or more rounds up (Honolulu) */
   round_up?: boolean;

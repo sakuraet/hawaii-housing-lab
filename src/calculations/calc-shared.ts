@@ -368,15 +368,27 @@ export function roundHalfUp(x: number): number {
 }
 
 /** legal minimum stalls per unit: 1 per so many sqft of private dwelling
- *  area (Honolulu: 1,000), or a flat number per unit where the locality sets
- *  one (Maui: 2); exempt parcels (§ 21-6.20(a)) pass `parking_exempt`
+ *  area (Honolulu: 1,000), a flat number per unit where the locality sets
+ *  one (Kauaʻi: 2), or a number for each unit type averaged over the mix
+ *  (Maui: by bedrooms); exempt parcels (§ 21-6.20(a)) pass `parking_exempt`
  *  instead */
 export function legalParkingRatio(
   unit_type: string,
   loc: Locality = honolulu
 ): number {
-  const { residential_stalls_per_unit, residential_sqft_per_stall } = loc.rules.parking;
+  const { residential_stalls_per_unit, residential_sqft_per_stall, residential_stalls_by_type } =
+    loc.rules.parking;
   if (residential_stalls_per_unit != null) return residential_stalls_per_unit;
+  if (residential_stalls_by_type != null) {
+    const mix = UNIT_MIX[unit_type] ?? UNIT_MIX["one_bb_100"];
+    return mix.reduce((sum, m) => {
+      const stalls = residential_stalls_by_type[m.type];
+      if (stalls == null) {
+        throw new Error(`${loc.name} (${loc.id}): no parking minimum for unit type "${m.type}"`);
+      }
+      return sum + stalls * m.weight;
+    }, 0);
+  }
   if (residential_sqft_per_stall == null) {
     throw new Error(`${loc.name} (${loc.id}): no residential parking minimum`);
   }

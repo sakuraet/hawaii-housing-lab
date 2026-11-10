@@ -25,11 +25,13 @@ const todoSchedule = (): Schedule => ({
 // ── parking, loading and bicycle parking ────────────────────────────────
 
 export const parking: ParkingRules = {
-  // housing minimum: set the one the code uses and delete the other
+  // housing minimum: set the one the code uses and delete the others
   // 1 stall per this many sqft of dwelling area (Honolulu: 1,000)
   residential_sqft_per_stall: TODO,
-  // stalls per dwelling unit, whatever its size (Maui: 2)
+  // stalls per dwelling unit, whatever its size (Kauaʻi: 2)
   residential_stalls_per_unit: TODO,
+  // or stalls by unit type, where the code goes by bedrooms (Maui):
+  // residential_stalls_by_type: { studio: TODO, one_bb: TODO, two_bb: TODO, three_bb: TODO, four_bb: TODO },
   // optional: true if any fraction of a stall rounds up (Hawaiʻi County);
   // leave out if 0.5 or more rounds up, as in Honolulu
   // round_up: true,

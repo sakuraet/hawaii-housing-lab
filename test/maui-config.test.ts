@@ -66,9 +66,26 @@ describe("Maui zoning (current zoning)", () => {
 });
 
 describe("Maui parking, loading and parks", () => {
-  it("2 stalls per unit, whatever the unit mix", () => {
-    expect(legalParkingRatio("one_bb_100", maui)).toBe(2);
-    expect(legalParkingRatio("studio_100", maui)).toBe(2);
+  it("stalls by bedrooms (Ord. 5983): 1 for a studio or one-bedroom, 2 for two", () => {
+    expect(legalParkingRatio("studio_100", maui)).toBe(1);
+    expect(legalParkingRatio("one_bb_100", maui)).toBe(1);
+    expect(legalParkingRatio("two_bb_100", maui)).toBe(2);
+    // averaged over the mix
+    expect(legalParkingRatio("one_br50_2br50", maui)).toBe(1.5);
+    expect(legalParkingRatio("third_each", maui)).toBeCloseTo(4 / 3, 9);
+    expect(maui.rules.parking.residential_stalls_by_type).toEqual({
+      studio: 1,
+      one_bb: 1,
+      two_bb: 2,
+      three_bb: 2,
+      four_bb: 3,
+    });
+  });
+
+  it("a unit type with no minimum stops the run", () => {
+    const loc = JSON.parse(JSON.stringify(maui)) as typeof maui;
+    loc.rules.parking.residential_stalls_by_type = { studio: 1 };
+    expect(() => legalParkingRatio("one_bb_100", loc)).toThrow(/no parking minimum for unit type "one_bb"/);
   });
 
   it("loading by non-dwelling floor area only", () => {
@@ -192,10 +209,10 @@ describe("a Maui parcel runs end to end", () => {
     expect(r.buildable_sqft).toBe(18000);
   });
 
-  it("units from 80% efficiency over 500 sqft one-bedrooms, 2 stalls each", () => {
+  it("units from 80% efficiency over 500 sqft one-bedrooms, 1 stall each", () => {
     // 18,000 x 0.8 / 500 = 28.8
     expect(r.max_units).toBe(28);
-    expect(r.parking_stalls).toBe(56);
+    expect(r.parking_stalls).toBe(28);
   });
 
   it("no bicycle parking", () => {

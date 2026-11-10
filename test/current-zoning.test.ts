@@ -98,7 +98,8 @@ describe("density by lot area per unit", () => {
     expect(r.max_units).toBe(6);
     // 6 one-bedrooms of 500 sqft at 80% efficiency
     expect(r.buildable_sqft).toBeCloseTo((6 * 500) / 0.8, 3);
-    expect(r.parking_stalls).toBe(12);
+    // 1 stall per one-bedroom, Maui's minimum (Ord. 5983)
+    expect(r.parking_stalls).toBe(6);
   });
 
   it("a lot too small for one unit builds nothing", () => {
