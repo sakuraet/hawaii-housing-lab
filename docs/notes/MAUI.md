@@ -50,8 +50,8 @@ These are judgment calls made to fit Maui's rules into the model. The ones most 
 | Workforce units' fees and park land | Charged like Honolulu's affordable units under the fee toggle (waived fees, no park land) | Maui's actual treatment: 50% building permit fee, 250 sqft park land per unit | The toggle waives these units' fees in full; Maui gives only partial relief |
 | Parking minimum | 2 stalls per unit | 1 stall for a studio or one-bedroom if Resolution 25-152 passes | Would halve parking for the default one-bedroom mix; check its status before submission |
 | School impact fee | $0, as for Honolulu | Maui DOE school impact districts (Central, South, West Maui): about $3,300–5,300 per multifamily unit in 2019 (from the rule sheet, via a 2019 DOE report; current rates not checked) | The team set Honolulu's to $0; worth deciding the same way for both |
-| Setbacks | The model's default 10 ft setback | A-1/A-2: 15 ft front and rear (20 above 35 ft), 10 ft side (15 above 35 ft); B-2/B-3: 0 ft front | Deeper setbacks shrink A-zone floor plates; needs the setback rule kind in the generic refactor |
-| Minimum lot size | Not checked | A zones 10,000 sqft and 70 ft wide; B zones 6,000 sqft and 60 ft wide | Smaller lots can't use the zone at all |
+| Setbacks | The model's default 10 ft setback | A-1/A-2: 15 ft front and rear (20 above 35 ft), 10 ft side (15 above 35 ft); H zones: front and rear ½ the building height (at least 15 ft), side 10–30 ft by height; B-2/B-3: 0 ft front | Deeper setbacks shrink A- and H-zone floor plates; needs the setback rule kind in the generic refactor |
+| Minimum lot size | Not checked | A zones 10,000 sqft and 70 ft wide; H-1 10,000 sqft and 75 ft, H-M 15,000 and 85 ft, H-2 and Hotel 20,000 and 100 ft; B zones 6,000 sqft and 60 ft wide | Smaller lots can't use the zone at all |
 | Wastewater service area | Wailuku-Kahului, $4.57/gal | Kīhei $4.65/gal; $0 (and a septic cost) outside both systems | The model has one rate per county; parcels outside these systems are overcharged |
 | Wastewater flow per unit | 255 gpd | Confirm with WWRD | Taken from a search summary of a 2006 table; not confirmed current |
 | Studio bedrooms for water ESDs | 0 bedrooms (0.4 ESD) | 1 bedroom (0.5 ESD) | DWS counts any room that could be slept in as a bedroom |
@@ -89,11 +89,23 @@ These are judgment calls made to fit Maui's rules into the model. The ones most 
 | --- | --- | --- | --- | --- | --- | --- |
 | A-1 Apartment | 0.5 on lots under 3 acres; 0.4 on 3 acres or more | 25% | 35 ft | 10,000 sqft, 70 ft wide | Front/rear 15 (20 above 35 ft); side 10 (15 above 35 ft) | MCC 19.12.020, 19.12.050 |
 | A-2 Apartment | 0.9 | 35% | 60 ft | 10,000 sqft, 70 ft wide | Same as A-1 | MCC 19.12.020, 19.12.050 |
-| H-1 Hotel | 0.5 | 25% | By district table | Not checked | Not checked | MCC 19.14.050 |
-| H-M Hotel | 1.0 | 30% | By district table | Not checked | Not checked | MCC 19.14.050 |
-| H-2 and Hotel | 1.5 | 35% | By district table | Not checked | Not checked | MCC 19.14.050 |
+| H-1 Hotel | 0.5 | 25% | 35 ft | 10,000 sqft, 75 ft wide | Front/rear ½ the building height, at least 15; side by height (below) | MCC 19.14.020, 19.14.050 |
+| H-M Hotel | 1.0 | 30% | 90 ft | 15,000 sqft, 85 ft wide | Same as H-1 | MCC 19.14.020, 19.14.050 |
+| H-2 and Hotel | 1.5 | 35% | 160 ft | 20,000 sqft, 100 ft wide | Same as H-1 | MCC 19.14.020, 19.14.050 |
 | B-2 Community Business | 2.0 | 100% (no limit) | 90 ft on Maui island; 45 West Maui, Hāna, Lānaʻi; 35 Molokaʻi | 6,000 sqft, 60 ft wide | Front 0; side/rear 0 or the adjoining zone's | MCC 19.18.020, 19.18.050 |
 | B-3 Central Business | 4.0 | 100% (no limit) | 144 ft on Maui island; 45 West Maui, Hāna, Lānaʻi; 35 Molokaʻi | 6,000 sqft, 60 ft wide | Same as B-2 | MCC 19.20.020, 19.20.050 |
+
+The hotel districts' side yard grows with the building's height (MCC 19.14.050):
+
+| Building height | Side yard |
+| --- | --- |
+| Under 30 ft | 10 ft |
+| 30 to 60 ft | 15 ft |
+| 60 to 90 ft | 20 ft |
+| 90 to 120 ft | 25 ft |
+| 120 to 160 ft | 30 ft |
+
+In the A and H districts, vents, fans, elevator and stair shafts, chimneys, antennae and small energy equipment may rise 10 ft above the height limit. Mailboxes, trash enclosures, boundary walls and ground signs may sit in the setbacks, up to 8 ft tall.
 
 Only FAR and lot coverage are in the config. Height comes from the parcel; minimum lots and yards are recorded here for the refactor and aren't modeled.
 
