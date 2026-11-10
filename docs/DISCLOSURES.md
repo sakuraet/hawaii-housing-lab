@@ -61,3 +61,9 @@ The MPL-2.0 is a file-level copyleft: it would apply only to changes made to tho
 Note: imported unchanged in commit `b29c53c` this is from @uhero/policy-simulator which is OSI compliant.
 
 Model changes made later by a team member (Sakura Takahashi) during the Coding Period, first in UHERO's package and released as `@uhero/feasim` 0.2.1, were ported into this repository: commits `059c4ef`, `69b85fa`, `91255fe`, `01544aa` and `27716f3` of UHERO/policy-simulator-package (Bill 7 grant sizing and prevailing wages, RLV detail, rent escalation, one permitting and construction time for every zone). The package's other changes after `6e75844` (renaming, publishing, release automation and version bumps, by non-team UHERO staff) were not ported.
+
+Her later changes, released in `@uhero/feasim` 0.3.0 and on the package's `minor-fixes` branch, were ported the same way:
+- **Code:** commits `46046a0` (no Bill 7 height cap), `9c153ee` (parking and unit mix defaults), `a1c3f57` (built height and floors), `ef4aa9f` (Bill 7 built to its unit caps), `5f7f1a3` (no Bill 7 height step-backs), `43ecb49` (HHFDC 2026 income limits and sale prices), `e7bc18c` (conveyance tax) and `c1e767b` (comments).
+- **Documentation:** the package's `docs/` folder, at `minor-fixes`, is in `docs/model/`, without its developer guide.
+- **Adapted, not copied:** Honolulu's income limits are in its county config, and the conveyance tax schedule is in the state config. The neighbor-island counties' current-zoning runs keep their own parking minimums.
+- **Checked:** Honolulu's results match the package's snapshot tests at `minor-fixes`.

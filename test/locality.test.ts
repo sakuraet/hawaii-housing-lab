@@ -31,23 +31,27 @@ function testCounty(id: string, change: (loc: Locality) => Locality = (l) => l):
 }
 
 const parcel: Parcel = { lot_sqft: 20000, zone_class: "A-2", height: 60 };
-const honoluluResult = calcParcel("bill6", parcel);
+
+// bill6 at the county's parking minimum: DEFAULT_INPUTS sets 0.95 stalls per
+// unit, which would hide the county's parking rule
+const runBill6 = (p: Parcel) => calcSingle({ ...parcelInputs("bill6", p), parking_ratio: undefined });
+const honoluluResult = runBill6(parcel);
 
 // run the parcel under a county that differs from Honolulu in one way
 function runChanged(id: string, change: (loc: Locality) => Locality) {
   registerLocality(testCounty(id, change));
-  return calcParcel("bill6", { ...parcel, locality: id });
+  return runBill6({ ...parcel, locality: id });
 }
 
 describe("choosing the county", () => {
   it("a parcel with no locality runs on Honolulu, unchanged", () => {
     expect(parcelInputs("bill6", parcel)).not.toHaveProperty("locality");
-    expect(calcParcel("bill6", { ...parcel, locality: "hi-honolulu" })).toEqual(honoluluResult);
+    expect(runBill6({ ...parcel, locality: "hi-honolulu" })).toEqual(honoluluResult);
   });
 
   it("an exact copy of Honolulu's config gives Honolulu's results", () => {
     registerLocality(testCounty("test-copy"));
-    expect(calcParcel("bill6", { ...parcel, locality: "test-copy" })).toEqual(honoluluResult);
+    expect(runBill6({ ...parcel, locality: "test-copy" })).toEqual(honoluluResult);
     expect(parcelInputs("bill6", { ...parcel, locality: "test-copy" }).locality).toBe("test-copy");
   });
 

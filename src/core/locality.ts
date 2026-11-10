@@ -249,7 +249,21 @@ export interface StateRules {
   affordable_rent_income_share: number;
   /** HRS 201H: affordable share of units must be more than this */
   h201_min_affordable_frac: number;
+  /** conveyance tax paid by the seller, lowest price bracket first: the
+   *  bracket's rate applies to the whole price, not marginally */
+  conveyance_tax: ConveyanceTaxBracket[];
   source: string;
+}
+
+/** one bracket of the conveyance tax, rates in dollars per $100 of price */
+export interface ConveyanceTaxBracket {
+  /** prices under this; null for the top bracket */
+  below: number | null;
+  /** the general rate (Hawaiʻi: HRS § 247-2(1)) */
+  general: number;
+  /** a condo or single-family home whose buyer can't take a home exemption
+   *  (Hawaiʻi: HRS § 247-2(2)) */
+  condo_sfr: number;
 }
 
 /** zone names in parcel data that are not `rules.zones`' keys */

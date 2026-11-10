@@ -258,7 +258,12 @@ describe("Honolulu config: water, tax and income limits match the code", () => {
 
   it("property tax and HHFDC income limits", () => {
     expect(rules.property_tax_rate).toBe(FINANCING.rpt_residential);
-    expect(rules.income_limits).toEqual(INCOME_LIMITS);
+    // updated to HHFDC's 2026 schedule (median $133,400), as in feasim; the
+    // legacy copy has 2025's, so only the shape is the same
+    expect(Object.keys(rules.income_limits)).toEqual(Object.keys(INCOME_LIMITS));
+    for (const row of Object.values(rules.income_limits)) expect(row).toHaveLength(8);
+    expect(rules.income_limits[80]).toEqual([86240, 98560, 110880, 123200, 133120, 142960, 152800, 162640]);
+    expect(rules.income_limits[100][3]).toBe(154000);
   });
 });
 

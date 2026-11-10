@@ -113,21 +113,28 @@ describe("calculator defaults", () => {
 
 describe("calculator parking", () => {
   for (const program of ["bill6", "standard", "h201"] as const) {
-    it(`${program}: defaults to the Article 6 minimum for the unit mix`, () => {
+    it(`${program}: defaults to 0.95 stalls per unit`, () => {
       const inputs = CASES[program];
-      expect(inputs.parking_ratio).toBe(legalParkingRatio(inputs.unit_type!));
+      expect(inputs.parking_ratio).toBe(0.95);
       const r = calcSingle(inputs);
-      expect(r.parking_stalls).toBe(roundHalfUp(inputs.parking_ratio! * r.max_units));
+      expect(r.parking_stalls).toBe(roundHalfUp(0.95 * r.max_units));
+    });
+
+    it(`${program}: with the ratio unset, builds the Article 6 minimum for the unit mix`, () => {
+      const inputs = CASES[program];
+      const r = calcSingle({ ...inputs, parking_ratio: undefined });
+      expect(r.parking_stalls).toBe(roundHalfUp(legalParkingRatio(inputs.unit_type!) * r.max_units));
       // the calculator applies no § 21-6.20(a) exemption
       expect(inputs.parking_exempt).toBeUndefined();
       expect(r.parking_stalls).toBeGreaterThan(0);
     });
   }
 
-  it("bill7 and TOD default to no car parking", () => {
+  it("bill7 and TOD build no car parking at a ratio of 0", () => {
     for (const [name, inputs] of [...casesOf("bill7"), ...casesOf("tod")]) {
-      expect(inputs.parking_ratio, name).toBe(0);
-      if (!inputs.include_retail) expect(calcSingle(inputs).parking_stalls, name).toBe(0);
+      expect(inputs.parking_ratio, name).toBe(inputs.program === "bill7" ? 0.5 : 0.85);
+      if (!inputs.include_retail)
+        expect(calcSingle({ ...inputs, parking_ratio: 0 }).parking_stalls, name).toBe(0);
     }
   });
 
@@ -195,11 +202,12 @@ describe("calculator Bill 7 and the zone", () => {
     expect(soft("A-3")).toBeGreaterThan(soft("A-1"));
   });
 
-  it("steps back above 40 ft where the zone requires it", () => {
+  it("never steps back, whatever the zone (Chapter 32 has no height setbacks)", () => {
     const at60 = (zone: string, s: Partial<SliderInputs> = {}) =>
       calcSingle({ ...base, zone_class: zone, height_limit: 60, ...s }).buildable_sqft;
-    expect(at60("A-2")).toBeLessThan(at60("A-2", { stepback_trigger_ft: 1000 }));
-    expect(at60("A-1")).toBe(at60("A-1", { stepback_trigger_ft: 1000 }));
+    for (const zone of ["A-2", "BMX-3", "Resort"])
+      expect(at60(zone), zone).toBe(at60(zone, { stepback_trigger_ft: 1000 }));
+    expect(at60("A-2", { stepback_trigger_ft: 40 })).toBeLessThan(at60("A-2"));
   });
 
   it("keeps Bill 7's FAR and unit density in every zone", () => {

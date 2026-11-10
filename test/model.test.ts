@@ -8,6 +8,8 @@ import { describe, expect, it } from "vitest";
 
 import {
   BILL7_FAR,
+  conveyanceTax,
+  sellingCosts,
   BILL7_MAX_HEIGHT,
   DEFAULT_INPUTS,
   DEFAULT_TARGET_RETURN,
@@ -444,10 +446,11 @@ describe("parcelInputs", () => {
     expect(inputs.max_far).toBe(2.5);
   });
 
-  it("holds Bill 7 to 60 ft even when a lever asks for more", () => {
+  it("holds Bill 7 to 60 ft unless a lever asks for more", () => {
+    expect(parcelInputs("bill7", tall).height_limit).toBe(60);
     expect(parcelInputs("bill7", tall, { height_limit: 30 }).height_limit).toBe(30);
-    expect(parcelInputs("bill7", tall, { height_limit: 75 }).height_limit).toBe(60);
-    expect(parcelInputs("bill7", low, { height_limit: 75 }).height_limit).toBe(60);
+    expect(parcelInputs("bill7", tall, { height_limit: 75 }).height_limit).toBe(75);
+    expect(parcelInputs("bill7", low, { height_limit: 75 }).height_limit).toBe(75);
   });
 
   it("treats levers set to undefined as not set", () => {
@@ -496,8 +499,21 @@ describe("calcParcel", () => {
       .toBe(pre.max_units * 60000);
   });
 
-  it("builds to the Bill 7 cap, not above it", () => {
-    expect(calcParcel("bill7", tall, { height_limit: 75 }).height_limit).toBe(60);
+  it("builds only the floor area Bill 7's unit cap needs", () => {
+    const site = { lot_sqft: 5000, zone_class: "A-1", max_far: 4, setback: 10 };
+    const r = calcSingle({ ...DEFAULT_INPUTS.bill7, ...site, height_limit: 140 });
+    expect(r.max_units).toBe(25); // 5,000 x 4.0 / 800
+    expect(r.buildable_sqft).toBeCloseTo(12500, 3); // 25 x 400 / 0.8
+    expect(r.built_floors).toBe(8); // ground, 1 podium, 6 of housing
+    // a taller limit adds nothing once the cap is met
+    expect({ ...calcSingle({ ...DEFAULT_INPUTS.bill7, ...site, height_limit: 450 }), height_limit: 80 }).toEqual(
+      calcSingle({ ...DEFAULT_INPUTS.bill7, ...site, height_limit: 80 })
+    );
+  });
+
+  it("builds to the Bill 7 cap unless a lever asks for more", () => {
+    expect(calcParcel("bill7", tall).height_limit).toBe(60);
+    expect(calcParcel("bill7", tall, { height_limit: 75 }).height_limit).toBe(75);
     expect(calcParcel("bill7", tall, { height_limit: 30 }).height_limit).toBe(30);
   });
 });
@@ -984,13 +1000,31 @@ describe("parking", () => {
     expect(calcParkingIncome(10)).toBe(10 * 100 * 12);
   });
 
-  it("defaults to the Article 6 minimum for Standard, Before Ord. 26-7 and 201H, none for Bill 7 and TOD", () => {
-    // left unset, the model applies the legal minimum for the unit mix
-    expect(DEFAULT_INPUTS.bill6.parking_ratio).toBeUndefined();
-    expect(DEFAULT_INPUTS.standard.parking_ratio).toBeUndefined();
-    expect(DEFAULT_INPUTS.h201.parking_ratio).toBeUndefined();
-    expect(DEFAULT_INPUTS.bill7.parking_ratio).toBe(0);
-    expect(DEFAULT_INPUTS.tod.parking_ratio).toBe(0);
+  it("defaults to a flat ratio by pathway", () => {
+    expect(DEFAULT_INPUTS.bill6.parking_ratio).toBe(0.95);
+    expect(DEFAULT_INPUTS.standard.parking_ratio).toBe(0.95);
+    expect(DEFAULT_INPUTS.h201.parking_ratio).toBe(0.95);
+    expect(DEFAULT_INPUTS.bill7.parking_ratio).toBe(0.5);
+    expect(DEFAULT_INPUTS.tod.parking_ratio).toBe(0.85);
+  });
+
+  it("defaults every pathway to half studio, half one-bedroom", () => {
+    for (const program of PROGRAMS)
+      expect(DEFAULT_INPUTS[program].unit_type, program).toBe("studio50_1br50");
+  });
+
+  it("falls back to the same unit mix, and Bill 7 and TOD to the same ratio, when calcSingle gets neither", () => {
+    const site = { lot_sqft: 20000, zone_class: "BMX-3", height_limit: 60, max_far: 3 };
+    for (const program of PROGRAMS) {
+      const inputs = { ...DEFAULT_INPUTS[program], ...site };
+      const withParking = program === "bill7" || program === "tod";
+      const { unit_type, ...noMix } = inputs;
+      expect(calcSingle(noMix).max_units, program).toBe(calcSingle(inputs).max_units);
+      if (withParking) {
+        const { parking_ratio, ...noRatio } = inputs;
+        expect(calcSingle(noRatio).parking_stalls, program).toBe(calcSingle(inputs).parking_stalls);
+      }
+    }
   });
 
   it("builds a surface lot when the stalls fit beside a slimmer building", () => {
@@ -1081,10 +1115,11 @@ describe("Article 6 parking minimums", () => {
   it("requires no stalls on a parcel exempt under § 21-6.20(a)", () => {
     const parcel: Parcel = { lot_sqft: 20000, zone_class: "BMX-3", height: 150 };
     for (const program of ["bill6", "standard", "h201"] as const) {
-      const exempt = calcParcel(program, { ...parcel, parking_exempt: true }, { include_retail: true });
+      const levers = { include_retail: true, parking_ratio: 0 };
+      const exempt = calcParcel(program, { ...parcel, parking_exempt: true }, levers);
       expect(exempt.parking_stalls, program).toBe(0);
       expect(exempt.loading_spaces, program).toBeGreaterThan(0); // loading is not exempted
-      expect(calcParcel(program, parcel, { include_retail: true }).parking_stalls, program).toBeGreaterThan(0);
+      expect(calcParcel(program, parcel, levers).parking_stalls, program).toBeGreaterThan(0);
     }
   });
 
@@ -1220,20 +1255,23 @@ describe("open-space bonus", () => {
   });
 
   it("keeps the bigger building where neither version pencils", () => {
-    // 10,000 sqft BMX-4 at 60 ft loses money either way; the bonus would give
-    // up 70% of the lot to open space for floor area the height can't hold
-    const r = calcParcel("bill6", { lot_sqft: 10000, zone_class: "BMX-4", height: 60 });
+    // 10,000 sqft BMX-4 at 60 ft loses money either way at $475/sqft; the bonus
+    // would give up 70% of the lot to open space for floor area the height
+    // can't hold
+    const levers = { unit_type: "one_bb_100", parking_ratio: 0.5, hard_cost_per_sqft: 475 };
+    const r = calcParcel("bill6", { lot_sqft: 10000, zone_class: "BMX-4", height: 60 }, levers);
     expect(r.rlv).toBeLessThan(0);
     expect(r.open_space_bonus).toBe(0);
     expect(r.max_units).toBeGreaterThanOrEqual(
-      calcParcel("bill6", { lot_sqft: 10000, zone_class: "BMX-3", height: 60 }).max_units
+      calcParcel("bill6", { lot_sqft: 10000, zone_class: "BMX-3", height: 60 }, levers).max_units
     );
   });
 
   it("skips the bonus a 60 ft BMX-4 building can't use", () => {
-    const bmx4 = calcParcel("bill6", site("BMX-4", 60));
+    const levers = { unit_type: "one_bb_100", parking_ratio: 0.5 };
+    const bmx4 = calcParcel("bill6", site("BMX-4", 60), levers);
     expect(bmx4.open_space_bonus).toBe(0);
-    expect(bmx4.max_units).toBeGreaterThanOrEqual(calcParcel("bill6", site("BMX-3", 60)).max_units);
+    expect(bmx4.max_units).toBeGreaterThanOrEqual(calcParcel("bill6", site("BMX-3", 60), levers).max_units);
   });
 
   it("takes the bonus where the height can use the floor area", () => {
@@ -1248,5 +1286,34 @@ describe("open-space bonus", () => {
   it("reports no bonus where none is offered", () => {
     expect(calcParcel("bill6", site("A-2", 60)).open_space_bonus).toBe(0);
     expect(calcParcel("bill7", site("BMX-4", 60)).open_space_bonus).toBe(0);
+  });
+});
+
+describe("conveyance tax", () => {
+  it("taxes the whole price at its bracket's rate, not marginally", () => {
+    expect(conveyanceTax(500_000)).toBeCloseTo(500);
+    expect(conveyanceTax(600_000)).toBeCloseTo(1_200);
+    expect(conveyanceTax(9_999_999)).toBeCloseTo(89_999.991);
+    expect(conveyanceTax(10_000_000)).toBeCloseTo(100_000);
+    expect(conveyanceTax(12_000_000)).toBeCloseTo(120_000);
+  });
+
+  it("uses the higher § 247-2(2) rates for condos and homes without a home exemption", () => {
+    expect(conveyanceTax(500_000, "condo_sfr")).toBeCloseTo(750);
+    expect(conveyanceTax(12_000_000, "condo_sfr")).toBeCloseTo(150_000);
+  });
+
+  it("charges nothing when nothing is sold", () => {
+    expect(conveyanceTax(0)).toBe(0);
+  });
+
+  it("adds the 3.5% disposition cost on top of the tax", () => {
+    expect(sellingCosts(12_000_000)).toBeCloseTo(420_000 + 120_000);
+    expect(sellingCosts(0)).toBe(0);
+  });
+
+  it("charges both on the stabilized sale", () => {
+    const r = calcParcel("bill6", { lot_sqft: 20000, zone_class: "BMX-3", height: 150 });
+    expect(r.rlv_selling_costs).toBe(Math.round(0.035 * r.gdv + conveyanceTax(r.gdv)));
   });
 });

@@ -261,7 +261,7 @@ Land is classed by highest and best use, with zoning given major weight (19-53(e
 
 ## Income limits and affordable rents
 
-`income_limits` is HHFDC's 2025 Hawaiʻi County schedule (median family income $98,800; Honolulu $129,300, Maui $110,900). HHFDC's 2026 table (median $98,300) is out, but 2025 is used to match Honolulu and Maui.
+`income_limits` is HHFDC's 2025 Hawaiʻi County schedule (median family income $98,800; Maui $110,900). HHFDC's 2026 table (median $98,300) is out, and Honolulu now uses its 2026 table (median $133,400, from feasim); this county, Maui and Kauaʻi are still on 2025 and should move to 2026 together.
 
 | AMI | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |

@@ -1,13 +1,16 @@
 // TOD (Transit-Oriented Development) calculator:
 //
 // Key TOD rules:
-//   - 2× FAR bonus on top of base zone FAR (TOD entitlement)
-//   - Zone-specific lot coverage (small/medium/large/apt/b_bmx)
-//   - Mandatory 15% affordable rental + 30% affordable sale (validation errors otherwise)
-//   - NO car parking required (bicycle parking only) — major hard-cost reduction
-//   - Soft costs have TOD application fee + Special District Major Permit
-//   - Permit/plan-review fees apply to MARKET units only (affordable exempt)
-//   - 15-year improvement-tax exemption applies if hold strategy used
+//   - FAR and height from the regime's tier (todEnvelope in parcels.ts); Base
+//     uses the underlying zone
+//   - the underlying zone's lot coverage
+//   - no affordable units: Ch. 29 applies only to for-sale projects
+//   - no car parking minimum near rail (§ 21-6.20(a)): stalls come from the
+//     parking lever; loading and bicycle parking still apply
+//   - soft costs add the TOD application fee and special district fee
+//   - permit and plan-review fees on market units only by default
+//   - 15-year improvement-tax exemption
+//   - 18 months of permitting unless set
 
 import {
   allocatePropertyTax,
@@ -63,6 +66,7 @@ import {
   zoneStepBack,
   type ParcelOutput,
   type SliderInputs,
+  sellingCosts,
 } from "./calc-shared";
 
 // =========================================================
@@ -87,7 +91,7 @@ export function calcTodSingle(sliders: SliderInputs): ParcelOutput {
   const height_limit = sliders.height_limit ?? TOD_DEFAULT_HEIGHT_LIMIT;
   const floor_height = sliders.floor_height ?? TOD_DEFAULT_FLOOR_HEIGHT;
   const zone_class = sliders.zone_class ?? TOD_DEFAULT_ZONE_CLASS;
-  const unit_type = sliders.unit_type ?? "one_bb";
+  const unit_type = sliders.unit_type ?? "studio50_1br50";
   const rental_split = 1;
   const sale_split = 0;
   const leaseup_override = sliders.leaseup_months;
@@ -295,8 +299,7 @@ export function calcTodSingle(sliders: SliderInputs): ParcelOutput {
   const pri =
     affordable_rent * afd_rent_units * 12 + market_rent * mkt_rent_units * 12;
 
-  // TOD: no car parking income (bicycle only)
-  // 7/20/26 Trey says to implement car parking for TOD for now
+  // car parking income from the lever's stalls
   const parking_income = calcParkingIncome(env.stalls);
   const admin_income =
     max_units * 0.3 * INCOME.application_fee +
@@ -330,7 +333,7 @@ export function calcTodSingle(sliders: SliderInputs): ParcelOutput {
   const retail_noi = retail_egi - retail_opex - tax.retail_tax;
   const noi = residential_noi + retail_noi;
 
-  // GDV is gross disposition applied at point of sale only
+  // GDV is gross; the conveyance tax is applied at point of sale only
   const cap_rate = resolveCapRate(sliders.cap_rate);
   const rental_gdv = residential_noi / cap_rate;
   let retail_gdv_val = 0;
@@ -405,7 +408,7 @@ export function calcTodSingle(sliders: SliderInputs): ParcelOutput {
 
   if (hold_years === 0) {
     // DEV FLIP
-    const selling_costs = gdv * FINANCING.disposition_cost;
+    const selling_costs = sellingCosts(gdv);
     const equity_out = gdv - selling_costs - leaseup.final_principal;
 
     // predev spread monthly across permitting, construction_equity at close
@@ -462,7 +465,9 @@ export function calcTodSingle(sliders: SliderInputs): ParcelOutput {
     const tax_rate = FINANCING.rpt_residential;
 
     // Sale proceeds pay down construction loan first
-    const sale_selling_costs = gross_sales * FINANCING.disposition_cost;
+    // sale units are off (gross_sales is 0); if they return, charge each
+    // unit's price
+    const sale_selling_costs = sellingCosts(gross_sales);
     const net_sale_proceeds = gross_sales - sale_selling_costs;
     const perm_loan_balance = Math.max(
       0,
@@ -537,7 +542,7 @@ export function calcTodSingle(sliders: SliderInputs): ParcelOutput {
       if (yr === hold_years) {
         const forward_noi = current_noi * (1 + HOLD.annual_rent_growth);
         const gross_sale = forward_noi / exit_cap;
-        stored_selling_costs = gross_sale * FINANCING.disposition_cost;
+        stored_selling_costs = sellingCosts(gross_sale);
         const net_reversion =
           gross_sale - stored_selling_costs - perm.remaining_bal;
         cf[total_with_hold] += net_reversion;
@@ -609,6 +614,8 @@ export function calcTodSingle(sliders: SliderInputs): ParcelOutput {
     ground_floor_stalls: env.ground_floor_stalls,
     podium_stalls: env.podium_stalls,
     podium_levels: env.podium_levels,
+    built_floors: env.built_floors,
+    built_height: env.built_floors * floor_height,
     parking_sqft: env.parking_sqft,
     parking_share: env.parking_share,
     affordable_units,

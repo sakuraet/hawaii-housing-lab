@@ -169,7 +169,8 @@ describe("Hawaiʻi County water, tax and income limits", () => {
 describe("a Hawaiʻi County parcel runs end to end", () => {
   // an RM-2 lot of 20,000 sqft at 45 ft (made up, not a real parcel)
   const parcel = { locality: "hi-hawaii", lot_sqft: 20000, zone_class: "RM-2", height: 45 };
-  const r = calcParcel("current", parcel);
+  // one-bedrooms, not the default half-studio mix, as in the worked example
+  const r = calcParcel("current", parcel, { unit_type: "one_bb_100" });
 
   it("the envelope has no FAR and a 10-unit cap", () => {
     const e = pathwayEnvelope("current", parcel);
@@ -198,10 +199,10 @@ describe("a Hawaiʻi County parcel runs end to end", () => {
     // the yards are 20 ft front and rear and 8 + 2 = 10 ft at the sides,
     // which fit fewer units than a uniform 8 ft setback would
     const dense = { locality: "hi-hawaii", lot_sqft: 10000, zone_class: "RM-.75", height: 25 };
-    expect(calcParcel("current", dense).max_units).toBe(9);
-    expect(calcParcel("current", dense, { setback: 8 }).max_units).toBe(12);
+    expect(calcParcel("current", dense, { unit_type: "one_bb_100" }).max_units).toBe(9);
+    expect(calcParcel("current", dense, { setback: 8, unit_type: "one_bb_100" }).max_units).toBe(12);
     // at 45 ft the density cap binds either way
-    expect(calcParcel("current", { ...dense, height: 45 }).max_units).toBe(13);
+    expect(calcParcel("current", { ...dense, height: 45 }, { unit_type: "one_bb_100" }).max_units).toBe(13);
   });
 
   it("the setback lever still overrides the zone's yards", () => {

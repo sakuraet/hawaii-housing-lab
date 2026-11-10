@@ -27,7 +27,6 @@ import {
   DEFAULT_RETAIL_SHARE,
   DEFAULT_TARGET_RETURN,
   DEFAULT_TARGET_SPREAD,
-  DEFAULT_UNIT_TYPE,
   EFFICIENCY,
   envelopeCoverage,
   equityFirstDraws,
@@ -59,6 +58,7 @@ import {
   VACANCY,
   zeroOutput,
   zoneStepBack,
+  sellingCosts,
 } from "./calc-shared";
 import type { Locality } from "../core/locality";
 import { currentLimits } from "../core/zoning";
@@ -206,6 +206,7 @@ function bill6Hard(
     ground_floor_stalls: env.ground_floor_stalls,
     podium_stalls: env.podium_stalls,
     podium_levels: env.podium_levels,
+    built_floors: env.built_floors,
     parking_sqft: env.parking_sqft,
     parking_share: env.parking_share,
   };
@@ -352,7 +353,7 @@ function bill6Opex(
 }
 
 // =========================================================
-// STEP 7: NOI & GDV (gross, no disposition cost)
+// STEP 7: NOI & GDV (gross, before the conveyance tax)
 // =========================================================
 
 function bill6Noi(
@@ -412,10 +413,11 @@ function bill6DevFlip(
   monthly_predev_spend: number,
   construction_equity: number,
   land_cost_sqft: number,
-  lot_sqft: number
+  lot_sqft: number,
+  loc: Locality = honolulu
 ): Partial<ParcelOutput> {
-  // disposition cost at sale only
-  const selling_costs = gdv * FINANCING.disposition_cost;
+  // disposition cost and conveyance tax at sale only
+  const selling_costs = sellingCosts(gdv, loc.state);
   const equity_out = gdv - selling_costs - loan_balance;
 
   // monthly cashflow: predev spread across permitting, construction equity at close, exit at end
@@ -507,7 +509,9 @@ function bill6Hold(
   const total_equity_invested = equity_amount;
 
   // Sale units sold at stabilization, pay down construction loan first
-  const sale_selling_costs = gross_sales * FINANCING.disposition_cost;
+  // sale units are off (gross_sales is 0); if they return, charge each
+  // unit's price
+  const sale_selling_costs = sellingCosts(gross_sales, loc.state);
   const net_sale_proceeds = gross_sales - sale_selling_costs;
   const perm_loan_balance = Math.max(0, loan_balance - net_sale_proceeds);
   const excess_sale_cash = Math.max(0, net_sale_proceeds - loan_balance);
@@ -573,7 +577,7 @@ function bill6Hold(
     if (yr === hold_years) {
       const forward_noi = current_noi * (1 + loc.assumptions.market.annual_rent_growth);
       const gross_sale = forward_noi / exit_cap;
-      stored_selling_costs = gross_sale * FINANCING.disposition_cost;
+      stored_selling_costs = sellingCosts(gross_sale, loc.state);
       const net_reversion =
         gross_sale - stored_selling_costs - perm.remaining_bal;
       cf[total_with_hold] += net_reversion;
@@ -629,7 +633,7 @@ export function calcbill6Single(sliders: SliderInputs): ParcelOutput {
   const loc = getLocality(sliders.locality);
   const lot_sqft = sliders.lot_sqft ?? 5000;
   const height_limit = sliders.height_limit ?? BILL6_DEFAULT_HEIGHT_LIMIT;
-  const unit_type = sliders.unit_type ?? DEFAULT_UNIT_TYPE;
+  const unit_type = sliders.unit_type ?? "studio50_1br50";
   const zone_class = sliders.zone_class ?? "AMX-1";
   const max_far = sliders.max_far;
   const rental_split = 1;
@@ -853,7 +857,8 @@ export function calcbill6Single(sliders: SliderInputs): ParcelOutput {
     lot_sqft,
     total_months,
     sliders.target_return ?? DEFAULT_TARGET_RETURN,
-    sliders.profit_margin ?? DEFAULT_PROFIT_MARGIN
+    sliders.profit_margin ?? DEFAULT_PROFIT_MARGIN,
+    loc.state
   );
 
   // Step 9: Developer feasibility
@@ -872,7 +877,8 @@ export function calcbill6Single(sliders: SliderInputs): ParcelOutput {
           predev.monthly_predev_spend,
           predev.construction_equity,
           land_cost,
-          lot_sqft
+          lot_sqft,
+          loc
         )
       : bill6Hold(
           loan.equity_amount,
@@ -923,6 +929,8 @@ export function calcbill6Single(sliders: SliderInputs): ParcelOutput {
     ground_floor_stalls: hard.ground_floor_stalls,
     podium_stalls: hard.podium_stalls,
     podium_levels: hard.podium_levels,
+    built_floors: hard.built_floors,
+    built_height: hard.built_floors * floor_height,
     parking_sqft: hard.parking_sqft,
     parking_share: hard.parking_share,
     affordable_units: hard.affordable_units,

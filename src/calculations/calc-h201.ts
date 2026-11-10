@@ -28,7 +28,6 @@ import {
   DEFAULT_RETAIL_SHARE,
   DEFAULT_TARGET_RETURN,
   DEFAULT_TARGET_SPREAD,
-  DEFAULT_UNIT_TYPE,
   EFFICIENCY,
   envelopeCoverage,
   equityFirstDraws,
@@ -58,6 +57,7 @@ import {
   VACANCY,
   zeroOutput,
   zoneStepBack,
+  sellingCosts,
 } from "./calc-shared";
 import { hawaii } from "../localities/hi/state";
 
@@ -88,7 +88,7 @@ export function calcH201Single(sliders: SliderInputs): ParcelOutput {
   const lot_sqft = sliders.lot_sqft ?? 5000;
   const height_limit = sliders.height_limit ?? H201_DEFAULT_HEIGHT_LIMIT;
   const zone_class = sliders.zone_class ?? H201_DEFAULT_ZONE_CLASS;
-  const unit_type = sliders.unit_type ?? DEFAULT_UNIT_TYPE;
+  const unit_type = sliders.unit_type ?? "studio50_1br50";
   const rental_split = 1;
   const sale_split = 0;
   const leaseup_override = sliders.leaseup_months;
@@ -408,7 +408,7 @@ export function calcH201Single(sliders: SliderInputs): ParcelOutput {
 
   if (hold_years === 0) {
     //  DEV FLIP
-    const selling_costs = gdv * FINANCING.disposition_cost;
+    const selling_costs = sellingCosts(gdv);
     const equity_out = gdv - selling_costs - leaseup.final_principal;
     const cashflows = new Array(total_months + 1).fill(0);
     // equity first: land, then predev, then the balance at loan closing
@@ -463,7 +463,9 @@ export function calcH201Single(sliders: SliderInputs): ParcelOutput {
     const tax_rate = FINANCING.rpt_residential;
 
     // Sale proceeds pay down construction loan first
-    const sale_selling_costs = gross_sales * FINANCING.disposition_cost;
+    // sale units are off (gross_sales is 0); if they return, charge each
+    // unit's price
+    const sale_selling_costs = sellingCosts(gross_sales);
     const net_sale_proceeds = gross_sales - sale_selling_costs;
     const perm_loan_balance = Math.max(
       0,
@@ -533,7 +535,7 @@ export function calcH201Single(sliders: SliderInputs): ParcelOutput {
       if (yr === hold_years) {
         const forward_noi = current_noi * (1 + HOLD.annual_rent_growth);
         const gross_sale = forward_noi / exit_cap;
-        stored_selling_costs = gross_sale * FINANCING.disposition_cost;
+        stored_selling_costs = sellingCosts(gross_sale);
         const net_reversion =
           gross_sale - stored_selling_costs - perm.remaining_bal;
         cf[total_with_hold] += net_reversion;
@@ -606,6 +608,8 @@ export function calcH201Single(sliders: SliderInputs): ParcelOutput {
     ground_floor_stalls: env.ground_floor_stalls,
     podium_stalls: env.podium_stalls,
     podium_levels: env.podium_levels,
+    built_floors: env.built_floors,
+    built_height: env.built_floors * 10,
     parking_sqft: env.parking_sqft,
     parking_share: env.parking_share,
     affordable_units,

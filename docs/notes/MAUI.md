@@ -285,7 +285,7 @@ The general excise tax (4% state + 0.5% county surcharge since Jan 1, 2024, 4.5%
 
 ## Income limits and affordable rents
 
-`income_limits` is HHFDC's 2025 Maui County schedule (median family income $110,900; Honolulu's is $129,300), by AMI % for household sizes 1–8. It has the same shape as Honolulu's table and matches the rule sheet's copy row for row.
+`income_limits` is HHFDC's 2025 Maui County schedule (median family income $110,900; Honolulu's 2026 schedule, now in the model, has $133,400), by AMI % for household sizes 1–8. It has the same shape as Honolulu's table and matches the rule sheet's copy row for row.
 
 | AMI | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |

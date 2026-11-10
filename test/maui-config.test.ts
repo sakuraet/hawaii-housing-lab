@@ -203,7 +203,8 @@ describe("a Maui parcel runs end to end", () => {
   // not a real parcel): FAR 0.9 caps floor area at 18,000 sqft, under the
   // 35% coverage x 6 floors envelope (42,000 sqft)
   const parcel = { locality: "hi-maui", lot_sqft: 20000, zone_class: "A-2", height: 60 };
-  const r = calcParcel("current", parcel);
+  // one-bedrooms, not the default half-studio mix, as in the worked example
+  const r = calcParcel("current", parcel, { unit_type: "one_bb_100" });
 
   it("floor area at FAR 0.9", () => {
     expect(r.buildable_sqft).toBe(18000);

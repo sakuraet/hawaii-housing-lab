@@ -48,10 +48,10 @@ const other: Locality = {
 
 describe("rents read the locality's income limits and rent share", () => {
   it("a one-bedroom at 80% AMI", () => {
-    // Honolulu: average of the 1- and 2-person 80% incomes x 30% / 12
-    expect(rentByAmi("ami_80", "one_bb")).toBe(Math.floor((((85120 + 97280) / 2) * 0.3) / 12));
+    // Honolulu: average of the 1- and 2-person 80% incomes (HHFDC 2026) x 30% / 12
+    expect(rentByAmi("ami_80", "one_bb")).toBe(Math.floor((((86240 + 98560) / 2) * 0.3) / 12));
     expect(rentByAmi("ami_80", "one_bb", other)).toBe(
-      Math.floor((((85120 + 97280) / 4) * 0.25) / 12)
+      Math.floor((((86240 + 98560) / 4) * 0.25) / 12)
     );
   });
 

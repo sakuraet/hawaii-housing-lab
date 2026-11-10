@@ -146,7 +146,8 @@ describe("Kauaʻi water, tax and income limits", () => {
 describe("a Kauaʻi parcel runs end to end", () => {
   // an R-20 lot of 20,000 sqft at 40 ft (made up, not a real parcel)
   const parcel = { locality: "hi-kauai", lot_sqft: 20000, zone_class: "R-20", height: 40 };
-  const r = calcParcel("current", parcel);
+  // one-bedrooms, not the default half-studio mix, as in the worked example
+  const r = calcParcel("current", parcel, { unit_type: "one_bb_100" });
 
   it("the envelope has no FAR and a 9-unit cap", () => {
     const e = pathwayEnvelope("current", parcel);

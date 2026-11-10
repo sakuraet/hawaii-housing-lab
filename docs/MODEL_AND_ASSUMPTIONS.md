@@ -39,6 +39,8 @@ Replace every [bracketed prompt] with your content. Keep it concise; clarity bea
 
 # Methodological Approach
 
+The full methodology is in [docs/model](model/README.md): the pipeline every pathway runs ([simulator logic](model/simulator-logic.md)), each Honolulu pathway, and every variable with its source ([variables](model/variables.md)). The neighbor-island counties' rules are in [docs/notes](notes/).
+
 [Explain how the tool works: the equations, logic flows, or rules; how a scenario changes the inputs; and how outputs are produced. Diagrams or pseudocode are welcome. Someone should be able to follow the reasoning from input to output.]
 
 ## Scenario definitions (draft)
