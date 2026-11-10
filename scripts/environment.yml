@@ -1,0 +1,16 @@
+# Python environment for the data scripts in this folder (see README.md).
+#   conda env create -f scripts/environment.yml
+#   conda activate feasim-data
+name: feasim-data
+channels:
+  - conda-forge
+  - nodefaults
+dependencies:
+  - python=3.12.16
+  - pandas=3.1.0
+  - geopandas=1.2.0
+  - pyogrio=0.13.0
+  - shapely=2.2.0
+  - numpy=2.5.4
+  - pyproj=3.8.0
+  - libgdal-core=3.13.3

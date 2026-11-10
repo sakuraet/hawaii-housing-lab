@@ -44,6 +44,8 @@ data/*
 *.db
 # small samples are kept, whatever their format
 !data/sample/**
+# the data scripts' own small inputs (see scripts/README.md)
+!scripts/inputs/**
 
 # --- Build / output artifacts -------------------------------------------------
 dist/

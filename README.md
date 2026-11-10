@@ -51,7 +51,13 @@ No environment variables or API keys are needed.
 
 ## Data (WIP)
 
-[How to obtain the data your tool uses. Do not commit raw or large data — see data/README.md. Point to the datasets and describe any download or preparation steps. Full provenance goes in docs/DATA_PROVENANCE.md.]
+The tool's data comes from the Hawaiʻi Statewide GIS Program's public parcel and zoning layers. One command downloads and builds it; [scripts/README.md](scripts/README.md) has the setup and each step:
+
+```bash
+python scripts/build_data.py
+```
+
+Nothing it downloads or builds is committed. Full provenance goes in [docs/DATA_PROVENANCE.md](docs/DATA_PROVENANCE.md).
 
 ## Documentation (WIP)
 
