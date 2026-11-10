@@ -2,13 +2,14 @@
 
 Input:  data/gis/zoning_<county>/<stem>.shp      (from fetch_data.py)
 Output: data/gis/zoning_clean.gpkg               layer "zoning": county, gis_label, zone_label,
-                                                 not_zoning, geometry (all four counties)
+                                                 not_zoning, cpa, geometry (all four counties)
         data/gis/zoning_cleaning_log.csv          every repaired polygon
 
 gis_label is the label as the county layer writes it. zone_label is the district's name in the county
 code, which the engine's county configs use (src/localities/hi/*/zones.ts): the layers spell a few
 districts differently (Kauai "C-G" is the code's "CG", Maui "M1 Light Industrial" is "M-1"). Labels for
-roads, water and unzoned land are marked not_zoning, and the join skips them.
+roads, water and unzoned land are marked not_zoning, and the join skips them. cpa is Maui's community
+plan area (the layer's CP_AREA), which some Maui height limits depend on; blank elsewhere.
 
 Usage: python scripts/clean_zoning.py   (run after fetch_data.py)
 """
@@ -79,6 +80,7 @@ def main() -> None:
             "gis_label": g[field],
             "zone_label": [zone_label(county, s) for s in g[field]],
             "not_zoning": g[field].isin(NOT_ZONING),
+            "cpa": g["CP_AREA"].fillna("").astype(str) if county == "Maui" else "",
         }, geometry=g.geometry.values, crs=g.crs)
         out = out[~out.is_empty]
         parts.append(out)

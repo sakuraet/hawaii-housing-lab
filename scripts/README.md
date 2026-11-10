@@ -34,11 +34,11 @@ It downloads about 300 MB and writes the parcel table and the map files. To reru
 
 | Step | Script | What it does | Writes |
 | --- | --- | --- | --- |
-| 1 | `fetch_data.py` | Downloads the statewide parcel layer and the four counties' zoning layers from the Hawaiʻi Statewide GIS Program | `data/gis/<layer>/`, each with a `SOURCE.md` |
+| 1 | `fetch_data.py` | Downloads the statewide parcel layer and the four counties' zoning layers from the Hawaiʻi Statewide GIS Program, and Honolulu's zoning map height limits from the City's open data | `data/gis/<layer>/`, each with a `SOURCE.md` |
 | 2 | `clean_parcels.py` | Repairs invalid parcel shapes and merges rows that share a TMK | `data/gis/parcels/parcels_clean.gpkg` |
 | 3 | `clean_zoning.py` | Repairs the zoning layers and uses each county code's district names | `data/gis/zoning_clean.gpkg` |
-| 4 | `join_zoning.py` | Gives each parcel the district covering most of it, and applies Hawaiʻi County's recent rezonings | `data/joined/parcels_zoning.gpkg` |
-| 5 | `export_parcels.py` | Writes the parcel table the engine runs | `data/parcels_statewide.csv` |
+| 4 | `join_zoning.py` | Gives each parcel the district covering most of it, applies Hawaiʻi County's recent rezonings, and adds Maui's community plan area and Honolulu's mapped height | `data/joined/parcels_zoning.gpkg` |
+| 5 | `export_parcels.py` | Writes the parcel table the engine runs, with each parcel's height limit from `zone_heights.csv` | `data/parcels_statewide.csv` |
 | 6 | `run-parcels.mjs` | Builds the engine and runs every parcel on current zoning | `out/parcel-runs/` |
 | 7 | `export_map.py` | Writes each county's parcel positions and lot outlines for the map, for the parcels the engine runs (Honolulu: its apartment, mixed-use and Waikīkī districts) | `web/public/data/parcels-<county>.json`, `parcel-shapes-<county>.json` |
 
@@ -46,13 +46,20 @@ Git ignores everything these steps write. `common.py` holds the paths they share
 
 ### Inputs kept in git
 
-`scripts/inputs/` holds the one input that isn't downloaded:
+`scripts/inputs/` holds the inputs that aren't downloaded:
 
 - `hawaii_map_amendments.csv`: Hawaiʻi County zoning-map amendments since 2023, transcribed from the Annex to the County Code (Chapter 25). The join applies them where the county's zoning layer is older than the rezoning.
+- `zone_heights.csv`: each district's height limit, from the county codes, with the section for each row. The first row whose county, zone pattern (`RM-*` matches every RM district; `CG*` also matches Kauaʻi's overlay labels such as `CG/ST-P`) and area match a parcel sets its height. The areas:
+  - `hilo`: the City of Hilo, approximated as TMK zone 2 (the South Hilo district);
+  - `keauhou-kahaluu`: Keauhou and Kahaluʻu Bays, approximated as TMK zone 7, section 8;
+  - `west-maui` and `hana`: Maui community plan areas, from the Maui zoning layer;
+  - `lanai` and `molokai`: the parcel's island;
+  - `height-map`: Honolulu, where the zoning maps and special districts set heights. The parcel takes the first number of the label covering most of it (`25' (150')` is 25 ft; the bracketed figure is the transit-oriented bonus height). This row comes first because the map can raise a district's base height: some A-1 parcels in the Punchbowl and transit-oriented special districts, and in recent rezonings, are mapped at 40 to 350 ft. A-1 and AMX-1 parcels with no map height take Table 21-3.3's 30 ft.
+
+  A parcel no row matches, such as a Honolulu A-2 parcel whose map label is blank or `0'`, gets height 0, and the engine uses its default height. The table's `height_source` column says where each height came from.
 
 ### Not built yet
 
-- **Height limits:** every parcel's `height` is 0, so the engine uses its default height. A table of each district's height limit from the county codes is the next step.
 - **Honolulu's map files:** the tool still reads Honolulu from its pathway files (`parcels-bill6.json` and so on). Step 7 writes `parcels-hi-honolulu.json` too, to check against them.
 - **Assessed values, existing use, transit distance and parking exemptions:** blank in the table.
 - **Street addresses:** not in the public layers; the map shows each parcel's TMK.

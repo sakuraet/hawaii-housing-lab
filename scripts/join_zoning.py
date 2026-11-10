@@ -4,14 +4,18 @@ For each parcel:
   1. Zoning: the district (not roads or water) covering the largest share of the parcel, if it covers
      at least 10% of it; otherwise the parcel is unzoned. The second district and its share are kept
      for review.
-  2. Hawaii County: zoning-map amendments from the code's Annex (scripts/inputs/hawaii_map_amendments.csv)
+  2. Maui: the community plan area covering most of the parcel (cpa). Honolulu: the zoning map height
+     label covering most of the parcel (height_label, height_label_source), from the City's height layer.
+  3. Hawaii County: zoning-map amendments from the code's Annex (scripts/inputs/hawaii_map_amendments.csv)
      replace the district by TMK when they took effect after the zoning layer's date, or when the layer
      still shows the old district. Rezonings of part of a parcel ("por.", "portion") are flagged, not
      applied.
 
-Inputs:  data/gis/parcels/parcels_clean.gpkg (clean_parcels.py), data/gis/zoning_clean.gpkg (clean_zoning.py)
+Inputs:  data/gis/parcels/parcels_clean.gpkg (clean_parcels.py), data/gis/zoning_clean.gpkg (clean_zoning.py),
+         data/gis/height_honolulu/height_honolulu.geojson (fetch_data.py)
 Outputs, in data/joined/:
-  parcels_zoning.gpkg   layer "parcels": TMK and parcel fields, zone_label, join_status, shares, flags
+  parcels_zoning.gpkg   layer "parcels": TMK and parcel fields, zone_label, join_status, shares, cpa,
+                        height_label, flags
   summary.csv           parcels and acres by county, island and join_status
   annex_log.csv         what happened to each Hawaii Annex row
 
@@ -31,7 +35,7 @@ import pyogrio
 import shapely
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from common import GIS, INPUTS, JOINED, SQM_PER_ACRE  # noqa: E402
+from common import CRS, GIS, INPUTS, JOINED, SQM_PER_ACRE  # noqa: E402
 
 COUNTIES = ["Honolulu", "Hawaii", "Kauai", "Maui"]
 MIN_SHARE = 0.10            # a parcel is zoned if its largest district covers this share
@@ -40,7 +44,7 @@ GRID_M = 2000
 HAWAII_LAYER_DATE = pd.Timestamp("2023-11-08")
 PARCEL_COLS = ["TMK", "TMK_txt", "county", "island", "zone", "section", "plat", "parcel", "cty_tmk"]
 JOIN_COLS = ["parcel_acres", "gis_label", "zone_label", "join_status", "share", "zone_label_2", "share_2",
-             "zoned_share", "annex_ordinance", "flags"]
+             "zoned_share", "annex_ordinance", "cpa", "height_label", "height_label_source", "flags"]
 
 
 def grid_split(gdf: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
@@ -72,6 +76,12 @@ def areas_by(parcels: gpd.GeoDataFrame, layer: gpd.GeoDataFrame, key: str) -> pd
     df = pd.DataFrame({"pi": pi, "value": layer[key].values[li], "sqm": sqm})
     return df.groupby(["pi", "value"], as_index=False)["sqm"].sum().sort_values(["pi", "sqm"],
                                                                                  ascending=[True, False])
+
+
+def largest(parcels: gpd.GeoDataFrame, layer: gpd.GeoDataFrame, key: str) -> pd.Series:
+    """The `key` value covering the largest area of each parcel, aligned to parcels ("" where none)."""
+    top = areas_by(parcels, layer, key).groupby("pi").head(1).set_index("pi")["value"]
+    return top.reindex(range(len(parcels))).fillna("").astype(str)
 
 
 def assign_zoning(parcels: gpd.GeoDataFrame, zoning: gpd.GeoDataFrame, area: np.ndarray) -> pd.DataFrame:
@@ -143,7 +153,8 @@ def annex_rows(labels: dict[int, str]) -> tuple[dict, dict, pd.DataFrame]:
     return overrides, portions, pd.DataFrame(log)
 
 
-def join_county(county: str, zoning: gpd.GeoDataFrame) -> tuple[gpd.GeoDataFrame, pd.DataFrame]:
+def join_county(county: str, zoning: gpd.GeoDataFrame,
+                heights: gpd.GeoDataFrame) -> tuple[gpd.GeoDataFrame, pd.DataFrame]:
     t0 = time.time()
     parcels = gpd.read_file(GIS / "parcels" / "parcels_clean.gpkg", layer="parcels",
                             where=f"county = '{county}'", engine="pyogrio").reset_index(drop=True)
@@ -152,6 +163,13 @@ def join_county(county: str, zoning: gpd.GeoDataFrame) -> tuple[gpd.GeoDataFrame
     p["parcel_acres"] = (area / SQM_PER_ACRE).round(4)
     p = pd.concat([p, assign_zoning(parcels, zoning[zoning["county"] == county], area)], axis=1)
     p["annex_ordinance"] = ""
+    county_zoning = zoning[zoning["county"] == county]
+    p["cpa"] = largest(parcels, county_zoning[county_zoning["cpa"] != ""], "cpa") if county == "Maui" else ""
+    if county == "Honolulu":
+        p["height_label"] = largest(parcels, heights, "height_label")
+        p["height_label_source"] = largest(parcels, heights, "height_label_source")
+    else:
+        p["height_label"] = p["height_label_source"] = ""
 
     log = pd.DataFrame()
     if county == "Hawaii":
@@ -176,9 +194,14 @@ def main() -> None:
     sys.stdout.reconfigure(encoding="utf-8")
     JOINED.parent.mkdir(parents=True, exist_ok=True)
     zoning = grid_split(gpd.read_file(GIS / "zoning_clean.gpkg", layer="zoning"))
+    heights = gpd.read_file(GIS / "height_honolulu" / "height_honolulu.geojson").to_crs(CRS)
+    heights = heights[heights.geometry.notna() & heights["height_label"].notna()]
+    for c in ["height_label", "height_label_source"]:
+        heights[c] = heights[c].fillna("").astype(str).str.strip()
+    heights = grid_split(heights)
     parts, logs = [], []
     for county in COUNTIES:
-        out, log = join_county(county, zoning)
+        out, log = join_county(county, zoning, heights)
         parts.append(out)
         logs.append(log)
     joined = gpd.GeoDataFrame(pd.concat(parts, ignore_index=True), crs=parts[0].crs)

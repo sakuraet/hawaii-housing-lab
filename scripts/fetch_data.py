@@ -10,11 +10,15 @@ the zip's SHA-256, the feature count and the fields.
   zoning_hawaii     County of Hawaii zoning
   zoning_kauai      County of Kauai zoning
   zoning_maui       County of Maui zoning
+  height_honolulu   City and County of Honolulu zoning map height limits, from the City's open data
+                    (HOLIS) feature service rather than the State's files
 
 Usage: python scripts/fetch_data.py [name ...]   (default: every layer)
 """
 import hashlib
+import json
 import sys
+import urllib.parse
 import urllib.request
 import zipfile
 from datetime import date
@@ -28,6 +32,16 @@ from common import GIS  # noqa: E402
 BASE = "https://files.hawaii.gov/dbedt/op/gis/data/"
 SERVICE = "https://geodata.hawaii.gov/arcgis/rest/services/ParcelsZoning/MapServer/"
 SHP_PARTS = {".shp", ".shx", ".dbf", ".prj", ".cpg", ".sbn", ".sbx", ".xml"}
+
+# feature services read page by page into one GeoJSON file: name: (layer url, fields, title)
+FEATURE_LAYERS = {
+    "height_honolulu": (
+        "https://services.arcgis.com/tNJpAOha4mODLkXz/arcgis/rest/services/Zoning_Reg/FeatureServer/2",
+        "height_label,height_label_source",
+        "Zoning - Map Height Limit, City and County of Honolulu",
+    ),
+}
+PAGE = 1000
 
 # name: (file stem, map service layer id, title)
 LAYERS = {
@@ -77,14 +91,45 @@ def get(name: str) -> None:
     print(f"{name}: {len(g):,} features")
 
 
+def get_features(name: str) -> None:
+    """A feature service layer, every feature, as GeoJSON in WGS 84."""
+    url, fields, title = FEATURE_LAYERS[name]
+    out = GIS / name
+    out.mkdir(parents=True, exist_ok=True)
+    features, offset = [], 0
+    while True:
+        query = urllib.parse.urlencode({"where": "1=1", "outFields": fields, "f": "geojson",
+                                        "resultOffset": offset, "resultRecordCount": PAGE})
+        req = urllib.request.Request(f"{url}/query?{query}", headers={"User-Agent": "feasim-data-scripts"})
+        with urllib.request.urlopen(req) as r:
+            page = json.load(r)
+        features += page.get("features", [])
+        if len(page.get("features", [])) < PAGE:
+            break
+        offset += PAGE
+    path = out / f"{name}.geojson"
+    path.write_text(json.dumps({"type": "FeatureCollection", "features": features}), encoding="utf-8")
+    sha = hashlib.sha256(path.read_bytes()).hexdigest()
+    (out / "SOURCE.md").write_text(
+        f"# {title}\n\n"
+        f"- Feature service layer: {url}\n"
+        f"- Fields: {fields}; downloaded {date.today().isoformat()} as GeoJSON (WGS 84)\n"
+        f"- File: {path.name}; {len(features):,} features; SHA-256 {sha}\n", encoding="utf-8")
+    print(f"{name}: {len(features):,} features")
+
+
 def main() -> None:
     sys.stdout.reconfigure(encoding="utf-8")
-    names = sys.argv[1:] or list(LAYERS)
-    unknown = [n for n in names if n not in LAYERS]
+    every = list(LAYERS) + list(FEATURE_LAYERS)
+    names = sys.argv[1:] or every
+    unknown = [n for n in names if n not in every]
     if unknown:
-        sys.exit(f"unknown layer {unknown}; choose from {list(LAYERS)}")
+        sys.exit(f"unknown layer {unknown}; choose from {every}")
     for n in names:
-        get(n)
+        if n in FEATURE_LAYERS:
+            get_features(n)
+        else:
+            get(n)
 
 
 if __name__ == "__main__":
