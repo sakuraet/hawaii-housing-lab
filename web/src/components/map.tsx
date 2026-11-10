@@ -42,6 +42,8 @@ interface Props {
   centerParcel?: ParcelRow | null;
   /** [south-west, north-east] corners to frame when `focusRows` is empty */
   area?: [[number, number], [number, number]];
+  /** the lot outlines' file in public/data/ */
+  outlinesFile?: string;
   selectedParcelId: string | null;
   onSelectParcel: (parcelId: string) => void;
 }
@@ -83,21 +85,26 @@ const OUTLINE_PANE = "parcel-outlines";
 // Leaflet multi-polygon
 type Outline = LatLngTuple[][][];
 
-let outlinesPromise: Promise<Map<string, Outline>> | null = null;
-function loadOutlines(): Promise<Map<string, Outline>> {
-  // served from public/data/, which git ignores (see public/data/README.md)
-  outlinesPromise ??= fetch("/data/parcel-shapes.json")
-    .then((res) => {
-      if (!res.ok) throw new Error(`parcel-shapes.json: HTTP ${res.status}`);
-      return res.json() as Promise<[string, Outline][]>;
-    })
-    .then((rows) => new Map(rows))
-    .catch((err) => {
-      // let the next zoom-in retry rather than caching the failure
-      outlinesPromise = null;
-      throw err;
-    });
-  return outlinesPromise;
+// one download per file, shared by every zoom-in that wants it
+const outlinesPromises = new Map<string, Promise<Map<string, Outline>>>();
+function loadOutlines(file: string): Promise<Map<string, Outline>> {
+  let promise = outlinesPromises.get(file);
+  if (!promise) {
+    // served from public/data/, which git ignores (see public/data/README.md)
+    promise = fetch(`/data/${file}`)
+      .then((res) => {
+        if (!res.ok) throw new Error(`${file}: HTTP ${res.status}`);
+        return res.json() as Promise<[string, Outline][]>;
+      })
+      .then((rows) => new Map(rows))
+      .catch((err) => {
+        // let the next zoom-in retry rather than caching the failure
+        outlinesPromises.delete(file);
+        throw err;
+      });
+    outlinesPromises.set(file, promise);
+  }
+  return promise;
 }
 
 // same colours for dots and lots; dots get a slightly heavier edge
@@ -123,6 +130,7 @@ export function ParcelMap({
   focusRows,
   centerParcel = null,
   area,
+  outlinesFile = "parcel-shapes.json",
   selectedParcelId,
   onSelectParcel,
 }: Props) {
@@ -197,6 +205,8 @@ export function ParcelMap({
             onHover={handleHover}
           />
           <ParcelOutlines
+            key={outlinesFile}
+            file={outlinesFile}
             map={map}
             parcels={parcels}
             rows={rows}
@@ -311,13 +321,14 @@ function ParcelDots({
 }
 
 function ParcelOutlines({
+  file,
   map,
   parcels,
   rows,
   selectedParcelId,
   onSelect,
   onHover,
-}: LayerProps) {
+}: LayerProps & { file: string }) {
   const [zoom, setZoom] = useState(() => map.getZoom());
   useEffect(() => {
     const onZoom = () => setZoom(map.getZoom());
@@ -332,7 +343,7 @@ function ParcelOutlines({
   useEffect(() => {
     if (!wantOutlines || outlines) return;
     let live = true;
-    loadOutlines()
+    loadOutlines(file)
       .then((loaded) => {
         if (live) setOutlines(loaded);
       })
@@ -341,7 +352,7 @@ function ParcelOutlines({
     return () => {
       live = false;
     };
-  }, [wantOutlines, outlines]);
+  }, [wantOutlines, outlines, file]);
 
   // Outlines only replace the dots once they have arrived
   const showOutlines = wantOutlines && outlines != null;

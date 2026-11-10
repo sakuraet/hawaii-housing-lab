@@ -18,7 +18,10 @@ export interface ParcelRow {
   height: number;
   lat: number;
   lng: number;
-  region: Region;
+  /** Oʻahu only: the part of the island the parcel is in */
+  region?: Region;
+  /** other counties: the island the parcel is on */
+  island?: string;
   address?: string;
   parking_exempt?: boolean;
   // ── TOD pathway only ───────────────────────────────────────────────────

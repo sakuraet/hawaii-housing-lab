@@ -37,6 +37,8 @@ export const PROGRAM_LABEL: Record<string, string> = {
   bill7: "Bill 7 ",
   tod: "TOD ",
   h201: "201H ",
+  // the other counties run on their own current zoning
+  current: "Current Zoning ",
 };
 
 function pct(v: number | null, decimals = 1) {
