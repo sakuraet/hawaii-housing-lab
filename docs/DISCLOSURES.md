@@ -36,7 +36,22 @@ remain freely available to end users.]
 
 | Dependency | License | Runtime or dev-only | Notes |
 | ---------- | ------- | ------------------- | ----- |
-| [name] | [license] | [runtime / dev] | [ok / flagged] |
+| Next.js 16.4.5, React 19.3.0, Leaflet 1.9.4, Tailwind CSS 3.4.19 and the rest of the npm tree | MIT, ISC, Apache-2.0, BSD-2-Clause, BSD-3-Clause, 0BSD, BlueOak-1.0.0, CC0-1.0, Python-2.0, CC-BY-4.0 | Runtime and dev | ok: permissive |
+| `sharp` 0.35.5 | Apache-2.0 | Runtime, optional | ok |
+| `@img/sharp-libvips-*` 1.3.4, and the libvips binaries bundled in `@img/sharp-win32-*` and `@img/sharp-wasm32` 0.35.5 | LGPL-3.0-or-later | Runtime, optional | Flagged, resolved; see below |
+| `lightningcss` 1.33.0 and its platform binaries | MPL-2.0 | Dev only | Flagged, resolved; see below |
+| `axe-core` 4.14.0 | MPL-2.0 | Dev only | Flagged, resolved; see below |
+| `feasim-challenge` (repo root) and `feasim-web` (`web/`) | No `license` field in `package.json`; covered by the repository's Apache-2.0 [LICENSE](../LICENSE) | Runtime | ok: this repository's own packages, which the SBOM may list as unknown |
+| Python data scripts (`scripts/requirements.txt`): pandas, geopandas, shapely, numpy | BSD-3-Clause | Data build only | ok: permissive |
+| pyogrio, pyproj, GDAL (`libgdal-core`) | MIT | Data build only | ok: permissive |
+
+The license scan read every package in `package-lock.json` (Nov. 10, 2026). Only the packages flagged above aren't permissive:
+
+- **libvips (LGPL-3.0-or-later).** `sharp` is an optional dependency of Next.js, which uses it only to optimize images served through `next/image`. The tool doesn't use `next/image`, so it never loads sharp. When sharp is installed, libvips is a separate, unmodified prebuilt library that sharp links dynamically, which the LGPL permits in closed-source software as long as the library can be replaced. No LGPL code is copied into this repository or into the built pages.
+- **lightningcss (MPL-2.0).** A CSS tool that Vite, under the test runner Vitest, can use. It is a dev dependency only, used to run tests, and isn't part of the built tool.
+- **axe-core (MPL-2.0).** The accessibility rules behind `eslint-plugin-jsx-a11y`, which `eslint-config-next` uses for linting. It is a dev dependency only and isn't part of the built tool.
+
+The MPL-2.0 is a file-level copyleft: it would apply only to changes made to those packages' own files, and none have been changed.
 
 # Generated or Copied Code
 
