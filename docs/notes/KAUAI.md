@@ -31,7 +31,7 @@
 1. **County code:** Chapters 5A (real property tax), 7A (housing policy), 8 (Comprehensive Zoning Ordinance, "CZO"), 9 (subdivisions), 12 (building code), 22 (grading, Article 7) and 25 (sewers), from eCode360, downloaded October 29, 2026.
 2. **Department of Water:** Rules Part 5, Facilities Reserve Charge (rev. June 15, 2020). Part 4 (rev. September 24, 2026) sets monthly rates only.
 3. **Property tax rates:** the County's FY 2026–27 rate notice (Resolution 2026-11) and FY 2025–26 rate sheet.
-4. **Income limits:** HHFDC's 2025 and 2013 Kauaʻi County schedules.
+4. **Income limits:** HHFDC's 2026, 2025 and 2013 Kauaʻi County schedules.
 5. **Honolulu's figures:** market estimates and timing, marked "Honolulu's" in `assumptions.ts`, as for Maui and Hawaiʻi County.
 
 ## Locality settings
@@ -59,7 +59,6 @@ The ones most likely to move results come first.
 | Water facilities reserve charge | $9,880 per unit at every size | The larger of that and the meter-size charge | Smaller projects on large meters are undercharged |
 | Commercial yards | 5 ft front, no side or rear | The residential side yard and a 10 ft rear next to a residential district | The parcel data has no neighboring zone |
 | CN density | R-10's | An adjoining residential district's, where higher | Not known from the parcel data |
-| Income limits year | HHFDC 2025 (median $132,900) | HHFDC 2026 | 2025 matches the other counties; move all four together |
 
 ## Modeling assumptions
 
@@ -207,14 +206,33 @@ A building with retail has two uses and takes the higher rate, comparing tiered 
 
 ## Income limits and affordable rents
 
-`income_limits` is HHFDC's 2025 Kauaʻi County schedule (median family income $132,900), by AMI % for household sizes 1–8. It reproduces HHFDC's 2025 rent guidelines, for example:
+`income_limits` is HHFDC's 2026 Kauaʻi County schedule (median family income $120,100; $135,900 at 100% AMI for 4 people, up from $132,900 in 2025), by AMI % for household sizes 1–8. The PDF's income table is a scanned image, so it was read from the image and checked against the PDF's sales price pages, which list the 50–140% incomes as text.
+
+| AMI | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 10% | 9,520 | 10,880 | 12,240 | 13,590 | 14,680 | 15,770 | 16,860 | 17,940 |
+| 20% | 19,040 | 21,760 | 24,480 | 27,180 | 29,360 | 31,540 | 33,720 | 35,880 |
+| 30% | 28,560 | 32,640 | 36,720 | 40,770 | 44,040 | 47,310 | 50,580 | 53,820 |
+| 40% | 38,080 | 43,520 | 48,960 | 54,360 | 58,720 | 63,080 | 67,440 | 71,760 |
+| 50% | 47,600 | 54,400 | 61,200 | 67,950 | 73,400 | 78,850 | 84,300 | 89,700 |
+| 60% | 57,120 | 65,280 | 73,440 | 81,540 | 88,080 | 94,620 | 101,160 | 107,640 |
+| 70% | 66,640 | 76,160 | 85,680 | 95,130 | 102,760 | 110,390 | 118,020 | 125,580 |
+| 80% | 76,160 | 87,040 | 97,920 | 108,720 | 117,440 | 126,160 | 134,880 | 143,520 |
+| 90% | 85,680 | 97,920 | 110,160 | 122,310 | 132,120 | 141,930 | 151,740 | 161,460 |
+| 100% | 95,200 | 108,800 | 122,400 | 135,900 | 146,800 | 157,700 | 168,600 | 179,400 |
+| 110% | 104,720 | 119,680 | 134,640 | 149,490 | 161,480 | 173,470 | 185,460 | 197,340 |
+| 120% | 114,240 | 130,560 | 146,880 | 163,080 | 176,160 | 189,240 | 202,320 | 215,280 |
+| 130% | 123,760 | 141,440 | 159,120 | 176,670 | 190,840 | 205,010 | 219,180 | 233,220 |
+| 140% | 133,280 | 152,320 | 171,360 | 190,260 | 205,520 | 220,780 | 236,040 | 251,160 |
+
+It reproduces all 35 of HHFDC's 2026 rents, for example:
 
 | AMI | Studio | 1 BR | 2 BR | 3 BR | 4 BR |
 | --- | --- | --- | --- | --- | --- |
-| 60% | $1,396 | $1,496 | $1,795 | $2,073 | $2,313 |
-| 80% | $1,862 | $1,995 | $2,394 | $2,765 | $3,084 |
-| 100% | $2,327 | $2,493 | $2,992 | $3,456 | $3,855 |
-| 120% | $2,793 | $2,992 | $3,591 | $4,147 | $4,626 |
+| 60% | $1,428 | $1,530 | $1,836 | $2,120 | $2,365 |
+| 80% | $1,904 | $2,040 | $2,448 | $2,827 | $3,154 |
+| 100% | $2,380 | $2,550 | $3,060 | $3,533 | $3,942 |
+| 120% | $2,856 | $3,060 | $3,672 | $4,240 | $4,731 |
 
 ## Workforce housing (Chapter 7A)
 
@@ -234,7 +252,7 @@ The model builds R-10 and R-20 to the maximum density, so those projects qualify
 | `timing` | 18 and 12 months | Honolulu's |
 | `market.cap_rate`, `vacancy` | 5.1%; 7.4% residential, 12.6% retail | Honolulu's |
 | `market.cost_inflation` | 1.056 | Honolulu's (RLB Honolulu) |
-| `market.ami_escalation` | 1.036 | HHFDC Kauaʻi 100% AMI for 4 people, $86,500 (2013) to $132,900 (2025) |
+| `market.ami_escalation` | 1.036 | HHFDC Kauaʻi 100% AMI for 4 people, $86,500 (2013) to $132,900 (2025). Not updated for the 2026 table ($135,900) |
 | `market.annual_rent_growth` | 3.6% | Affordable caps track AMI; market rent growth not checked |
 | `market.annual_opex_growth`, `annual_assessment_growth` | 3.5%, 2% | Honolulu's |
 | `market.parking` | 330 sqft and $190/sqft structured; 360 sqft and $30/sqft surface; $100 a month per stall | Honolulu's |
@@ -277,5 +295,6 @@ Two optional fields, so Honolulu, Maui and Hawaiʻi County are unchanged:
 | [Kauaʻi DOW Rules Part 4, Rates (rev. Sept. 24, 2026)](https://www.kauaiwater.org/wp-content/uploads/Part-4-Fixing-Rates-for-the-Furnishing-of-Water-Service-in-the-COK-rev.-09-24-26.pdf) | Monthly rates only, no one-time charges |
 | [Notice of publication, Resolution 2026-11 (FY 2026–27 tax rates)](https://www.kauai.gov/files/assets/public/v/1/county-council/documents/budget/2026-06-03-notice-of-publication-re-resolution-no.-2026-11.pdf) | Property tax rates |
 | [FY 2025–26 tax rates, Real Property Assessment](https://www.kauai.gov/files/assets/public/v/1/finance/rpa/2026-tax-reliefexemption-forms/2025-assessment-year-tax-rates_-no-pitt_-rev-9.24.2025-printable.pdf) | Rates unchanged year to year |
-| [HHFDC 2025 Kauaʻi County income schedule](https://dbedt.hawaii.gov/hhfdc/files/2025/05/Kauai-County-2025.pdf) | Income limits, affordable rents |
+| [HHFDC 2026 Kauaʻi County income limits](https://dbedt.hawaii.gov/hhfdc/files/2026/06/2026-HHFDC-Kauai-County-Income-Limits_Sales-Price-Guidelines.pdf) | Income limits, affordable rents |
+| [HHFDC 2025 Kauaʻi County income schedule](https://dbedt.hawaii.gov/hhfdc/files/2025/05/Kauai-County-2025.pdf) | AMI growth |
 | [HHFDC 2013 Kauaʻi County income schedule](https://files.hawaii.gov/dbedt/hhfdc/resources/2013Kauai.pdf) | AMI growth |

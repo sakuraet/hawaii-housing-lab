@@ -1,7 +1,7 @@
 // Kauaʻi's config (src/localities/hi/kauai) against the code it comes from:
 // zoning and parking (Kauaʻi County Code Chapter 8, the CZO), fees (Chapters
 // 9, 12, 22 and 25), water (DOW Rules Part 5), property tax (FY 2026–27
-// rates, Res. 2026-11) and the 2025 HHFDC income limits, then parcels run end
+// rates, Res. 2026-11) and the 2026 HHFDC income limits, then parcels run end
 // to end.
 
 import { describe, expect, it } from "vitest";
@@ -131,11 +131,11 @@ describe("Kauaʻi water, tax and income limits", () => {
     expect(loc.rules.property_tax_rate).toBe(0.0094);
   });
 
-  it("2025 HHFDC table reproduces HHFDC's rents", () => {
-    expect(loc.rules.income_limits[100][3]).toBe(132900);
-    // one-bedroom at 80% AMI: $1,995; studio at 60%: $1,396
-    expect(mixRentByAmi(80, "one_bb_100", loc)).toBe(1995);
-    expect(mixRentByAmi(60, "studio_100", loc)).toBe(1396);
+  it("2026 HHFDC table reproduces HHFDC's rents", () => {
+    expect(loc.rules.income_limits[100][3]).toBe(135900);
+    // one-bedroom at 80% AMI: $2,040; studio at 60%: $1,428
+    expect(mixRentByAmi(80, "one_bb_100", loc)).toBe(2040);
+    expect(mixRentByAmi(60, "studio_100", loc)).toBe(1428);
   });
 
   it("no set-aside: multiple-family at full density is exempt from 7A (7A-1.4.2)", () => {

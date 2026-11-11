@@ -1,7 +1,7 @@
 // Hawaiʻi County's config (src/localities/hi/hawaii) against the code it
 // comes from: zoning, parking and loading (HCC Chapter 25, Supp. 20), fees
 // (HCC Chapters 5, 8, 10 and 21), water (DWS rates, eff. July 1, 2025),
-// property tax (Res. 574-26) and the 2025 HHFDC income limits, then parcels
+// property tax (Res. 574-26) and the 2026 HHFDC income limits, then parcels
 // run end to end.
 
 import { describe, expect, it } from "vitest";
@@ -154,8 +154,8 @@ describe("Hawaiʻi County water, tax and income limits", () => {
     expect(loc.rules.property_tax_rate).toBe(0.0117);
   });
 
-  it("2025 HHFDC table reproduces HHFDC's rents", () => {
-    expect(loc.rules.income_limits[100][3]).toBe(120900);
+  it("2026 HHFDC table reproduces HHFDC's rents", () => {
+    expect(loc.rules.income_limits[100][3]).toBe(121000);
     // one-bedroom at 80% AMI: $1,815; studio at 60%: $1,270
     expect(mixRentByAmi(80, "one_bb_100", loc)).toBe(1815);
     expect(mixRentByAmi(60, "studio_100", loc)).toBe(1270);

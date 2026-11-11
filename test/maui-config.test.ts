@@ -1,7 +1,7 @@
 // Maui's config (src/localities/hi/maui) against the code it comes from:
 // zoning (MCC 19.12, 19.14, 19.18, 19.20), parking and loading (MCC 19.36B),
 // park dedication (MCC 18.16.320), fees (FY 2027 Appendix B), water (DWS
-// FY 2027 Appendix B), workforce housing (MCC 2.96) and the 2025 HHFDC
+// FY 2027 Appendix B), workforce housing (MCC 2.96) and the 2026 HHFDC
 // income limits, then a parcel run end to end.
 
 import { describe, expect, it } from "vitest";
@@ -104,12 +104,18 @@ describe("Maui parking, loading and parks", () => {
 });
 
 describe("Maui income limits", () => {
-  it("2025 HHFDC Maui County table: 100% AMI for 4 is 50% of 2 x VLIL", () => {
-    expect(maui.rules.income_limits[100][3]).toBe(134600);
-    expect(maui.rules.income_limits[50][3] * 2).toBe(134600);
+  it("2026 HHFDC Maui County table: 100% AMI for 4 is 50% of 2 x VLIL", () => {
+    expect(maui.rules.income_limits[100][3]).toBe(148000);
+    expect(maui.rules.income_limits[50][3] * 2).toBe(148000);
     expect(maui.rules.income_limits[80]).toEqual([
-      75440, 86160, 96960, 107680, 116320, 124960, 133600, 142160,
+      82880, 94720, 106560, 118400, 127920, 137360, 146880, 156320,
     ]);
+  });
+
+  it("reproduces HHFDC's 2026 rents", () => {
+    // one-bedroom at 80% AMI: $2,220; studio at 60%: $1,554
+    expect(mixRentByAmi(80, "one_bb_100", maui)).toBe(2220);
+    expect(mixRentByAmi(60, "studio_100", maui)).toBe(1554);
   });
 });
 

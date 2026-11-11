@@ -40,7 +40,7 @@ Values are trusted in this order, and each value below says which kind it is:
     - Chapter 21 Sewers;
     - Chapter 23 Subdivisions;
     - the permitted uses table and the County GIS zoning definitions.
-2. **Official tables:** the DWS rates brochure and HHFDC's 2013 and 2025 Hawaiʻi County income schedules, read directly.
+2. **Official tables:** the DWS rates brochure and HHFDC's 2013, 2025 and 2026 Hawaiʻi County income schedules, read directly.
 3. **Official notices:** the FY 2026–27 property tax rates, from the published legal notice of Resolution 574-26.
 4. **Honolulu's figures:** market estimates and timing, marked "Honolulu's", as for Maui.
 
@@ -77,7 +77,6 @@ These are judgment calls with a realistic alternative. The ones most likely to m
 | CDH parking | 1 stall per unit | 1.25 per unit for a project less dense than 1,000 sqft per unit | Only a project well below CDH's density would differ |
 | Excavation depth | 4 ft everywhere (Honolulu's default) | Depth by density | Honolulu's depths are by FAR, which these districts don't have |
 | AMI growth | 4.7% a year (2013 to 2025) | A shorter base period | HHFDC's 2013 and 2025 100% rows may be defined differently (see [Estimates](#estimates)) |
-| Income limits year | HHFDC 2025 (median $98,800) | HHFDC 2026 (median $98,300) | 2025 matches Honolulu and Maui; move all three together |
 | State parking cap (HB 1919, 2026) | Not modeled | 0.5 stalls per unit from 7/1/2027, as an optional state rule | Passed the House 58–1; no sign it became law |
 
 ## Modeling assumptions
@@ -261,36 +260,36 @@ Land is classed by highest and best use, with zoning given major weight (19-53(e
 
 ## Income limits and affordable rents
 
-`income_limits` is HHFDC's 2025 Hawaiʻi County schedule (median family income $98,800; Maui $110,900). HHFDC's 2026 table (median $98,300) is out, and Honolulu now uses its 2026 table (median $133,400, from feasim); this county, Maui and Kauaʻi are still on 2025 and should move to 2026 together.
+`income_limits` is HHFDC's 2026 Hawaiʻi County schedule (median family income $98,300; Maui $121,400), by AMI % for household sizes 1–8. All four counties are now on HHFDC's 2026 tables. The 2025 table it replaced had a median of $98,800 and $120,900 at 100% AMI for 4 people; the 2026 table has $121,000.
 
 | AMI | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| 10% | 8,470 | 9,680 | 10,890 | 12,090 | 13,060 | 14,030 | 15,000 | 15,960 |
-| 20% | 16,940 | 19,360 | 21,780 | 24,180 | 26,120 | 28,060 | 30,000 | 31,920 |
-| 30% | 25,410 | 29,040 | 32,670 | 36,270 | 39,180 | 42,090 | 45,000 | 47,880 |
-| 40% | 33,880 | 38,720 | 43,560 | 48,360 | 52,240 | 56,120 | 60,000 | 63,840 |
-| 50% | 42,350 | 48,400 | 54,450 | 60,450 | 65,300 | 70,150 | 75,000 | 79,800 |
-| 60% | 50,820 | 58,080 | 65,340 | 72,540 | 78,360 | 84,180 | 90,000 | 95,760 |
-| 70% | 59,290 | 67,760 | 76,230 | 84,630 | 91,420 | 98,210 | 105,000 | 111,720 |
-| 80% | 67,760 | 77,440 | 87,120 | 96,720 | 104,480 | 112,240 | 120,000 | 127,680 |
-| 90% | 76,230 | 87,120 | 98,010 | 108,810 | 117,540 | 126,270 | 135,000 | 143,640 |
-| 100% | 84,700 | 96,800 | 108,900 | 120,900 | 130,600 | 140,300 | 150,000 | 159,600 |
-| 110% | 93,170 | 106,480 | 119,790 | 132,990 | 143,660 | 154,330 | 165,000 | 175,560 |
-| 120% | 101,640 | 116,160 | 130,680 | 145,080 | 156,720 | 168,360 | 180,000 | 191,520 |
-| 130% | 110,110 | 125,840 | 141,570 | 157,170 | 169,780 | 182,390 | 195,000 | 207,480 |
-| 140% | 118,580 | 135,520 | 152,460 | 169,260 | 182,840 | 196,420 | 210,000 | 223,440 |
+| 10% | 8,470 | 9,680 | 10,890 | 12,100 | 13,070 | 14,040 | 15,010 | 15,980 |
+| 20% | 16,940 | 19,360 | 21,780 | 24,200 | 26,140 | 28,080 | 30,020 | 31,960 |
+| 30% | 25,410 | 29,040 | 32,670 | 36,300 | 39,210 | 42,120 | 45,030 | 47,940 |
+| 40% | 33,880 | 38,720 | 43,560 | 48,400 | 52,280 | 56,160 | 60,040 | 63,920 |
+| 50% | 42,350 | 48,400 | 54,450 | 60,500 | 65,350 | 70,200 | 75,050 | 79,900 |
+| 60% | 50,820 | 58,080 | 65,340 | 72,600 | 78,420 | 84,240 | 90,060 | 95,880 |
+| 70% | 59,290 | 67,760 | 76,230 | 84,700 | 91,490 | 98,280 | 105,070 | 111,860 |
+| 80% | 67,760 | 77,440 | 87,120 | 96,800 | 104,560 | 112,320 | 120,080 | 127,840 |
+| 90% | 76,230 | 87,120 | 98,010 | 108,900 | 117,630 | 126,360 | 135,090 | 143,820 |
+| 100% | 84,700 | 96,800 | 108,900 | 121,000 | 130,700 | 140,400 | 150,100 | 159,800 |
+| 110% | 93,170 | 106,480 | 119,790 | 133,100 | 143,770 | 154,440 | 165,110 | 175,780 |
+| 120% | 101,640 | 116,160 | 130,680 | 145,200 | 156,840 | 168,480 | 180,120 | 191,760 |
+| 130% | 110,110 | 125,840 | 141,570 | 157,300 | 169,910 | 182,520 | 195,130 | 207,740 |
+| 140% | 118,580 | 135,520 | 152,460 | 169,400 | 182,980 | 196,560 | 210,140 | 223,720 |
 
-Affordable rent is a statewide rule: 30% of income, utilities included. `rentByAmi` averages the incomes of the household sizes for each unit type (studio 1; one-bedroom 1 and 2; two-bedroom 3; three-bedroom 4 and 5; four-bedroom 6) and floors the monthly result. It reproduces HHFDC's 2025 Hawaiʻi County rent table exactly:
+Affordable rent is a statewide rule: 30% of income, utilities included. `rentByAmi` averages the incomes of the household sizes for each unit type (studio 1; one-bedroom 1 and 2; two-bedroom 3; three-bedroom 4 and 5; four-bedroom 6) and floors the monthly result. It reproduces HHFDC's 2026 Hawaiʻi County rent table exactly, all 35 rents:
 
 | AMI | Studio | 1 bedroom | 2 bedroom | 3 bedroom | 4 bedroom |
 | --- | --- | --- | --- | --- | --- |
-| 30% | 635 | 680 | 816 | 943 | 1,052 |
-| 50% | 1,058 | 1,134 | 1,361 | 1,571 | 1,753 |
-| 60% | 1,270 | 1,361 | 1,633 | 1,886 | 2,104 |
-| 80% | 1,694 | 1,815 | 2,178 | 2,515 | 2,806 |
-| 100% | 2,117 | 2,268 | 2,722 | 3,143 | 3,507 |
-| 120% | 2,541 | 2,722 | 3,267 | 3,772 | 4,209 |
-| 140% | 2,964 | 3,176 | 3,811 | 4,401 | 4,910 |
+| 30% | 635 | 680 | 816 | 943 | 1,053 |
+| 50% | 1,058 | 1,134 | 1,361 | 1,573 | 1,755 |
+| 60% | 1,270 | 1,361 | 1,633 | 1,887 | 2,106 |
+| 80% | 1,694 | 1,815 | 2,178 | 2,517 | 2,808 |
+| 100% | 2,117 | 2,268 | 2,722 | 3,146 | 3,510 |
+| 120% | 2,541 | 2,722 | 3,267 | 3,775 | 4,212 |
+| 140% | 2,964 | 3,176 | 3,811 | 4,404 | 4,914 |
 
 These limits aren't for tax-credit (LIHTC) projects, which use HHFDC's separate MTSP chart.
 
@@ -302,7 +301,7 @@ No required affordable set-aside is modeled. HCC Chapter 11 requires affordable 
 
 | Field | Value | Basis |
 | --- | --- | --- |
-| `market.ami_escalation` | 1.047 (4.7% a year) | HHFDC Hawaiʻi County 100% AMI for 4 people: $69,800 (2013) to $120,900 (2025) |
+| `market.ami_escalation` | 1.047 (4.7% a year) | HHFDC Hawaiʻi County 100% AMI for 4 people: $69,800 (2013) to $120,900 (2025). Not updated for the 2026 table ($121,000) |
 | `market.annual_rent_growth` | 4.7% a year | Affordable caps track the income limits; market rent growth not checked |
 | `timing` | 18 and 12 months | Honolulu's; the rule sheet expects permitting to be longer here |
 | `market.cap_rate`, `vacancy` | 5.1%; 7.4% residential, 12.6% retail | Honolulu's |
@@ -360,7 +359,7 @@ Every row of the team's Hawaiʻi County Rule Sheet against the config. **Same** 
 | School impact fee | West Hawaiʻi ~$1,796 per unit, not collected | $0 | Same (default to 0) |
 | Grading, grubbing, stockpiling | Not researched | HCC 10-11 | Updated |
 | Inclusionary requirement | Ch. 11, rezonings only; a 20% rewrite for 5+ units due early 2026 | Confirmed: 20% for 5+ units, rezonings only (11-4); none for by-right | Confirmed |
-| Income limits | HHFDC 2025, median $98,800 | Same, all 112 values | Same |
+| Income limits | HHFDC 2025, median $98,800 | Same, all 112 values; the model now uses HHFDC 2026 (median $98,300) | Updated |
 | Affordable rent rule | 30% of income; reproduces HHFDC rents | Same, all 35 rents | Same |
 | Property tax | FY27 Apartment $11.70, Long-Term Rental $7.75, Affordable $5.75 | Same; Apartment used, per the class rules in 19-53 | Same |
 | General excise tax | 4.5% | — | Not modeled (as for Honolulu) |
@@ -379,7 +378,7 @@ Every row of the team's Hawaiʻi County Rule Sheet against the config. **Same** 
     - the building permit table at each band edge, and the $350,000 example;
     - plan review and its $50 minimum;
     - grading, grubbing, park land, sewer and the certificate of occupancy fee.
-- **Water, tax, income:** $6,095 per unit; the Apartment rate; the 2025 table and two HHFDC rents; no required set-aside.
+- **Water, tax, income:** $6,095 per unit; the Apartment rate; the 2026 table and two HHFDC rents; no required set-aside.
 - **End to end:**
     - the RM-2 parcel: 10 units, 6,250 sqft, 13 stalls, every result finite;
     - yards that bind before density: an RM-.75 lot at 25 ft gives 9 units, against 12 with a uniform 8 ft setback;
@@ -401,8 +400,8 @@ Every row of the team's Hawaiʻi County Rule Sheet against the config. **Same** 
 | Hawaiʻi County Code Chapter 23, Subdivisions (2026-08) | Checked for park dedication; none there | PDF, downloaded by the team |
 | [County GIS zoning definitions](https://gis.hawaiicounty.gov/public/downloads/plhyperlinks/MetadataFiles/Zoning%20Definition.pdf) (rev. April 22, 2020) | The zone codes in use | PDF, directly; the team's March 2017 copy has the same codes |
 | [DWS Water Rates brochure, eff. July 1, 2025](https://www.hawaiidws.org/wp-content/uploads/2025/07/Water-Rates-Brochure-Effective-07-01-2025.pdf) | Facilities charge, service laterals | PDF, directly |
-| [HHFDC 2025 Hawaiʻi County income schedule](https://dbedt.hawaii.gov/hhfdc/files/2025/05/Hawaii-County-2025.pdf) | Income limits, affordable rents | PDF, directly |
-| [HHFDC 2026 Hawaiʻi County income limits](https://dbedt.hawaii.gov/hhfdc/files/2026/06/2026-HHFDC-Hawaii-County-Income-Limits_Sales-Price-Guidelines.pdf) | The newer table, not yet used (median $98,300) | Via the rule sheet |
+| [HHFDC 2026 Hawaiʻi County income limits](https://dbedt.hawaii.gov/hhfdc/files/2026/06/2026-HHFDC-Hawaii-County-Income-Limits_Sales-Price-Guidelines.pdf) | Income limits, affordable rents (median $98,300) | PDF, directly |
+| [HHFDC 2025 Hawaiʻi County income schedule](https://dbedt.hawaii.gov/hhfdc/files/2025/05/Hawaii-County-2025.pdf) | AMI growth | PDF, directly |
 | [HHFDC 2013 Hawaiʻi County income schedule](https://files.hawaii.gov/dbedt/hhfdc/resources/2013Hawaii.pdf) | AMI growth | PDF, directly |
 | [Resolution 574-26 legal notice](https://statelegals.staradvertiser.com/?p=10994) | FY 2026–27 property tax rates | Web page, directly |
 | [Big Island Now, FY 2026–27 tax rates](https://bigislandnow.com/?p=434839) | Cross-check of the tax rates | Via the rule sheet |
