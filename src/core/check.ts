@@ -3,6 +3,7 @@
 // schedules well formed, shares between 0 and 1. Each problem names the
 // value's path, for example `rules.zones.A-2.current.far.bands[0].base`.
 
+import { UNIT_MIX } from "../calculations/calc-shared";
 import type { Locality } from "./locality";
 
 const INCOME_LIMIT_AMIS = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 130, 140];
@@ -107,6 +108,11 @@ export function checkLocality(loc: Locality): string[] {
   positive("assumptions.timing.permitting_months", loc.assumptions.timing.permitting_months);
   positive("assumptions.timing.construction_months", loc.assumptions.timing.construction_months);
   positive("assumptions.market.cap_rate", loc.assumptions.market.cap_rate);
+  const levers = loc.assumptions.lever_defaults;
+  if (levers?.land_cost !== undefined && levers.land_cost < 0)
+    add("assumptions.lever_defaults.land_cost", "must be 0 or more");
+  if (levers?.unit_type !== undefined && !(levers.unit_type in UNIT_MIX))
+    add("assumptions.lever_defaults.unit_type", `"${levers.unit_type}" is not a unit mix`);
   // the housing parking minimum: by floor area, per unit or by unit type,
   // exactly one
   const {

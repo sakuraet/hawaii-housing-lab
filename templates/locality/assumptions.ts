@@ -51,3 +51,13 @@ export const market: MarketAssumptions = {
   },
   source: "TODO",
 };
+
+// optional: the county's own defaults for the land cost ($ per sqft of lot)
+// and unit mix levers, where they differ from Honolulu's ($130, half studios
+// and half one-bedrooms). Add `lever_defaults: assumptions.lever_defaults` to
+// index.ts to use them; see src/localities/hi/maui/assumptions.ts
+// export const lever_defaults: LeverDefaults = {
+//   land_cost: TODO,
+//   unit_type: "studio_100",
+//   source: "TODO",
+// };

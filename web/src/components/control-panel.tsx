@@ -147,7 +147,8 @@ const ZONING_FACTORS: FactorConfig[] = [
     category: "Zoning & Development Standards",
     label: "Parking (stalls per unit)",
     min: 0,
-    max: 1.5,
+    // up to 3: Kauaʻi's minimum is 2, and Maui's 3 for four bedrooms
+    max: 3,
     step: 0.05,
     format: (v) => `${Number(v.toFixed(2))}/unit`,
   },

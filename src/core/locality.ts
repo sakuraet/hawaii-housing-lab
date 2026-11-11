@@ -238,6 +238,16 @@ export interface MarketAssumptions {
   source: string;
 }
 
+/** a county's own defaults for levers every pathway shares; a lever setting
+ *  overrides them, and a lever left out keeps the pathway's default */
+export interface LeverDefaults {
+  /** land cost, $ per sqft of lot */
+  land_cost?: number;
+  /** a unit mix key, for example "studio_100" */
+  unit_type?: string;
+  source: string;
+}
+
 // ── the forms ───────────────────────────────────────────────────────────
 
 /** what state law and statewide agencies set */
@@ -315,5 +325,7 @@ export interface Locality {
     /** used for a zone with no entry in `zones` */
     default_zone: ZoneAssumptions;
     market: MarketAssumptions;
+    /** absent = the pathway defaults (Honolulu's) */
+    lever_defaults?: LeverDefaults;
   };
 }

@@ -14,6 +14,7 @@ import {
 import {
   baseFar,
   calcFAR,
+  legalParkingRatio,
   calcFarBill6,
   calcFarPdt,
   calcFarTod,
@@ -452,6 +453,23 @@ export const DEFAULT_INPUTS: Record<ProgramId, SliderInputs> = (() => {
  * set), then the parcel's envelope. `levers.height_limit` / `max_far` override
  * the envelope, including Bill 7's 60 ft cap. `opts` is TOD only.
  */
+/** the county's legal parking minimum, stalls per unit, for a unit mix
+ *  (Maui: 1 per studio or one-bedroom, Ord. 5983) */
+export function countyParkingRatio(unit_type: string, locality?: string): number {
+  return legalParkingRatio(unit_type, getLocality(locality));
+}
+
+/** the county's own lever defaults (`assumptions.lever_defaults`), which go
+ *  between the pathway's defaults and the levers set; none for Honolulu */
+export function countyLeverDefaults(locality?: string): Partial<SliderInputs> {
+  const d = getLocality(locality).assumptions.lever_defaults;
+  if (!d) return {};
+  const out: Partial<SliderInputs> = {};
+  if (d.land_cost !== undefined) out.land_cost = d.land_cost;
+  if (d.unit_type !== undefined) out.unit_type = d.unit_type;
+  return out;
+}
+
 export function parcelInputs(
   program: ProgramId,
   parcel: Parcel,
@@ -464,6 +482,7 @@ export function parcelInputs(
   const envelope = pathwayEnvelope(program, parcel, opts);
   const inputs: SliderInputs = {
     ...DEFAULT_INPUTS[program],
+    ...countyLeverDefaults(parcel.locality),
     ...set,
     program,
     lot_sqft: parcel.lot_sqft,

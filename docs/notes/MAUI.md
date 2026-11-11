@@ -45,7 +45,8 @@ These are judgment calls made to fit Maui's rules into the model. The ones most 
 | Choice | Current value | Alternative | Why it matters |
 | --- | --- | --- | --- |
 | Market estimates (cap rate, vacancy, cost escalation, opex and assessment growth, parking costs, timing) | Honolulu's figures | Maui-specific sources | These drive land value directly; none have a Maui source yet |
-| Engine defaults: hard cost, land cost, sale prices | $450/sqft hard cost, $130/sqft land, Honolulu HHFDC sale tables | Maui figures (post-fire rebuilding may push costs up) | They live in the engine, not the county config, so Maui currently inherits Honolulu's. Published land and cost figures didn't change any verdict; see the [cost cross-check](#cost-cross-check-november-2026) |
+| Land cost and unit mix | $75/sqft land, all studios (`assumptions.lever_defaults`) | Honolulu's $130 and half studios, half one-bedrooms; a published Maui land figure | Team estimates, not from a source. Together they move a 20,000 sqft A-2 lot from 4.61% to 5.85% return on cost; see [Estimates](#estimates) |
+| Engine defaults: hard cost, sale prices | $450/sqft hard cost, Honolulu HHFDC sale tables | Maui figures (post-fire rebuilding may push costs up) | They live in the engine, not the county config, so Maui inherits Honolulu's. See the [cost cross-check](#cost-cross-check-november-2026) |
 | Workforce housing: how it's met | On-site rentals, 25% of market units, rents at the 80/100/120% AMI caps | 20% if conveyed to a qualified provider in perpetuity; or the in-lieu fee | The in-lieu fee may be cheaper than building the units; the model doesn't compare them |
 | Workforce units' fees and park land | Charged like Honolulu's affordable units under the fee toggle (waived fees, no park land) | Maui's actual treatment: 50% building permit fee, 250 sqft park land per unit | The toggle waives these units' fees in full; Maui gives only partial relief |
 | Parking for 4+ bedroom units | 3 stalls, plus 1 per bedroom over four | 2 plus 1 per bedroom over four where the street allows parking on both sides (Ord. 5983) | The model's largest type has four bedrooms; street width isn't in the parcel data |
@@ -70,7 +71,7 @@ These are judgment calls made to fit Maui's rules into the model. The ones most 
 ## Known limitations
 
 - Wastewater uses Wailuku-Kahului's rate for the whole county; Kīhei's is $4.65, and areas outside both systems pay none. The 255 gpd figure should be confirmed with the Wastewater Reclamation Division.
-- Hard cost ($450/sqft), land cost ($130/sqft) and HHFDC sale prices are still Honolulu engine defaults.
+- Hard cost ($450/sqft) and HHFDC sale prices are still Honolulu engine defaults. Land cost ($75/sqft) and the unit mix (all studios) are Maui's own, but team estimates.
 - Market estimates (cap rate, vacancy, cost escalation, opex and assessment growth, parking costs, timing) are Honolulu's; only AMI and rent growth are Maui's own.
 - Not modeled: the open-space bonus (MCC 19.56), discretionary parking reductions (MCC 19.36B.110), per-project road trenching permits, fire plan review (17.5%) and meter installation billed at actual cost.
 - Parking follows each unit type's bedroom count (Ord. 5983); a den or office large enough to count as a bedroom isn't modeled, and neither is the street-width exception for 4+ bedroom units.
@@ -332,12 +333,21 @@ Affordable rent is a statewide rule: 30% of income, utilities included (`state.a
 | `market.parking` | 330 sqft and $190/sqft structured; 360 sqft and $30/sqft surface; $100 a month per stall | Honolulu's (Ulupono 2020, RLB Q2 2026) |
 | `zones.*.excavation_depth_ft` | 3 ft (A-1, H-1: FAR 0.5 or less), 5 ft (A-2, H-M, H-2, Hotel, B-2: FAR 0.9–2.0), 9 ft (B-3: FAR 4.0) | Honolulu's depths for districts of like density |
 | `default_zone` | 4 ft excavation | Honolulu's default |
+| `lever_defaults.land_cost` | $75 per sqft of lot | Team estimate (Nov. 2026); Honolulu's default is $130. The Land Cost lever overrides it |
+| `lever_defaults.unit_type` | All studios (`studio_100`) | Team estimate (Nov. 2026); Honolulu's default is half studios, half one-bedrooms. The Unit Mix lever overrides it |
 
 Honolulu's AMI growth (4%) is measured on median family income, while Maui's (3.9%) is measured on the HHFDC 100% row the model actually uses for rents. Maui's median family income grew more slowly over the same years ($84,900 to $110,900, 2.25% a year).
 
+**What the lever defaults change.** Each lever default goes between the pathway's defaults and any lever setting, so the tool's Land Cost and Unit Mix levers start at Maui's values on the Maui map. Across the 1,133 parcels in Maui's configured zones, the median return on cost is now 5.81%: 216 parcels rate "strong" (163 of them in B-2), 547 "marginal" and 370 "poor", where before every parcel rated "poor". The two changes count about equally:
+
+| 20,000 sqft lot | Both (now) | $130 land, all studios | $75 land, half one-bedrooms | Both as before |
+| --- | --- | --- | --- | --- |
+| A-2, 60 ft | 5.85%, 48 units | 5.27% | 5.12%, 36 units | 4.61%, 36 units |
+| B-2, 90 ft | 6.20%, 106 units | 5.73% | 5.46%, 80 units | 5.06%, 80 units |
+
 ### Cost cross-check (November 2026)
 
-We compared the engine's defaults with published Maui land and construction figures to see whether Maui-specific values would change the results. They wouldn't change any verdict, so the config and the engine defaults stay as they are.
+We compared the engine's defaults with published Maui land and construction figures to see whether Maui-specific values would change the results. They wouldn't change any verdict, so the engine defaults stayed as they were. This check predates Maui's lever defaults: it ran on $130 land, half studios and half one-bedrooms, and 2 stalls per unit.
 
 **The test.** We ran the 1,133 parcels in Maui's configured zones from a county-wide parcel table, on current zoning, with every other input at its default. Every combination rates all 1,133 parcels "poor":
 

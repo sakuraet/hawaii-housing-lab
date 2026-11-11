@@ -4,6 +4,7 @@
 // and hold-period rent growth are Maui's own.
 
 import type {
+  LeverDefaults,
   MarketAssumptions,
   TimingAssumptions,
   ZoneAssumptions,
@@ -34,6 +35,14 @@ export const zones: Record<string, ZoneAssumptions> = {
   "B-2": zone(5),
   // high density (FAR 4.0)
   "B-3": zone(9),
+};
+
+// Maui's own defaults for the land cost and unit mix levers (Honolulu's: $130
+// per sqft, and half studios, half one-bedrooms)
+export const lever_defaults: LeverDefaults = {
+  land_cost: 75,
+  unit_type: "studio_100",
+  source: "team estimate (Nov. 2026)",
 };
 
 export const market: MarketAssumptions = {

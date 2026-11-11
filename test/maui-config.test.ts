@@ -22,7 +22,8 @@ import {
   wastewaterFee,
 } from "../src/calculations/calc-shared";
 import { checkLocality } from "../src/core/check";
-import { calcParcel } from "../src/parcels";
+import type { Locality } from "../src/core/locality";
+import { calcParcel, parcelInputs } from "../src/parcels";
 import { currentLimits, zoneRules } from "../src/core/zoning";
 import { maui } from "../src/localities/hi/maui";
 
@@ -203,7 +204,7 @@ describe("a Maui parcel runs end to end", () => {
   // not a real parcel): FAR 0.9 caps floor area at 18,000 sqft, under the
   // 35% coverage x 6 floors envelope (42,000 sqft)
   const parcel = { locality: "hi-maui", lot_sqft: 20000, zone_class: "A-2", height: 60 };
-  // one-bedrooms, not the default half-studio mix, as in the worked example
+  // one-bedrooms, not Maui's default of all studios, as in the worked example
   const r = calcParcel("current", parcel, { unit_type: "one_bb_100" });
 
   it("floor area at FAR 0.9", () => {
@@ -238,8 +239,39 @@ describe("a Maui parcel runs end to end", () => {
   });
 });
 
+describe("Maui's lever defaults", () => {
+  const parcel = { locality: "hi-maui", lot_sqft: 20000, zone_class: "A-2", height: 60 };
+
+  it("$75 land and all studios, where Honolulu has $130 and half studios", () => {
+    const inputs = parcelInputs("current", parcel);
+    expect(inputs.land_cost).toBe(75);
+    expect(inputs.unit_type).toBe("studio_100");
+    const oahu = parcelInputs("current", { ...parcel, locality: "hi-honolulu" });
+    expect(oahu.land_cost).toBe(130);
+    expect(oahu.unit_type).toBe("studio50_1br50");
+  });
+
+  it("a lever setting still wins", () => {
+    const inputs = parcelInputs("current", parcel, { land_cost: 200, unit_type: "two_bb_100" });
+    expect(inputs.land_cost).toBe(200);
+    expect(inputs.unit_type).toBe("two_bb_100");
+  });
+
+  it("the land cost is what the run pays for the lot", () => {
+    expect(calcParcel("current", parcel).dev_land_cost).toBe(75 * 20000);
+  });
+});
+
 describe("the config is complete", () => {
   it("nothing left to fill in", () => {
     expect(checkLocality(maui)).toEqual([]);
+  });
+
+  it("a lever default must be a unit mix the model has", () => {
+    const loc: Locality = JSON.parse(JSON.stringify(maui));
+    loc.assumptions.lever_defaults = { unit_type: "lofts", source: "test" };
+    expect(checkLocality(loc)).toContain(
+      'hi-maui assumptions.lever_defaults.unit_type: "lofts" is not a unit mix'
+    );
   });
 });
