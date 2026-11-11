@@ -5,7 +5,7 @@ Maui is a registered county in the model: parcels with `locality: "hi-maui"` run
 - **Where it lives:** `src/localities/hi/maui/` (`zones.ts` zoning, `rules.ts` law and fee schedules, `assumptions.ts` estimates, `index.ts` the `Locality`), tested in `test/maui-config.test.ts`.
 - **Coverage:** the County of Maui is Maui island, Molokaʻi and Lānaʻi. One config covers all three; where rules differ by island or community plan area, the note says how that's handled.
 - **Pathways:** current zoning only (`pathways: ["current"]`). `bill6` is Honolulu's name for its current zoning (Ord. 26-7), and Standard (pre-Bill 6), Bill 7, TOD and Waikīkī are Honolulu ordinances too, so they don't apply. Asking for another pathway throws.
-- **Check:** a made-up A-2 lot of 20,000 sqft at 60 ft gives 18,000 sqft of floor area (FAR 0.9), 28 units and 56 stalls (2 per unit), 6 of them workforce housing (MCC 2.96).
+- **Check:** a made-up A-2 lot of 20,000 sqft at 60 ft gives 18,000 sqft of floor area (FAR 0.9), 28 units and 28 stalls (1 per one-bedroom, Ord. 5983), 6 of them workforce housing (MCC 2.96).
 
 ## Contents
 
@@ -32,7 +32,7 @@ Every rule was taken from a primary document wherever one could be read. Values 
 
 1. **Code text:** Maui County Code on Municode, version of Sep 14, 2026, read section by section. Zoning, parking, loading, park dedication, workforce housing, the water and wastewater fee chapters and the tax classes come from here.
 2. **The FY 2027 budget appendices:** the code leaves most fee amounts to the annual budget, so amounts come from the County of Maui FY 2027 Appendix B ("Revenues - Fees, Rates, Assessments and Taxes") and the Department of Water Supply's own FY 2027 Appendix B ("Water Fund - Water Rates and Fees"). Both cover July 1, 2026 to June 30, 2027. The County's website blocks automated downloads, so the team downloaded both PDFs and they were read in full. Page numbers in this note and the code are the appendix's own page numbers (its footers), not PDF page numbers.
-3. **Official tables:** HHFDC's 2013 and 2025 Maui County income schedules, and DWS's Water Use Calculation Method page.
+3. **Official tables:** HHFDC's 2013, 2025 and 2026 Maui County income schedules, and DWS's Water Use Calculation Method page.
 4. **Search summaries:** used only where the primary document couldn't be opened. Two values rest on one: the 255 gallons a day of wastewater flow per unit, and the school impact fee range. Both are flagged below.
 5. **Honolulu's figures:** where no Maui source has been found (market estimates, timing, parking costs), Honolulu's value is carried over so the model runs, and marked "Honolulu's" in the code.
 
@@ -45,13 +45,14 @@ These are judgment calls made to fit Maui's rules into the model. The ones most 
 | Choice | Current value | Alternative | Why it matters |
 | --- | --- | --- | --- |
 | Market estimates (cap rate, vacancy, cost escalation, opex and assessment growth, parking costs, timing) | Honolulu's figures | Maui-specific sources | These drive land value directly; none have a Maui source yet |
-| Engine defaults: hard cost, land cost, sale prices | $450/sqft hard cost, $130/sqft land, Honolulu HHFDC sale tables | Maui figures (post-fire rebuilding may push costs up) | They live in the engine, not the county config, so Maui currently inherits Honolulu's. Published land and cost figures didn't change any verdict; see the [cost cross-check](#cost-cross-check-november-2026) |
+| Land cost and unit mix | $75/sqft land, all studios (`assumptions.lever_defaults`) | Honolulu's $130 and half studios, half one-bedrooms; a published Maui land figure | Team estimates, not from a source. Together they move a 20,000 sqft A-2 lot from 5.06% to 6.39% return on cost (2026 income limits); see [Estimates](#estimates) |
+| Engine defaults: hard cost, sale prices | $450/sqft hard cost, Honolulu HHFDC sale tables | Maui figures (post-fire rebuilding may push costs up) | They live in the engine, not the county config, so Maui inherits Honolulu's. See the [cost cross-check](#cost-cross-check-november-2026) |
 | Workforce housing: how it's met | On-site rentals, 25% of market units, rents at the 80/100/120% AMI caps | 20% if conveyed to a qualified provider in perpetuity; or the in-lieu fee | The in-lieu fee may be cheaper than building the units; the model doesn't compare them |
 | Workforce units' fees and park land | Charged like Honolulu's affordable units under the fee toggle (waived fees, no park land) | Maui's actual treatment: 50% building permit fee, 250 sqft park land per unit | The toggle waives these units' fees in full; Maui gives only partial relief |
-| Parking minimum | 2 stalls per unit | 1 stall for a studio or one-bedroom if Resolution 25-152 passes | Would halve parking for the default one-bedroom mix; check its status before submission |
+| Parking for 4+ bedroom units | 3 stalls, plus 1 per bedroom over four | 2 plus 1 per bedroom over four where the street allows parking on both sides (Ord. 5983) | The model's largest type has four bedrooms; street width isn't in the parcel data |
 | School impact fee | $0, as for Honolulu | Maui DOE school impact districts (Central, South, West Maui): about $3,300–5,300 per multifamily unit in 2019 (from the rule sheet, via a 2019 DOE report; current rates not checked) | The team set Honolulu's to $0; worth deciding the same way for both |
-| Setbacks | The model's default 10 ft setback | A-1/A-2: 15 ft front and rear (20 above 35 ft), 10 ft side (15 above 35 ft); B-2/B-3: 0 ft front | Deeper setbacks shrink A-zone floor plates; needs the setback rule kind in the generic refactor |
-| Minimum lot size | Not checked | A zones 10,000 sqft and 70 ft wide; B zones 6,000 sqft and 60 ft wide | Smaller lots can't use the zone at all |
+| Setbacks | The model's default 10 ft setback | A-1/A-2: 15 ft front and rear (20 above 35 ft), 10 ft side (15 above 35 ft); H zones: front and rear ½ the building height (at least 15 ft), side 10–30 ft by height; B-2/B-3: 0 ft front | Deeper setbacks shrink A- and H-zone floor plates; needs the setback rule kind in the generic refactor |
+| Minimum lot size | Not checked | A zones 10,000 sqft and 70 ft wide; H-1 10,000 sqft and 75 ft, H-M 15,000 and 85 ft, H-2 and Hotel 20,000 and 100 ft; B zones 6,000 sqft and 60 ft wide | Smaller lots can't use the zone at all |
 | Wastewater service area | Wailuku-Kahului, $4.57/gal | Kīhei $4.65/gal; $0 (and a septic cost) outside both systems | The model has one rate per county; parcels outside these systems are overcharged |
 | Wastewater flow per unit | 255 gpd | Confirm with WWRD | Taken from a search summary of a 2006 table; not confirmed current |
 | Studio bedrooms for water ESDs | 0 bedrooms (0.4 ESD) | 1 bedroom (0.5 ESD) | DWS counts any room that could be slept in as a bedroom |
@@ -70,10 +71,10 @@ These are judgment calls made to fit Maui's rules into the model. The ones most 
 ## Known limitations
 
 - Wastewater uses Wailuku-Kahului's rate for the whole county; Kīhei's is $4.65, and areas outside both systems pay none. The 255 gpd figure should be confirmed with the Wastewater Reclamation Division.
-- Hard cost ($450/sqft), land cost ($130/sqft) and HHFDC sale prices are still Honolulu engine defaults.
+- Hard cost ($450/sqft) and HHFDC sale prices are still Honolulu engine defaults. Land cost ($75/sqft) and the unit mix (all studios) are Maui's own, but team estimates.
 - Market estimates (cap rate, vacancy, cost escalation, opex and assessment growth, parking costs, timing) are Honolulu's; only AMI and rent growth are Maui's own.
 - Not modeled: the open-space bonus (MCC 19.56), discretionary parking reductions (MCC 19.36B.110), per-project road trenching permits, fire plan review (17.5%) and meter installation billed at actual cost.
-- Proposed bedroom-based parking (Resolution 25-152) would change the parking minimum if adopted.
+- Parking follows each unit type's bedroom count (Ord. 5983); a den or office large enough to count as a bedroom isn't modeled, and neither is the street-width exception for 4+ bedroom units.
 - Workforce housing (MCC 2.96) is always built on site at 25% of market units. The 20% conveyance option, the in-lieu fee, the Wailuku Redevelopment Area exemption and adjusted AMI for Hāna, Lānaʻi and Molokaʻi aren't modeled, and workforce units get full fee and park relief under the fee toggle where Maui gives only partial relief.
 - Setbacks and minimum lot sizes aren't checked; every zone uses the model's default 10 ft setback.
 - B-1, B-CT, SBR and the Wailuku Redevelopment Area districts aren't configured, so parcels there stop with an error.
@@ -89,11 +90,23 @@ These are judgment calls made to fit Maui's rules into the model. The ones most 
 | --- | --- | --- | --- | --- | --- | --- |
 | A-1 Apartment | 0.5 on lots under 3 acres; 0.4 on 3 acres or more | 25% | 35 ft | 10,000 sqft, 70 ft wide | Front/rear 15 (20 above 35 ft); side 10 (15 above 35 ft) | MCC 19.12.020, 19.12.050 |
 | A-2 Apartment | 0.9 | 35% | 60 ft | 10,000 sqft, 70 ft wide | Same as A-1 | MCC 19.12.020, 19.12.050 |
-| H-1 Hotel | 0.5 | 25% | By district table | Not checked | Not checked | MCC 19.14.050 |
-| H-M Hotel | 1.0 | 30% | By district table | Not checked | Not checked | MCC 19.14.050 |
-| H-2 and Hotel | 1.5 | 35% | By district table | Not checked | Not checked | MCC 19.14.050 |
+| H-1 Hotel | 0.5 | 25% | 35 ft | 10,000 sqft, 75 ft wide | Front/rear ½ the building height, at least 15; side by height (below) | MCC 19.14.020, 19.14.050 |
+| H-M Hotel | 1.0 | 30% | 90 ft | 15,000 sqft, 85 ft wide | Same as H-1 | MCC 19.14.020, 19.14.050 |
+| H-2 and Hotel | 1.5 | 35% | 160 ft | 20,000 sqft, 100 ft wide | Same as H-1 | MCC 19.14.020, 19.14.050 |
 | B-2 Community Business | 2.0 | 100% (no limit) | 90 ft on Maui island; 45 West Maui, Hāna, Lānaʻi; 35 Molokaʻi | 6,000 sqft, 60 ft wide | Front 0; side/rear 0 or the adjoining zone's | MCC 19.18.020, 19.18.050 |
 | B-3 Central Business | 4.0 | 100% (no limit) | 144 ft on Maui island; 45 West Maui, Hāna, Lānaʻi; 35 Molokaʻi | 6,000 sqft, 60 ft wide | Same as B-2 | MCC 19.20.020, 19.20.050 |
+
+The hotel districts' side yard grows with the building's height (MCC 19.14.050):
+
+| Building height | Side yard |
+| --- | --- |
+| Under 30 ft | 10 ft |
+| 30 to 60 ft | 15 ft |
+| 60 to 90 ft | 20 ft |
+| 90 to 120 ft | 25 ft |
+| 120 to 160 ft | 30 ft |
+
+In the A and H districts, vents, fans, elevator and stair shafts, chimneys, antennae and small energy equipment may rise 10 ft above the height limit. Mailboxes, trash enclosures, boundary walls and ground signs may sit in the setbacks, up to 8 ft tall.
 
 Only FAR and lot coverage are in the config. Height comes from the parcel; minimum lots and yards are recorded here for the refactor and aren't modeled.
 
@@ -122,11 +135,25 @@ Only FAR and lot coverage are in the config. Height comes from the parcel; minim
 
 ## Parking, loading and bicycle parking
 
-Maui requires 2 stalls per dwelling unit under 3,000 sqft, whatever its size or bedroom count. Honolulu's minimum is by floor area instead, so the model now takes either form (see [Engine changes](#engine-changes)).
+Maui sets housing parking by bedrooms per dwelling unit, under Ordinance 5983 (Bill 47 CD1, passed April 17, 2026, in effect April 20, 2026). It amended MCC 19.36B.020; the Municode version of September 14, 2026 hadn't been updated with it yet. Honolulu's minimum is by floor area and Kauaʻi's is a flat number per unit, so the model takes any of the three forms (see [Engine changes](#engine-changes)).
+
+| Bedrooms per unit | Stalls | Model unit type (size) |
+| --- | --- | --- |
+| Studio | 1 | `studio` (300 sqft) |
+| 1 | 1 | `one_bb` (500 sqft) |
+| 2 | 2 | `two_bb` (700 sqft) |
+| 3 | 2 | `three_bb` (900 sqft) |
+| 4 or more | 3, plus 1 for each bedroom over four (2 plus 1 each where the street is wide enough to park on both sides) | `four_bb` (1,200 sqft): 3 |
+
+For a mix, the model averages the stalls over its unit types, so the default all-one-bedroom mix needs 1 stall per unit, and a half one- and half two-bedroom mix 1.5. Stalls may be in tandem.
+
+**Before Ordinance 5983, parking went by floor area,** in bands far larger than the model's units: 2 stalls under 3,000 sqft, 3 for 3,000–3,999 sqft, 4 for 4,000–4,999, up to 8 for 8,000 sqft or more. The model's units are 300 to 1,200 sqft, so every one was in the smallest band, and the model used 2 stalls per unit whatever the mix. In the ordinance's text those floor-area bands are bracketed (repealed) beside the new bedroom rows; they aren't sizes for studios or bedrooms.
+
+The ordinance counts as a bedroom any room separated for sleeping of at least 70 sqft and 7 ft in every horizontal dimension, including a den, study, office or loft (19.36B.020(F)). The model's unit types are taken at their bedroom count.
 
 | Field (`rules.ts`) | Value | Reasoning | Source |
 | --- | --- | --- | --- |
-| `parking.residential_stalls_per_unit` | 2 | 2 stalls per unit under 3,000 sqft, regardless of bedrooms; tandem allowed. Larger units add 1 per extra 1,000 sqft, but the model's units are all under 1,300 sqft | MCC 19.36B.020 |
+| `parking.residential_stalls_by_type` | `studio` 1, `one_bb` 1, `two_bb` 2, `three_bb` 2, `four_bb` 3 | By bedrooms per unit, above. The street-width exception for 4+ bedrooms isn't modeled | MCC 19.36B.020 as amended by Ord. 5983 (2026) |
 | `parking.retail_sqft_per_stall` | 500 | General merchandising, office and services: 1 per 500 sqft. The minimum of 3 isn't modeled; restaurants (1 per 100 sqft of dining) aren't a model use | MCC 19.36B.020 |
 | `parking.joint_use` | 1 | The code has no joint-use reduction. The director may cut parking up to 50% case by case, which isn't modeled | MCC 19.36B.110(A) |
 | Rounding | Half up | A fraction under ½ is dropped, ½ or more rounds up, as in Honolulu | MCC 19.36B.020 |
@@ -136,7 +163,7 @@ Maui requires 2 stalls per dwelling unit under 3,000 sqft, whatever its size or 
 | `loading.small_space_sqft`, `large_space_sqft` | 8.5 × 19 ft; 12 × 35 ft | The code has small, medium and large sizes (small 2,000–5,000 sqft; medium 5,001–10,000; small + medium to 20,000; medium + large to 50,000; 2 large above). The model has small and large only, so medium isn't used | MCC 19.36B.030 |
 | `bicycle.*` | All 0 | No bicycle minimum; these are never read, since every zone sets `bicycle_required: false`. Bicycle stalls may replace up to 2 required non-dwelling stalls (1 per 10 bike stalls) | MCC 19.36B.110(C) |
 
-A proposed Council change (Resolution 25-152, discussed at the Molokaʻi Planning Commission on Jan 14, 2026) would base housing parking on bedrooms: 1 stall for a studio or one-bedroom, 2 for two or three bedrooms. Its status should be checked before submission.
+Resolution 25-152 (July 25, 2025) sent the bedroom-based proposal to the planning commissions; Ordinance 5983 is the bill that came out of it.
 
 ## Workforce housing (MCC 2.96)
 
@@ -166,7 +193,7 @@ The 25% is of the *market-rate* units, not of all units, so the required count W
 
 ### How the rent is worked out
 
-`inclusionaryRent` averages the rent at each AMI cap. For the default one-bedroom mix with the 2025 Maui table: $2,020 at 80%, $2,525 at 100% and $3,030 at 120%, so workforce units average $2,525 a month. The model's market rent defaults to the 120% AMI rent (the `market_ami` slider), so the top third of workforce units rents at market and only the 80% and 100% thirds cut income.
+`inclusionaryRent` averages the rent at each AMI cap. For a one-bedroom mix with the 2026 Maui table: $2,220 at 80%, $2,775 at 100% and $3,330 at 120%, so workforce units average $2,775 a month. The model's market rent defaults to the 120% AMI rent (the `market_ami` slider), so the top third of workforce units rents at market and only the 80% and 100% thirds cut income.
 
 ### Where it runs
 
@@ -259,36 +286,36 @@ The general excise tax (4% state + 0.5% county surcharge since Jan 1, 2024, 4.5%
 
 ## Income limits and affordable rents
 
-`income_limits` is HHFDC's 2025 Maui County schedule (median family income $110,900; Honolulu's is $129,300), by AMI % for household sizes 1–8. It has the same shape as Honolulu's table and matches the rule sheet's copy row for row.
+`income_limits` is HHFDC's 2026 Maui County schedule (median family income $121,400; Honolulu's has $133,400), by AMI % for household sizes 1–8. It has the same shape as Honolulu's table. The PDF's income table is a scanned image, so it was read from the image and checked against the PDF's sales price pages, which list the 50–140% incomes for each household size as text. Every row is also an exact multiple of the 10% row. The 2025 table it replaced had a median of $110,900 and $134,600 at 100% AMI for 4 people; the 2026 table has $148,000.
 
 | AMI | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| 10% | 9,430 | 10,770 | 12,120 | 13,460 | 14,540 | 15,620 | 16,700 | 17,770 |
-| 20% | 18,860 | 21,540 | 24,240 | 26,920 | 29,080 | 31,240 | 33,400 | 35,540 |
-| 30% | 28,290 | 32,310 | 36,360 | 40,380 | 43,620 | 46,860 | 50,100 | 53,310 |
-| 40% | 37,720 | 43,080 | 48,480 | 53,840 | 58,160 | 62,480 | 66,800 | 71,080 |
-| 50% | 47,150 | 53,850 | 60,600 | 67,300 | 72,700 | 78,100 | 83,500 | 88,850 |
-| 60% | 56,580 | 64,620 | 72,720 | 80,760 | 87,240 | 93,720 | 100,200 | 106,620 |
-| 70% | 66,010 | 75,390 | 84,840 | 94,220 | 101,780 | 109,340 | 116,900 | 124,390 |
-| 80% | 75,440 | 86,160 | 96,960 | 107,680 | 116,320 | 124,960 | 133,600 | 142,160 |
-| 90% | 84,870 | 96,930 | 109,080 | 121,140 | 130,860 | 140,580 | 150,300 | 159,930 |
-| 100% | 94,300 | 107,700 | 121,200 | 134,600 | 145,400 | 156,200 | 167,000 | 177,700 |
-| 110% | 103,730 | 118,470 | 133,320 | 148,060 | 159,940 | 171,820 | 183,700 | 195,470 |
-| 120% | 113,160 | 129,240 | 145,440 | 161,520 | 174,480 | 187,440 | 200,400 | 213,240 |
-| 130% | 122,590 | 140,010 | 157,560 | 174,980 | 189,020 | 203,060 | 217,100 | 231,010 |
-| 140% | 132,020 | 150,780 | 169,680 | 188,440 | 203,560 | 218,680 | 233,800 | 248,780 |
+| 10% | 10,360 | 11,840 | 13,320 | 14,800 | 15,990 | 17,170 | 18,360 | 19,540 |
+| 20% | 20,720 | 23,680 | 26,640 | 29,600 | 31,980 | 34,340 | 36,720 | 39,080 |
+| 30% | 31,080 | 35,520 | 39,960 | 44,400 | 47,970 | 51,510 | 55,080 | 58,620 |
+| 40% | 41,440 | 47,360 | 53,280 | 59,200 | 63,960 | 68,680 | 73,440 | 78,160 |
+| 50% | 51,800 | 59,200 | 66,600 | 74,000 | 79,950 | 85,850 | 91,800 | 97,700 |
+| 60% | 62,160 | 71,040 | 79,920 | 88,800 | 95,940 | 103,020 | 110,160 | 117,240 |
+| 70% | 72,520 | 82,880 | 93,240 | 103,600 | 111,930 | 120,190 | 128,520 | 136,780 |
+| 80% | 82,880 | 94,720 | 106,560 | 118,400 | 127,920 | 137,360 | 146,880 | 156,320 |
+| 90% | 93,240 | 106,560 | 119,880 | 133,200 | 143,910 | 154,530 | 165,240 | 175,860 |
+| 100% | 103,600 | 118,400 | 133,200 | 148,000 | 159,900 | 171,700 | 183,600 | 195,400 |
+| 110% | 113,960 | 130,240 | 146,520 | 162,800 | 175,890 | 188,870 | 201,960 | 214,940 |
+| 120% | 124,320 | 142,080 | 159,840 | 177,600 | 191,880 | 206,040 | 220,320 | 234,480 |
+| 130% | 134,680 | 153,920 | 173,160 | 192,400 | 207,870 | 223,210 | 238,680 | 254,020 |
+| 140% | 145,040 | 165,760 | 186,480 | 207,200 | 223,860 | 240,380 | 257,040 | 273,560 |
 
-Affordable rent is a statewide rule: 30% of income, utilities included (`state.affordable_rent_income_share`). `rentByAmi` averages the incomes of the household sizes for each unit type (studio 1; one-bedroom 1 and 2; two-bedroom 3; three-bedroom 4 and 5; four-bedroom 6) and floors the monthly result, as HHFDC does. With Maui's table that reproduces HHFDC's 2025 Maui rent table (monthly):
+Affordable rent is a statewide rule: 30% of income, utilities included (`state.affordable_rent_income_share`). `rentByAmi` averages the incomes of the household sizes for each unit type (studio 1; one-bedroom 1 and 2; two-bedroom 3; three-bedroom 4 and 5; four-bedroom 6) and floors the monthly result, as HHFDC does. With Maui's table that reproduces HHFDC's 2026 Maui rent table exactly, all 35 rents (monthly):
 
 | AMI | Studio | 1 bedroom | 2 bedroom | 3 bedroom | 4 bedroom |
 | --- | --- | --- | --- | --- | --- |
-| 30% | 707 | 757 | 909 | 1,050 | 1,171 |
-| 50% | 1,178 | 1,262 | 1,515 | 1,750 | 1,952 |
-| 60% | 1,414 | 1,515 | 1,818 | 2,100 | 2,343 |
-| 80% | 1,886 | 2,020 | 2,424 | 2,800 | 3,124 |
-| 100% | 2,357 | 2,525 | 3,030 | 3,500 | 3,905 |
-| 120% | 2,829 | 3,030 | 3,636 | 4,200 | 4,686 |
-| 140% | 3,300 | 3,535 | 4,242 | 4,900 | 5,467 |
+| 30% | 777 | 832 | 999 | 1,154 | 1,287 |
+| 50% | 1,295 | 1,387 | 1,665 | 1,924 | 2,146 |
+| 60% | 1,554 | 1,665 | 1,998 | 2,309 | 2,575 |
+| 80% | 2,072 | 2,220 | 2,664 | 3,079 | 3,434 |
+| 100% | 2,590 | 2,775 | 3,330 | 3,848 | 4,292 |
+| 120% | 3,108 | 3,330 | 3,996 | 4,618 | 5,151 |
+| 140% | 3,626 | 3,885 | 4,662 | 5,388 | 6,009 |
 
 ## Estimates
 
@@ -296,7 +323,7 @@ Affordable rent is a statewide rule: 30% of income, utilities included (`state.a
 
 | Field | Value | Basis |
 | --- | --- | --- |
-| `market.ami_escalation` | 1.039 (3.9% a year) | HHFDC Maui 100% AMI for 4 people: $84,900 (2013) to $134,600 (2025), (134,600 / 84,900)^(1/12) = 1.039 |
+| `market.ami_escalation` | 1.039 (3.9% a year) | HHFDC Maui 100% AMI for 4 people: $84,900 (2013) to $134,600 (2025), (134,600 / 84,900)^(1/12) = 1.039. Not updated for the 2026 table ($148,000), which would give 4.4% |
 | `market.annual_rent_growth` | 3.9% a year | Affordable caps track the income limits; Maui market rent growth not checked |
 | `timing.permitting_months`, `construction_months` | 18 and 12 | Honolulu's; a slider setting overrides them |
 | `market.cap_rate` | 5.1% | Honolulu's |
@@ -306,12 +333,21 @@ Affordable rent is a statewide rule: 30% of income, utilities included (`state.a
 | `market.parking` | 330 sqft and $190/sqft structured; 360 sqft and $30/sqft surface; $100 a month per stall | Honolulu's (Ulupono 2020, RLB Q2 2026) |
 | `zones.*.excavation_depth_ft` | 3 ft (A-1, H-1: FAR 0.5 or less), 5 ft (A-2, H-M, H-2, Hotel, B-2: FAR 0.9–2.0), 9 ft (B-3: FAR 4.0) | Honolulu's depths for districts of like density |
 | `default_zone` | 4 ft excavation | Honolulu's default |
+| `lever_defaults.land_cost` | $75 per sqft of lot | Team estimate (Nov. 2026); Honolulu's default is $130. The Land Cost lever overrides it |
+| `lever_defaults.unit_type` | All studios (`studio_100`) | Team estimate (Nov. 2026); Honolulu's default is half studios, half one-bedrooms. The Unit Mix lever overrides it |
 
 Honolulu's AMI growth (4%) is measured on median family income, while Maui's (3.9%) is measured on the HHFDC 100% row the model actually uses for rents. Maui's median family income grew more slowly over the same years ($84,900 to $110,900, 2.25% a year).
 
+**What the lever defaults change.** Each lever default goes between the pathway's defaults and any lever setting, so the tool's Land Cost and Unit Mix levers start at Maui's values on the Maui map. Across the 1,133 parcels in Maui's configured zones, the median return on cost is now 6.35%: 657 parcels rate "strong" (311 in B-2, 207 in A-2), 418 "marginal" and 58 "poor". With Honolulu's land cost and unit mix and the 2025 income limits, every parcel rated "poor". The lever defaults alone, on the 2025 limits, gave 216 strong, 547 marginal and 370 poor (median 5.81%); the 2026 limits, about 10% higher, did the rest. The two lever defaults count about equally (2026 limits):
+
+| 20,000 sqft lot | Both (now) | $130 land, all studios | $75 land, half one-bedrooms | Neither |
+| --- | --- | --- | --- | --- |
+| A-2, 60 ft | 6.39%, 48 units | 5.77% | 5.60%, 36 units | 5.06%, 36 units |
+| B-2, 90 ft | 6.78%, 106 units | 6.26% | 5.98%, 80 units | 5.54%, 80 units |
+
 ### Cost cross-check (November 2026)
 
-We compared the engine's defaults with published Maui land and construction figures to see whether Maui-specific values would change the results. They wouldn't change any verdict, so the config and the engine defaults stay as they are.
+We compared the engine's defaults with published Maui land and construction figures to see whether Maui-specific values would change the results. They wouldn't change any verdict, so the engine defaults stayed as they were. This check predates Maui's lever defaults: it ran on $130 land, half studios and half one-bedrooms, and 2 stalls per unit.
 
 **The test.** We ran the 1,133 parcels in Maui's configured zones from a county-wide parcel table, on current zoning, with every other input at its default. Every combination rates all 1,133 parcels "poor":
 
@@ -341,18 +377,19 @@ This is a rough check. We don't know what each project's budget includes, or how
 
 - The $450/sqft default doesn't look too high for Maui, so hard cost alone doesn't explain the "poor" verdicts.
 - A lower land cost raises the return by less than a percentage point, which isn't enough to change a verdict.
-- The remaining gap looks like it's on the revenue side: rents at the 120% AMI level don't support $600,000–700,000 a unit. On the 20,000 sqft A-2 lot at $22 land, 1 stall per unit and rents at 140% AMI together reach only 5.23%, still "poor".
+- The remaining gap looks like it's on the revenue side: rents at the 120% AMI level don't support $600,000–700,000 a unit. On the 20,000 sqft A-2 lot at $22 land, 1 stall per unit and rents at 140% AMI together reach only 5.23%, still "poor". (This check ran at 2 stalls per unit; 1 stall per one-bedroom is now the default, under Ord. 5983.)
 - Neither land figure is good enough to become a Maui default. Published vacant land medians are per lot and can't be converted to a price per square foot.
 
 Single-family construction quotes weren't compared, because the engine models multifamily buildings.
 
 ## Engine changes
 
-Six small changes let the engine read Maui's rules. Since then, Maui's zones moved from Honolulu's `far.bill6` and `lot_coverage.bill6` to the generic `current` rules (see [ADDING_A_COUNTY.md](ADDING_A_COUNTY.md)), so the lot-size lookup in the third row now happens in `currentLimits`. Each is optional or a default that leaves Honolulu's results the same, and the v0.2.1 snapshots still match.
+Seven small changes let the engine read Maui's rules. Since then, Maui's zones moved from Honolulu's `far.bill6` and `lot_coverage.bill6` to the generic `current` rules (see [ADDING_A_COUNTY.md](ADDING_A_COUNTY.md)), so the lot-size lookup in the third row now happens in `currentLimits`. Each is optional or a default that leaves Honolulu's results the same, and the v0.2.1 snapshots still match.
 
 | Change | Where | Why Maui needs it | Why Honolulu is unchanged |
 | --- | --- | --- | --- |
 | `residential_stalls_per_unit` in `ParkingRules`, now one of it or `residential_sqft_per_stall`; `checkLocality` requires exactly one | `core/locality.ts`, `legalParkingRatio`, `core/check.ts` | Maui's minimum is per unit, not per sqft | Honolulu keeps `residential_sqft_per_stall: 1000` |
+| `residential_stalls_by_type` in `ParkingRules`, a third form of the housing minimum: stalls for each unit type, averaged over the mix; `checkLocality` requires exactly one of the three and no negative values | `core/locality.ts`, `legalParkingRatio`, `core/check.ts` | Ord. 5983 sets Maui's minimum by bedrooms (Maui moved to it from `residential_stalls_per_unit: 2`) | Unset for Honolulu |
 | `park_dedication.exempt_units` | `core/locality.ts`, `calcParkArea` | Maui exempts the first 3 units | Defaults to 0 |
 | `calcFarBill6` and `lotCoverageBill6` take the lot size | `calc-shared.ts`, `calc-bill6.ts`, `parcels.ts` | Maui A-1's FAR drops from 0.5 to 0.4 at 3 acres; lot size 0 was always used before | Honolulu's current-zoning schedules are flat |
 | `water.demand_per_unit`, used by `mixFixtureUnits` | `core/locality.ts`, `calc-shared.ts` | Maui charges per ESD by beds and baths, not per fixture unit | Unset for Honolulu, so fixture units are used as before |
@@ -377,7 +414,7 @@ Every row of the team's Maui County Rule Sheet, with what the config does. "Matc
 | Multifamily permitted | A, B-2, B-3 yes; B-CT except Lānaʻi and Molokaʻi; B-1 above/below business only | Matches; B-1 and B-CT left out for lack of an FAR |
 | Long-term occupancy | A-zone TVRs end 2028/2030 | No change needed; the model assumes long-term rentals |
 | Design guidelines | B-CT and SBR follow community guidelines | Both left out |
-| Dwelling stalls | 2 per unit under 3,000 sqft | Matches |
+| Dwelling stalls | 2 per unit under 3,000 sqft | Differs: by bedrooms under Ord. 5983 (April 2026), which replaced the rule the sheet gives |
 | Commercial stalls | 1 per 500 sqft (min. 3); restaurants 1 per 100 | 1 per 500 sqft; the minimum of 3 and restaurants not modeled |
 | Rounding | Half up | Matches the engine |
 | Reductions | Up to 50%, discretionary | Not modeled (an optional slider later) |
@@ -394,7 +431,7 @@ Every row of the team's Maui County Rule Sheet, with what the config does. "Matc
 | Workforce income mix | Rental thirds at 80/100/120% | Matches; ownership mix not used |
 | Workforce in-lieu fee | 3-bedroom price gap, 100% vs 160% AMI | Not modeled |
 | 100% workforce fast track (MCC 2.97) | County-level 201H | Not modeled (current zoning only) |
-| Income limits | HHFDC 2025 Maui | Matches row for row |
+| Income limits | HHFDC 2025 Maui | Matched row for row; the model now uses HHFDC 2026 |
 | Affordable rent rule | 30% of income | Matches; reproduces HHFDC's rent table |
 | Property tax rate | Apartment $3.50 (search summary of Res. 26-69) | Matches, from App. B p. 12 and MCC 3.48.305 |
 | General excise tax | 4.5% | Not modeled, as for Honolulu |
@@ -409,12 +446,12 @@ Every row of the team's Maui County Rule Sheet, with what the config does. "Matc
 `test/maui-config.test.ts` checks the config against the code it comes from:
 
 - **Zoning:** FAR and coverage for every district; A-1's 3-acre break; B-1 and B-CT stop the run; no zone requires bicycle parking.
-- **Parking, loading and parks:** 2 stalls per unit for any mix; loading at the 2,000 and 10,000 sqft edges; park land of 500 sqft per unit over 3.
-- **Income limits:** the 2025 table, with 100% AMI equal to twice the 50% row.
+- **Parking, loading and parks:** stalls by bedrooms (1, 1, 2 and their mixes); a unit type with no minimum stops the run; loading at the 2,000 and 10,000 sqft edges; park land of 500 sqft per unit over 3.
+- **Income limits:** the 2026 table, with 100% AMI equal to twice the 50% row, and two of HHFDC's 2026 rents.
 - **Fees:** the building permit table at each band edge and the $350,000 example; plan review; grading and grubbing steps; the Apartment tax rate.
 - **Water and wastewater:** ESDs per unit; the $5,491 fee and $1,250 review fee; 255 gpd at $4.57.
 - **Workforce housing:** the count table above; 0 for Honolulu; the rent average.
-- **End to end:** the A-2 parcel (18,000 sqft, 28 units, 56 stalls, 6 workforce, every result a finite number) and TOD throwing.
+- **End to end:** the A-2 parcel (18,000 sqft, 28 units, 28 stalls, 6 workforce, every result a finite number) and TOD throwing.
 - **Completeness:** `checkLocality(maui)` finds nothing missing.
 
 ## Sources
@@ -427,10 +464,12 @@ Every row of the team's Maui County Rule Sheet, with what the config does. "Matc
 | Department of Water Supply FY 2027 Appendix B, Water Fund - Water Rates and Fees (linked from [DWS Water Charges](https://www.mauicounty.gov/216/Water-Charges)) | Water system development fee and review fee (p. 64), meter installation (pp. 57–60) | Full PDF, downloaded by the team |
 | [DWS Water Use Calculation Method](https://www.mauicounty.gov/2895/Water-Use-Calculation-Method) | ESD formula and per-dwelling ESDs (Ord. 5759) | Web page, directly |
 | [County of Maui WWRD Wastewater Flow Standards](https://www.mauicounty.gov/DocumentCenter/View/6775/Wastewater-Flow-Standards) | 255 gpd per apartment unit | Search summary only; to be confirmed |
-| [HHFDC 2025 Maui County income schedule](https://dbedt.hawaii.gov/hhfdc/files/2025/05/Maui-County-2025.pdf) | Income limits, affordable rents | PDF, directly |
+| [HHFDC 2026 Maui County income limits](https://dbedt.hawaii.gov/hhfdc/files/2026/06/2026-HHFDC-Maui-County-Income-Limits_Sales-Price-Guidelines.pdf) | Income limits, affordable rents | PDF, directly (the income and rent tables are scanned images) |
+| [HHFDC 2025 Maui County income schedule](https://dbedt.hawaii.gov/hhfdc/files/2025/05/Maui-County-2025.pdf) | AMI growth | PDF, directly |
 | [HHFDC 2013 Maui County income schedule](https://files.hawaii.gov/dbedt/hhfdc/resources/2013Maui.pdf) | AMI growth since 2013 | PDF, directly |
 | [Tax Rate Resolution 26-69 FD2](https://www.mauicounty.gov/DocumentCenter/View/161952/2026-Tax-Rate-Resolution-No-26-69-FD2-PDF) | Cross-check of tax rates by class | Via the rule sheet |
 | [DOE school impact fee report (2019)](https://www.hawaiipublicschools.org/Reports/LEG19_School%20Impact%20Fees.pdf) | School impact fee range | Via the rule sheet |
+| Ordinance 5983 (Bill 47 CD1, 2026), amending MCC 19.36B.020; passed April 17, 2026, in effect April 20, 2026 | Housing parking by bedrooms | Signed copy, downloaded by the team |
 | [Molokaʻi Planning Commission minutes, Jan 14, 2026](https://www.mauicounty.gov/AgendaCenter/ViewFile/Minutes/_01142026-546) | Resolution 25-152 (bedroom-based parking proposal) | PDF, directly |
 | [Hawaiʻi Legislature, HB 1919 (2026)](https://www.capitol.hawaii.gov/session/measure_indiv.aspx?billtype=HB&billnumber=1919&year=2026) | State parking cap status | Via the rule sheet |
 | [Maui Now, Apr 23, 2025](https://mauinow.com/2025/04/23/9-projects-with-over-800-housing-units-could-get-funding-from-maui-county-for-construction-rising-costs/) | Cost cross-check: Hale O Piʻikea and Kehalani project costs | Via a research summary; not opened directly |

@@ -1,8 +1,10 @@
 // County of Maui: parking, loading, bicycle parking, fees, water charges,
 // property tax and income limits.
 //
-// Parking, loading, park dedication and the tax classes are from the code on
-// Municode (version of Sep 14, 2026). The code leaves the fee amounts to the
+// Loading, park dedication and the tax classes are from the code on Municode
+// (version of Sep 14, 2026). The housing parking minimum is from Ordinance
+// 5983 (Bill 47 CD1, effective Apr 20, 2026), which Municode's version did
+// not yet include. The code leaves the fee amounts to the
 // annual budget; they are from the County of Maui FY 2027 Appendix B,
 // "Revenues - Fees, Rates, Assessments and Taxes" (July 1, 2026 to June 30,
 // 2027), cited below as "FY27 App. B" with its page. Water charges are from
@@ -22,9 +24,11 @@ import { flat } from "../../../core/schedule";
 // ── parking, loading and bicycle parking (MCC 19.36B) ───────────────────
 
 export const parking: ParkingRules = {
-  // 2 stalls for a dwelling unit under 3,000 sqft, whatever its bedrooms
-  // (more only for larger units)
-  residential_stalls_per_unit: 2,
+  // by bedrooms per dwelling unit (Ord. 5983): studio and one-bedroom 1,
+  // two- and three-bedroom 2, four or more 3 plus 1 for each bedroom over
+  // four (the model's largest type has four). Before Ord. 5983 it went by
+  // floor area: 2 stalls for any unit under 3,000 sqft
+  residential_stalls_by_type: { studio: 1, one_bb: 1, two_bb: 2, three_bb: 2, four_bb: 3 },
   // general merchandising, general office, personal and business services:
   // 1 per 500 sqft, at least 3 (the minimum of 3 is not modeled; eating and
   // drinking places need 1 per 100 sqft of dining area)
@@ -32,7 +36,7 @@ export const parking: ParkingRules = {
   // no joint-use reduction in the code; the director may reduce required
   // parking by up to 50% case by case (19.36B.110(A)), which is not modeled
   joint_use: 1,
-  source: "MCC 19.36B.020; MCC 19.36B.110(A)",
+  source: "MCC 19.36B.020 as amended by Ord. 5983 (2026); MCC 19.36B.110(A)",
 };
 
 export const loading: LoadingRules = {
@@ -226,21 +230,21 @@ export const inclusionary: InclusionaryRules = {
 // which is not modeled
 export const property_tax_rate = 0.0035;
 
-// 2025 HHFDC Maui County income limits by AMI %, household sizes 1–8
-// (median family income $110,900)
+// 2026 HHFDC Maui County income limits by AMI %, household sizes 1–8
+// (median family income $121,400)
 export const income_limits: Record<number, number[]> = {
-  10: [9430, 10770, 12120, 13460, 14540, 15620, 16700, 17770],
-  20: [18860, 21540, 24240, 26920, 29080, 31240, 33400, 35540],
-  30: [28290, 32310, 36360, 40380, 43620, 46860, 50100, 53310],
-  40: [37720, 43080, 48480, 53840, 58160, 62480, 66800, 71080],
-  50: [47150, 53850, 60600, 67300, 72700, 78100, 83500, 88850],
-  60: [56580, 64620, 72720, 80760, 87240, 93720, 100200, 106620],
-  70: [66010, 75390, 84840, 94220, 101780, 109340, 116900, 124390],
-  80: [75440, 86160, 96960, 107680, 116320, 124960, 133600, 142160],
-  90: [84870, 96930, 109080, 121140, 130860, 140580, 150300, 159930],
-  100: [94300, 107700, 121200, 134600, 145400, 156200, 167000, 177700],
-  110: [103730, 118470, 133320, 148060, 159940, 171820, 183700, 195470],
-  120: [113160, 129240, 145440, 161520, 174480, 187440, 200400, 213240],
-  130: [122590, 140010, 157560, 174980, 189020, 203060, 217100, 231010],
-  140: [132020, 150780, 169680, 188440, 203560, 218680, 233800, 248780],
+  10: [10360, 11840, 13320, 14800, 15990, 17170, 18360, 19540],
+  20: [20720, 23680, 26640, 29600, 31980, 34340, 36720, 39080],
+  30: [31080, 35520, 39960, 44400, 47970, 51510, 55080, 58620],
+  40: [41440, 47360, 53280, 59200, 63960, 68680, 73440, 78160],
+  50: [51800, 59200, 66600, 74000, 79950, 85850, 91800, 97700],
+  60: [62160, 71040, 79920, 88800, 95940, 103020, 110160, 117240],
+  70: [72520, 82880, 93240, 103600, 111930, 120190, 128520, 136780],
+  80: [82880, 94720, 106560, 118400, 127920, 137360, 146880, 156320],
+  90: [93240, 106560, 119880, 133200, 143910, 154530, 165240, 175860],
+  100: [103600, 118400, 133200, 148000, 159900, 171700, 183600, 195400],
+  110: [113960, 130240, 146520, 162800, 175890, 188870, 201960, 214940],
+  120: [124320, 142080, 159840, 177600, 191880, 206040, 220320, 234480],
+  130: [134680, 153920, 173160, 192400, 207870, 223210, 238680, 254020],
+  140: [145040, 165760, 186480, 207200, 223860, 240380, 257040, 273560],
 };

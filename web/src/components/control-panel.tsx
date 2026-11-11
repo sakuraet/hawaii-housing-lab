@@ -147,7 +147,8 @@ const ZONING_FACTORS: FactorConfig[] = [
     category: "Zoning & Development Standards",
     label: "Parking (stalls per unit)",
     min: 0,
-    max: 1.5,
+    // up to 3: Kauaʻi's minimum is 2, and Maui's 3 for four bedrooms
+    max: 3,
     step: 0.05,
     format: (v) => `${Number(v.toFixed(2))}/unit`,
   },
@@ -574,13 +575,26 @@ const GAUGE_LEVER_INFO: Partial<Record<keyof GaugeInputs, string>> = {
     "Raises or lowers every parcel's own FAR by the same amount. Baseline is the FAR the pathway gives each parcel. A parcel pushed to 0 or below builds nothing.",
 };
 
+// the parking lever in the other counties: each county's own minimum, which
+// the lever follows until it is moved (Honolulu's text is the calculator's)
+const PLACEMENT =
+  "Stalls fill a surface lot first, then the ground floor and podium floors, which count toward height but not FAR.";
+const COUNTY_PARKING_INFO: Partial<Record<CountyId, string>> = {
+  "hi-maui": `Stalls per unit. Defaults to Maui's minimum for the unit mix: 1 stall per studio or one-bedroom, 2 per two- or three-bedroom, 3 per four-bedroom (MCC 19.36B.020, as amended by Ord. 5983), so 1 for all studios. ${PLACEMENT}`,
+  "hi-hawaii": `Stalls per unit. Defaults to Hawaiʻi County's minimum: 1.25 stalls per multiple-family unit, whatever its size (HCC 25-4-51). ${PLACEMENT}`,
+  "hi-kauai": `Stalls per unit. Defaults to Kauaʻi's minimum: 2 stalls per unit, whatever its size (CZO 8-4.5). ${PLACEMENT}`,
+};
+
 // The calculator's description of a lever. Some differ by pathway (the AMI
 // lever cites each program's own rules), so the pathway's own text wins
 function leverDescription(
   program: string,
+  county: CountyId,
   key: keyof GaugeInputs
 ): string | undefined {
   if (GAUGE_LEVER_INFO[key]) return GAUGE_LEVER_INFO[key];
+  if (key === "parking_ratio" && COUNTY_PARKING_INFO[county])
+    return COUNTY_PARKING_INFO[county];
   const factorKey = CALCULATOR_FACTOR_KEY[key];
   if (!factorKey) return undefined;
   const describe = (p: (typeof CALCULATOR_PROGRAMS)[number] | undefined) =>
@@ -907,7 +921,7 @@ export function ControlPanel({
                       label={factor.label}
                       value={inputs[factor.key] ? "true" : "false"}
                       locked={isLocked(factor.key)}
-                      info={leverDescription(inputs.program, factor.key)}
+                      info={leverDescription(inputs.program, county, factor.key)}
                       options={[
                         { value: "false", label: factor.offLabel },
                         { value: "true", label: factor.onLabel },
@@ -925,7 +939,7 @@ export function ControlPanel({
                       label={factor.label}
                       value={String(inputs[factor.key] ?? "")}
                       locked={isLocked(factor.key)}
-                      info={leverDescription(inputs.program, factor.key)}
+                      info={leverDescription(inputs.program, county, factor.key)}
                       options={factor.options}
                       onChange={(v) =>
                         set(factor.key, v as GaugeInputs[typeof factor.key])
@@ -977,7 +991,7 @@ export function ControlPanel({
                     }
                     locked={isLocked(slider.key)}
                     onUnlock={defaults ? () => unlock(slider.key) : undefined}
-                    info={leverDescription(inputs.program, slider.key)}
+                    info={leverDescription(inputs.program, county, slider.key)}
                     onChange={(v) =>
                       set(
                         slider.key,

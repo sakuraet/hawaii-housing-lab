@@ -26,6 +26,8 @@ describe("the check catches an unfinished config", () => {
   unfinished.rules.zones["A-2"].lot_coverage!.bill6 = { bands: [{ upTo: 7500, inclusive: false, base: 1.5 }], source: "" };
   unfinished.rules.income_limits = { ...unfinished.rules.income_limits, 80: [1, 2, 3] };
   unfinished.assumptions.timing.permitting_months = 0;
+  // a second housing parking minimum, alongside the per-sqft one
+  unfinished.rules.parking.residential_stalls_by_type = { studio: -1 };
   const problems = checkLocality(unfinished);
 
   it.each([
@@ -36,6 +38,8 @@ describe("the check catches an unfinished config", () => {
     "rules.zones.A-2.lot_coverage.bill6.bands[0].base: 1.5 is a share",
     "rules.income_limits.80: needs 8 household sizes, has 3",
     "assumptions.timing.permitting_months: must be more than 0",
+    "rules.parking: set one of residential_sqft_per_stall, residential_stalls_per_unit and residential_stalls_by_type",
+    "rules.parking.residential_stalls_by_type.studio: must be 0 or more",
   ])("%s", (expected) => {
     expect(problems.some((p) => p.startsWith(`hi-test ${expected}`))).toBe(true);
   });

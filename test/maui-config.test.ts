@@ -1,7 +1,7 @@
 // Maui's config (src/localities/hi/maui) against the code it comes from:
 // zoning (MCC 19.12, 19.14, 19.18, 19.20), parking and loading (MCC 19.36B),
 // park dedication (MCC 18.16.320), fees (FY 2027 Appendix B), water (DWS
-// FY 2027 Appendix B), workforce housing (MCC 2.96) and the 2025 HHFDC
+// FY 2027 Appendix B), workforce housing (MCC 2.96) and the 2026 HHFDC
 // income limits, then a parcel run end to end.
 
 import { describe, expect, it } from "vitest";
@@ -22,7 +22,8 @@ import {
   wastewaterFee,
 } from "../src/calculations/calc-shared";
 import { checkLocality } from "../src/core/check";
-import { calcParcel } from "../src/parcels";
+import type { Locality } from "../src/core/locality";
+import { calcParcel, parcelInputs } from "../src/parcels";
 import { currentLimits, zoneRules } from "../src/core/zoning";
 import { maui } from "../src/localities/hi/maui";
 
@@ -66,9 +67,26 @@ describe("Maui zoning (current zoning)", () => {
 });
 
 describe("Maui parking, loading and parks", () => {
-  it("2 stalls per unit, whatever the unit mix", () => {
-    expect(legalParkingRatio("one_bb_100", maui)).toBe(2);
-    expect(legalParkingRatio("studio_100", maui)).toBe(2);
+  it("stalls by bedrooms (Ord. 5983): 1 for a studio or one-bedroom, 2 for two", () => {
+    expect(legalParkingRatio("studio_100", maui)).toBe(1);
+    expect(legalParkingRatio("one_bb_100", maui)).toBe(1);
+    expect(legalParkingRatio("two_bb_100", maui)).toBe(2);
+    // averaged over the mix
+    expect(legalParkingRatio("one_br50_2br50", maui)).toBe(1.5);
+    expect(legalParkingRatio("third_each", maui)).toBeCloseTo(4 / 3, 9);
+    expect(maui.rules.parking.residential_stalls_by_type).toEqual({
+      studio: 1,
+      one_bb: 1,
+      two_bb: 2,
+      three_bb: 2,
+      four_bb: 3,
+    });
+  });
+
+  it("a unit type with no minimum stops the run", () => {
+    const loc = JSON.parse(JSON.stringify(maui)) as typeof maui;
+    loc.rules.parking.residential_stalls_by_type = { studio: 1 };
+    expect(() => legalParkingRatio("one_bb_100", loc)).toThrow(/no parking minimum for unit type "one_bb"/);
   });
 
   it("loading by non-dwelling floor area only", () => {
@@ -86,12 +104,18 @@ describe("Maui parking, loading and parks", () => {
 });
 
 describe("Maui income limits", () => {
-  it("2025 HHFDC Maui County table: 100% AMI for 4 is 50% of 2 x VLIL", () => {
-    expect(maui.rules.income_limits[100][3]).toBe(134600);
-    expect(maui.rules.income_limits[50][3] * 2).toBe(134600);
+  it("2026 HHFDC Maui County table: 100% AMI for 4 is 50% of 2 x VLIL", () => {
+    expect(maui.rules.income_limits[100][3]).toBe(148000);
+    expect(maui.rules.income_limits[50][3] * 2).toBe(148000);
     expect(maui.rules.income_limits[80]).toEqual([
-      75440, 86160, 96960, 107680, 116320, 124960, 133600, 142160,
+      82880, 94720, 106560, 118400, 127920, 137360, 146880, 156320,
     ]);
+  });
+
+  it("reproduces HHFDC's 2026 rents", () => {
+    // one-bedroom at 80% AMI: $2,220; studio at 60%: $1,554
+    expect(mixRentByAmi(80, "one_bb_100", maui)).toBe(2220);
+    expect(mixRentByAmi(60, "studio_100", maui)).toBe(1554);
   });
 });
 
@@ -186,16 +210,17 @@ describe("a Maui parcel runs end to end", () => {
   // not a real parcel): FAR 0.9 caps floor area at 18,000 sqft, under the
   // 35% coverage x 6 floors envelope (42,000 sqft)
   const parcel = { locality: "hi-maui", lot_sqft: 20000, zone_class: "A-2", height: 60 };
-  const r = calcParcel("current", parcel);
+  // one-bedrooms, not Maui's default of all studios, as in the worked example
+  const r = calcParcel("current", parcel, { unit_type: "one_bb_100" });
 
   it("floor area at FAR 0.9", () => {
     expect(r.buildable_sqft).toBe(18000);
   });
 
-  it("units from 80% efficiency over 500 sqft one-bedrooms, 2 stalls each", () => {
+  it("units from 80% efficiency over 500 sqft one-bedrooms, 1 stall each", () => {
     // 18,000 x 0.8 / 500 = 28.8
     expect(r.max_units).toBe(28);
-    expect(r.parking_stalls).toBe(56);
+    expect(r.parking_stalls).toBe(28);
   });
 
   it("no bicycle parking", () => {
@@ -220,8 +245,39 @@ describe("a Maui parcel runs end to end", () => {
   });
 });
 
+describe("Maui's lever defaults", () => {
+  const parcel = { locality: "hi-maui", lot_sqft: 20000, zone_class: "A-2", height: 60 };
+
+  it("$75 land and all studios, where Honolulu has $130 and half studios", () => {
+    const inputs = parcelInputs("current", parcel);
+    expect(inputs.land_cost).toBe(75);
+    expect(inputs.unit_type).toBe("studio_100");
+    const oahu = parcelInputs("current", { ...parcel, locality: "hi-honolulu" });
+    expect(oahu.land_cost).toBe(130);
+    expect(oahu.unit_type).toBe("studio50_1br50");
+  });
+
+  it("a lever setting still wins", () => {
+    const inputs = parcelInputs("current", parcel, { land_cost: 200, unit_type: "two_bb_100" });
+    expect(inputs.land_cost).toBe(200);
+    expect(inputs.unit_type).toBe("two_bb_100");
+  });
+
+  it("the land cost is what the run pays for the lot", () => {
+    expect(calcParcel("current", parcel).dev_land_cost).toBe(75 * 20000);
+  });
+});
+
 describe("the config is complete", () => {
   it("nothing left to fill in", () => {
     expect(checkLocality(maui)).toEqual([]);
+  });
+
+  it("a lever default must be a unit mix the model has", () => {
+    const loc: Locality = JSON.parse(JSON.stringify(maui));
+    loc.assumptions.lever_defaults = { unit_type: "lofts", source: "test" };
+    expect(checkLocality(loc)).toContain(
+      'hi-maui assumptions.lever_defaults.unit_type: "lofts" is not a unit mix'
+    );
   });
 });

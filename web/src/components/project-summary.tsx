@@ -163,8 +163,10 @@ export function ProjectSummary({
               value={zonedHeight ? `${fmt(zonedHeight)} ft` : "—"}
             />
             <Row label="Height Limit" value={`${fmt(r.height_limit)} ft`} />
-            {/* Built Height is left out: this repo's engine does not report
-                built_height or built_floors yet */}
+            <Row
+              label="Built Height"
+              value={`${fmt(r.built_height)} ft (${fmt(r.built_floors)} floors)`}
+            />
             <Row
               label="FAR"
               value={maxFar !== undefined ? fmt(maxFar, 2) : "—"}

@@ -23,7 +23,22 @@ describe("Honolulu: current is bill6", () => {
 
   it.each(parcels)("$zone_class: same envelope and results", (p) => {
     expect(pathwayEnvelope("current", p)).toEqual(pathwayEnvelope("bill6", p));
+    // including bill6's 0.95 stalls per unit
     expect(calcParcel("current", p)).toEqual(calcParcel("bill6", p));
+    expect(calcParcel("current", { ...p, locality: "hi-honolulu" })).toEqual(calcParcel("bill6", p));
+  });
+
+  it("a parking lever still wins in Honolulu", () => {
+    const p = parcels[0];
+    const set = { parking_ratio: 0.4 };
+    expect(calcParcel("current", p, set)).toEqual(calcParcel("bill6", p, set));
+  });
+
+  it("other counties keep their own minimum, not 0.95", () => {
+    const p = { locality: "hi-maui", lot_sqft: 20000, zone_class: "A-2", height: 60 };
+    // Maui: 1 stall per studio or one-bedroom (Ord. 5983)
+    const r = calcParcel("current", p);
+    expect(r.parking_stalls).toBe(r.max_units);
   });
 });
 
@@ -74,7 +89,7 @@ testCounty.rules.zones = {
 registerLocality(testCounty);
 
 const run = (zone_class: string, lot_sqft: number, height: number) =>
-  calcParcel("current", { locality: testCounty.id, zone_class, lot_sqft, height });
+  calcParcel("current", { locality: testCounty.id, zone_class, lot_sqft, height }, { unit_type: "one_bb_100" });
 
 describe("density by lot area per unit", () => {
   it("units are the lot area over the area per unit, rounded down", () => {
@@ -98,7 +113,8 @@ describe("density by lot area per unit", () => {
     expect(r.max_units).toBe(6);
     // 6 one-bedrooms of 500 sqft at 80% efficiency
     expect(r.buildable_sqft).toBeCloseTo((6 * 500) / 0.8, 3);
-    expect(r.parking_stalls).toBe(12);
+    // 1 stall per one-bedroom, Maui's minimum (Ord. 5983)
+    expect(r.parking_stalls).toBe(6);
   });
 
   it("a lot too small for one unit builds nothing", () => {

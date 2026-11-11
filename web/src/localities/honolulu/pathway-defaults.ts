@@ -2,6 +2,7 @@
 // has React hooks) so the server pages can read them for project links.
 
 import {
+  countyLeverDefaults,
   pathwayEnvelope,
   type Envelope,
   type ProgramId,
@@ -113,8 +114,14 @@ export const PROGRAM_DEFAULTS: Record<string, GaugeInputs> = {
   h201: H201_DEFAULTS,
 };
 
-export const defaultsFor = (program: string) =>
-  PROGRAM_DEFAULTS[program] ?? BILL6_DEFAULTS;
+/** a pathway's defaults; in another county, with that county's own lever
+ *  defaults (Maui: $75 land and all studios), and no fixed parking: the
+ *  county's legal minimum applies, which follows the unit mix */
+export function defaultsFor(program: string, county?: string): GaugeInputs {
+  const base = PROGRAM_DEFAULTS[program] ?? BILL6_DEFAULTS;
+  if (county === undefined || county === "hi-honolulu") return base;
+  return { ...base, ...countyLeverDefaults(county), parking_ratio: undefined };
+}
 
 // TOD parcels with no housing or no recorded height have no limit to change
 const hasNoLimits = (envelope: Envelope) =>

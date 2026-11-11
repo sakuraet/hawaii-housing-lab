@@ -91,11 +91,15 @@ export interface ZoneRules {
 // ── parking, loading and bicycle parking ────────────────────────────────
 
 export interface ParkingRules {
-  // the housing minimum is one of these two, whichever the code uses
+  // the housing minimum is one of these three, whichever the code uses
   /** minimum stalls: 1 per this many sqft of private dwelling area (Honolulu) */
   residential_sqft_per_stall?: number;
-  /** minimum stalls per dwelling unit, whatever its size (Maui: 2) */
+  /** minimum stalls per dwelling unit, whatever its size (Kauaʻi: 2) */
   residential_stalls_per_unit?: number;
+  /** minimum stalls per dwelling unit by unit type (`studio`, `one_bb`,
+   *  `two_bb`, `three_bb`, `four_bb`), averaged over the unit mix (Maui:
+   *  by bedrooms) */
+  residential_stalls_by_type?: Record<string, number>;
   /** a fraction of a stall always rounds up (Hawaiʻi County); otherwise
    *  0.5 or more rounds up (Honolulu) */
   round_up?: boolean;
@@ -234,6 +238,16 @@ export interface MarketAssumptions {
   source: string;
 }
 
+/** a county's own defaults for levers every pathway shares; a lever setting
+ *  overrides them, and a lever left out keeps the pathway's default */
+export interface LeverDefaults {
+  /** land cost, $ per sqft of lot */
+  land_cost?: number;
+  /** a unit mix key, for example "studio_100" */
+  unit_type?: string;
+  source: string;
+}
+
 // ── the forms ───────────────────────────────────────────────────────────
 
 /** what state law and statewide agencies set */
@@ -245,7 +259,21 @@ export interface StateRules {
   affordable_rent_income_share: number;
   /** HRS 201H: affordable share of units must be more than this */
   h201_min_affordable_frac: number;
+  /** conveyance tax paid by the seller, lowest price bracket first: the
+   *  bracket's rate applies to the whole price, not marginally */
+  conveyance_tax: ConveyanceTaxBracket[];
   source: string;
+}
+
+/** one bracket of the conveyance tax, rates in dollars per $100 of price */
+export interface ConveyanceTaxBracket {
+  /** prices under this; null for the top bracket */
+  below: number | null;
+  /** the general rate (Hawaiʻi: HRS § 247-2(1)) */
+  general: number;
+  /** a condo or single-family home whose buyer can't take a home exemption
+   *  (Hawaiʻi: HRS § 247-2(2)) */
+  condo_sfr: number;
 }
 
 /** zone names in parcel data that are not `rules.zones`' keys */
@@ -297,5 +325,7 @@ export interface Locality {
     /** used for a zone with no entry in `zones` */
     default_zone: ZoneAssumptions;
     market: MarketAssumptions;
+    /** absent = the pathway defaults (Honolulu's) */
+    lever_defaults?: LeverDefaults;
   };
 }

@@ -14,6 +14,7 @@ import {
 import {
   baseFar,
   calcFAR,
+  legalParkingRatio,
   calcFarBill6,
   calcFarPdt,
   calcFarTod,
@@ -370,7 +371,7 @@ export function todOpenSpaceCostSqft(
 export const DEFAULT_INPUTS: Record<ProgramId, SliderInputs> = (() => {
   const standard: SliderInputs = {
     program: "standard",
-    unit_type: "one_bb_100",
+    unit_type: "studio50_1br50",
     affordable_ami: "ami_80",
     market_ami: "ami_120",
     include_retail: false,
@@ -382,7 +383,8 @@ export const DEFAULT_INPUTS: Record<ProgramId, SliderInputs> = (() => {
     waivable_fee_basis: "market_units",
     park: "in_lieu",
     setback: 10,
-    // no parking_ratio: the model applies the Article 6 minimum
+    // set on exempt parcels too; left unset, the model applies the Article 6 minimum
+    parking_ratio: 0.95,
     permitting_months: 18,
     const_months: 12,
     leaseup_months: 9,
@@ -398,10 +400,12 @@ export const DEFAULT_INPUTS: Record<ProgramId, SliderInputs> = (() => {
   };
   return {
     standard,
-    // no setback: the zone's yards apply, or 10 ft where it sets none
-    current: { ...standard, program: "current", setback: undefined },
+    // no setback: the zone's yards apply, or 10 ft where it sets none; no
+    // parking_ratio: the county's own minimum applies, except in Honolulu,
+    // where current is bill6 and takes its 0.95 (see parcelInputs)
+    current: { ...standard, program: "current", setback: undefined, parking_ratio: undefined },
     bill6: { ...standard, program: "bill6" },
-    tod: { ...standard, program: "tod", floor_height: 10, parking_ratio: 0 },
+    tod: { ...standard, program: "tod", floor_height: 10, parking_ratio: 0.85 },
     h201: {
       ...standard,
       program: "h201",
@@ -430,7 +434,7 @@ export const DEFAULT_INPUTS: Record<ProgramId, SliderInputs> = (() => {
       waivable_fee_basis: "none",
       park: "exempt",
       setback: 10,
-      parking_ratio: 0,
+      parking_ratio: 0.5,
       permitting_months: 18,
       const_months: 12,
       leaseup_months: 9,
@@ -447,8 +451,25 @@ export const DEFAULT_INPUTS: Record<ProgramId, SliderInputs> = (() => {
 /**
  * Model inputs for a parcel: pathway defaults, then `levers` (undefined = not
  * set), then the parcel's envelope. `levers.height_limit` / `max_far` override
- * the envelope; Bill 7's 60 ft cap still applies. `opts` is TOD only.
+ * the envelope, including Bill 7's 60 ft cap. `opts` is TOD only.
  */
+/** the county's legal parking minimum, stalls per unit, for a unit mix
+ *  (Maui: 1 per studio or one-bedroom, Ord. 5983) */
+export function countyParkingRatio(unit_type: string, locality?: string): number {
+  return legalParkingRatio(unit_type, getLocality(locality));
+}
+
+/** the county's own lever defaults (`assumptions.lever_defaults`), which go
+ *  between the pathway's defaults and the levers set; none for Honolulu */
+export function countyLeverDefaults(locality?: string): Partial<SliderInputs> {
+  const d = getLocality(locality).assumptions.lever_defaults;
+  if (!d) return {};
+  const out: Partial<SliderInputs> = {};
+  if (d.land_cost !== undefined) out.land_cost = d.land_cost;
+  if (d.unit_type !== undefined) out.unit_type = d.unit_type;
+  return out;
+}
+
 export function parcelInputs(
   program: ProgramId,
   parcel: Parcel,
@@ -459,15 +480,14 @@ export function parcelInputs(
     Object.entries(levers).filter(([, value]) => value !== undefined)
   ) as Partial<SliderInputs>;
   const envelope = pathwayEnvelope(program, parcel, opts);
-  const height = set.height_limit ?? envelope.height_limit;
   const inputs: SliderInputs = {
     ...DEFAULT_INPUTS[program],
+    ...countyLeverDefaults(parcel.locality),
     ...set,
     program,
     lot_sqft: parcel.lot_sqft,
     zone_class: parcel.zone_class,
-    height_limit:
-      program === "bill7" ? Math.min(height, BILL7_MAX_HEIGHT) : height,
+    height_limit: set.height_limit ?? envelope.height_limit,
     max_far: set.max_far ?? envelope.max_far,
   };
   if (program === "tod") {
@@ -482,6 +502,14 @@ export function parcelInputs(
   // § 21-6.20(a) exemption
   if (program === "current" || program === "bill6" || program === "standard" || program === "h201")
     inputs.parking_exempt = parcel.parking_exempt;
+  // Honolulu's current zoning is bill6, so it takes bill6's parking default;
+  // other counties keep their own minimum, which 0.95 can be under
+  if (
+    program === "current" &&
+    set.parking_ratio == null &&
+    (parcel.locality ?? "hi-honolulu") === "hi-honolulu"
+  )
+    inputs.parking_ratio = DEFAULT_INPUTS.bill6.parking_ratio;
   if (parcel.locality !== undefined) inputs.locality = parcel.locality;
   return inputs;
 }

@@ -2,6 +2,7 @@
 
 import { useCallback, useState } from "react";
 import {
+  countyParkingRatio,
   GRANT,
   legalParkingRatio,
   type ParcelOutput,
@@ -25,36 +26,40 @@ const statutoryGrantFor = (s: GaugeInputs) =>
 
 const defaultValueFor = <K extends keyof GaugeInputs>(
   key: K,
-  state: GaugeInputs
+  state: GaugeInputs,
+  county?: string
 ): GaugeInputs[K] => {
   if (key === "grant_amount")
     return statutoryGrantFor(state) as GaugeInputs[K];
-  return defaultsFor(state.program)[key];
+  return defaultsFor(state.program, county)[key];
 };
 
 /** levers in `inputs` that differ from their pathway's defaults */
-function locksIn(inputs: GaugeInputs): Partial<GaugeInputs> {
+function locksIn(inputs: GaugeInputs, county?: string): Partial<GaugeInputs> {
   const locks: Partial<GaugeInputs> = {};
   for (const key of factorKeysFor(inputs.program)) {
     if (
       inputs[key] !== undefined &&
-      inputs[key] !== defaultValueFor(key, inputs)
+      inputs[key] !== defaultValueFor(key, inputs, county)
     )
       locks[key] = inputs[key] as never;
   }
   return locks;
 }
 
-/** lever values and locks; `initial` opens on a scenario with its changes locked */
-export function useLevers(initial?: GaugeInputs) {
+/**
+ * lever values and locks; `initial` opens on a scenario with its changes
+ * locked. The defaults are `county`'s, which only differ outside Honolulu
+ */
+export function useLevers(initial?: GaugeInputs, county?: string) {
   const [inputs, setInputs] = useState<GaugeInputs>(
-    () => initial ?? BILL6_DEFAULTS
+    () => initial ?? defaultsFor(BILL6_DEFAULTS.program, county)
   );
 
   // levers moved off their default: shown orange and kept across pathway
   // switches (like `modified` in the calculator)
   const [modified, setModified] = useState<Partial<GaugeInputs>>(() =>
-    initial ? locksIn(initial) : {}
+    initial ? locksIn(initial, county) : {}
   );
 
   // every lever edit: locks it, or unlocks it when back at its default
@@ -81,7 +86,7 @@ export function useLevers(initial?: GaugeInputs) {
     }));
     setModified((prev) => {
       const next = { ...prev };
-      if (value === defaultValueFor(key, inputs)) delete next[key];
+      if (value === defaultValueFor(key, inputs, county)) delete next[key];
       else next[key] = value;
       return next;
     });
@@ -95,7 +100,7 @@ export function useLevers(initial?: GaugeInputs) {
     setInputs((prev) => {
       const next = typeof action === "function" ? action(prev) : action;
       if (next.program !== prev.program) {
-        const defaults = defaultsFor(next.program);
+        const defaults = defaultsFor(next.program, county);
         const keys = factorKeysFor(next.program);
         const carried: Partial<GaugeInputs> = {};
         for (const key of Object.keys(modified) as (keyof GaugeInputs)[]) {
@@ -108,15 +113,27 @@ export function useLevers(initial?: GaugeInputs) {
   };
 
   const handleReset = () => {
-    setInputs(defaultsFor(inputs.program));
+    setInputs(defaultsFor(inputs.program, county));
     setModified({});
+  };
+
+  // a county switch: its defaults, with the locks kept (a lock now at the
+  // new county's default is a lock no more)
+  const changeCounty = (next: string) => {
+    const rebased = {
+      ...defaultsFor(inputs.program, next),
+      ...modified,
+      program: inputs.program,
+    };
+    setInputs(rebased);
+    setModified(locksIn(rebased, next));
   };
 
   // set a whole scenario at once
   const restore = useCallback((scenario: GaugeInputs) => {
     setInputs(scenario);
-    setModified(locksIn(scenario));
-  }, []);
+    setModified(locksIn(scenario, county));
+  }, [county]);
 
   // locks on this pathway's levers, for the badge
   const lockCount = Object.keys(modified).filter((key) =>
@@ -129,22 +146,32 @@ export function useLevers(initial?: GaugeInputs) {
     setFactor,
     handleInputsChange,
     handleReset,
+    changeCounty,
     restore,
     lockCount,
   };
 }
 
 /**
- * parcel values for levers with no fixed default: cap rate; also the Article 6
- * parking minimum (0 if exempt, § 21-6.20(a)) for the
- * below-minimum warning
+ * parcel values for levers with no fixed default: cap rate; also the legal
+ * parking minimum, which outside Honolulu is the parking lever's value until
+ * it is moved, and in Honolulu is the Article 6 minimum (0 if exempt,
+ * § 21-6.20(a)) for the below-minimum warning
  */
 export function derivedLevers(
   inputs: GaugeInputs,
-  parcel: { row: ParcelRow; result: ParcelOutput } | null
+  parcel: { row: ParcelRow; result: ParcelOutput } | null,
+  county?: string
 ): Partial<GaugeInputs> {
-  const parking: Partial<GaugeInputs> =
-    inputs.program === "bill6" ||
+  const otherCounty = county !== undefined && county !== "hi-honolulu";
+  const parking: Partial<GaugeInputs> = otherCounty
+    ? {
+        parking_ratio: countyParkingRatio(
+          inputs.unit_type ?? defaultsFor(inputs.program, county).unit_type ?? "one_bb_100",
+          county
+        ),
+      }
+    : inputs.program === "bill6" ||
     inputs.program === "standard" ||
     inputs.program === "h201"
       ? {

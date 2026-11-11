@@ -46,10 +46,8 @@ import {
   useParcels,
 } from "@/lib/load-parcels";
 import {
-  BILL6_DEFAULTS,
   defaultsFor,
   derivedLevers,
-  PROGRAM_DEFAULTS,
   useLevers,
 } from "@/lib/levers";
 import {
@@ -111,10 +109,10 @@ const isHonolulu = (county: CountyId) => county === "hi-honolulu";
 const pathwayFor = (program: string, county: CountyId): ProgramId =>
   isHonolulu(county) ? pathwayOf(program) : "current";
 
-// the levers moved from the Honolulu pathway's defaults: the other counties
-// run on their own defaults, so only a moved lever carries over
-function movedLevers(sliders: GaugeInputs): GaugeInputs {
-  const defaults = PROGRAM_DEFAULTS[sliders.program] ?? BILL6_DEFAULTS;
+// the levers moved from the county's defaults: the other counties run on
+// their own defaults, so only a moved lever carries over
+function movedLevers(sliders: GaugeInputs, county: CountyId): GaugeInputs {
+  const defaults = defaultsFor(sliders.program, county);
   const moved = { program: "current" } as GaugeInputs;
   for (const key of Object.keys(sliders) as (keyof GaugeInputs)[]) {
     if (key === "program") continue;
@@ -137,7 +135,7 @@ function runPathway(
   if (!isHonolulu(county)) {
     const calc = (parcel: ParcelRow, s: GaugeInputs) => {
       const row = { ...parcel, locality: county };
-      return calcParcel("current", row, parcelLevers("current", row, movedLevers(s)));
+      return calcParcel("current", row, parcelLevers("current", row, movedLevers(s, county)));
     };
     return runGauge(dataKeyFor(program, county), parcels, sliders, calc);
   }
@@ -273,6 +271,9 @@ function summarize(
 
 // ── Component ──────────────────────────────────────────────────────────────
 export function PolicyGaugeDashboard() {
+  // the county on the map; its parcels are the only ones run
+  const [county, setCounty] = useState<CountyId>(DEFAULT_COUNTY);
+
   // opens on Standard, which is the bill6 pathway (see PROGRAMS in control-panel)
   const {
     inputs,
@@ -280,16 +281,20 @@ export function PolicyGaugeDashboard() {
     setFactor,
     handleInputsChange,
     handleReset,
+    changeCounty,
     lockCount,
-  } = useLevers();
+  } = useLevers(undefined, county);
+  // the levers take the new county's defaults (Maui's land cost and unit mix)
+  const selectCounty = (next: CountyId) => {
+    setCounty(next);
+    changeCounty(next);
+  };
 
   // The map and summary follow a deferred copy of the inputs: the control
   // panel repaints with the new value immediately, and the ~10k-parcel rerun
   // happens in a lower-priority render instead of blocking it.
   const mapInputs = useDeferredValue(inputs);
 
-  // the county on the map; its parcels are the only ones run
-  const [county, setCounty] = useState<CountyId>(DEFAULT_COUNTY);
   const loadedParcels = useParcels(mapInputs.program, county);
   const activeParcels = useMemo(
     () =>
@@ -452,9 +457,10 @@ export function PolicyGaugeDashboard() {
         mapInputs,
         selectedParcel
           ? { row: selectedParcel.parcel, result: selectedParcel.result }
-          : null
+          : null,
+        county
       ),
-    [mapInputs, selectedParcel]
+    [mapInputs, selectedParcel, county]
   );
 
   // ── Aggregate financial metrics across all valid parcels ────────────────
@@ -469,7 +475,7 @@ export function PolicyGaugeDashboard() {
   // the same pathway with every lever at its default (TOD at the base tier):
   // what the scenario card's unit deltas are measured against
   const baseline = useMemo(() => {
-    const defaults = PROGRAM_DEFAULTS[mapInputs.program] ?? BILL6_DEFAULTS;
+    const defaults = defaultsFor(mapInputs.program, county);
     const results = runPathway(
       mapInputs.program,
       activeParcels,
@@ -571,7 +577,7 @@ export function PolicyGaugeDashboard() {
             onChange={handleInputsChange}
             onFactorChange={setFactor}
             modified={modified}
-            defaults={defaultsFor(inputs.program)}
+            defaults={defaultsFor(inputs.program, county)}
             derived={derived}
             onReset={handleReset}
             todTierPdt={todTierPdt}
@@ -580,7 +586,7 @@ export function PolicyGaugeDashboard() {
             onTodTierIpdtChange={setTodTierIpdt}
             onTourStart={handleTourStart}
             county={county}
-            onCountyChange={setCounty}
+            onCountyChange={selectCounty}
             countyNote={
               !parcelsLoading && activeParcels.length === 0
                 ? "No parcel data for this county yet."

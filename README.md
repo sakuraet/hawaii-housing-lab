@@ -62,6 +62,7 @@ Nothing it downloads or builds is committed. Full provenance goes in [docs/DATA_
 ## Documentation (WIP)
 
 - [Model & Assumptions Overview](docs/MODEL_AND_ASSUMPTIONS.md) — how the tool works and what it assumes
+- [Model documentation](docs/model/README.md) — the pipeline every pathway runs, each Honolulu pathway, and every variable with its source
 - [Policy Scenario Comparison](docs/POLICY_SCENARIO_COMPARISON.md) — scenario ranking and drivers
 - [Data Provenance](docs/DATA_PROVENANCE.md) — sources, licenses, and cleaning steps
 - [Disclosures](docs/DISCLOSURES.md) — AI tools, pretrained models, and external services

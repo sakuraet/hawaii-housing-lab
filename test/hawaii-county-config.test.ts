@@ -1,7 +1,7 @@
 // Hawaiʻi County's config (src/localities/hi/hawaii) against the code it
 // comes from: zoning, parking and loading (HCC Chapter 25, Supp. 20), fees
 // (HCC Chapters 5, 8, 10 and 21), water (DWS rates, eff. July 1, 2025),
-// property tax (Res. 574-26) and the 2025 HHFDC income limits, then parcels
+// property tax (Res. 574-26) and the 2026 HHFDC income limits, then parcels
 // run end to end.
 
 import { describe, expect, it } from "vitest";
@@ -154,8 +154,8 @@ describe("Hawaiʻi County water, tax and income limits", () => {
     expect(loc.rules.property_tax_rate).toBe(0.0117);
   });
 
-  it("2025 HHFDC table reproduces HHFDC's rents", () => {
-    expect(loc.rules.income_limits[100][3]).toBe(120900);
+  it("2026 HHFDC table reproduces HHFDC's rents", () => {
+    expect(loc.rules.income_limits[100][3]).toBe(121000);
     // one-bedroom at 80% AMI: $1,815; studio at 60%: $1,270
     expect(mixRentByAmi(80, "one_bb_100", loc)).toBe(1815);
     expect(mixRentByAmi(60, "studio_100", loc)).toBe(1270);
@@ -169,7 +169,8 @@ describe("Hawaiʻi County water, tax and income limits", () => {
 describe("a Hawaiʻi County parcel runs end to end", () => {
   // an RM-2 lot of 20,000 sqft at 45 ft (made up, not a real parcel)
   const parcel = { locality: "hi-hawaii", lot_sqft: 20000, zone_class: "RM-2", height: 45 };
-  const r = calcParcel("current", parcel);
+  // one-bedrooms, not the default half-studio mix, as in the worked example
+  const r = calcParcel("current", parcel, { unit_type: "one_bb_100" });
 
   it("the envelope has no FAR and a 10-unit cap", () => {
     const e = pathwayEnvelope("current", parcel);
@@ -198,10 +199,10 @@ describe("a Hawaiʻi County parcel runs end to end", () => {
     // the yards are 20 ft front and rear and 8 + 2 = 10 ft at the sides,
     // which fit fewer units than a uniform 8 ft setback would
     const dense = { locality: "hi-hawaii", lot_sqft: 10000, zone_class: "RM-.75", height: 25 };
-    expect(calcParcel("current", dense).max_units).toBe(9);
-    expect(calcParcel("current", dense, { setback: 8 }).max_units).toBe(12);
+    expect(calcParcel("current", dense, { unit_type: "one_bb_100" }).max_units).toBe(9);
+    expect(calcParcel("current", dense, { setback: 8, unit_type: "one_bb_100" }).max_units).toBe(12);
     // at 45 ft the density cap binds either way
-    expect(calcParcel("current", { ...dense, height: 45 }).max_units).toBe(13);
+    expect(calcParcel("current", { ...dense, height: 45 }, { unit_type: "one_bb_100" }).max_units).toBe(13);
   });
 
   it("the setback lever still overrides the zone's yards", () => {
