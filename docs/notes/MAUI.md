@@ -45,7 +45,7 @@ These are judgment calls made to fit Maui's rules into the model. The ones most 
 | Choice | Current value | Alternative | Why it matters |
 | --- | --- | --- | --- |
 | Market estimates (cap rate, vacancy, cost escalation, opex and assessment growth, parking costs, timing) | Honolulu's figures | Maui-specific sources | These drive land value directly; none have a Maui source yet |
-| Land cost and unit mix | $75/sqft land, all studios (`assumptions.lever_defaults`) | Honolulu's $130 and half studios, half one-bedrooms; a published Maui land figure | Team estimates, not from a source. Together they move a 20,000 sqft A-2 lot from 5.06% to 6.39% return on cost (2026 income limits); see [Estimates](#estimates) |
+| Land cost and unit mix | $75/sqft land, all studios (`assumptions.lever_defaults`) | The original model's $130 and half studios, half one-bedrooms; each parcel's assessed value | Team estimates. The land cost is in line with Title Guaranty ($72.70) and QPub ($81.37) land sales in these zones, 2020–2025 (see the [land cost note](LAND_COST.md)). Together they move a 20,000 sqft A-2 lot from 5.06% to 6.39% return on cost (2026 income limits); see [Estimates](#estimates) |
 | Engine defaults: hard cost, sale prices | $450/sqft hard cost, Honolulu HHFDC sale tables | Maui figures (post-fire rebuilding may push costs up) | They live in the engine, not the county config, so Maui inherits Honolulu's. See the [cost cross-check](#cost-cross-check-november-2026) |
 | Workforce housing: how it's met | On-site rentals, 25% of market units, rents at the 80/100/120% AMI caps | 20% if conveyed to a qualified provider in perpetuity; or the in-lieu fee | The in-lieu fee may be cheaper than building the units; the model doesn't compare them |
 | Workforce units' fees and park land | Charged like Honolulu's affordable units under the fee toggle (waived fees, no park land) | Maui's actual treatment: 50% building permit fee, 250 sqft park land per unit | The toggle waives these units' fees in full; Maui gives only partial relief |
@@ -333,7 +333,7 @@ Affordable rent is a statewide rule: 30% of income, utilities included (`state.a
 | `market.parking` | 330 sqft and $190/sqft structured; 360 sqft and $30/sqft surface; $100 a month per stall | Honolulu's (Ulupono 2020, RLB Q2 2026) |
 | `zones.*.excavation_depth_ft` | 3 ft (A-1, H-1: FAR 0.5 or less), 5 ft (A-2, H-M, H-2, Hotel, B-2: FAR 0.9–2.0), 9 ft (B-3: FAR 4.0) | Honolulu's depths for districts of like density |
 | `default_zone` | 4 ft excavation | Honolulu's default |
-| `lever_defaults.land_cost` | $75 per sqft of lot | Team estimate (Nov. 2026); Honolulu's default is $130. The Land Cost lever overrides it |
+| `lever_defaults.land_cost` | $75 per sqft of lot | Team estimate (Nov. 2026), in line with the median Title Guaranty ($72.70, 34 sales) and QPub ($81.37, 68 sales) land sale prices in Maui's A-1, A-2, H-1, H-M, H-2, B-2 and B-3 zones, 2020–2025 ([land cost note](LAND_COST.md)); Honolulu's default is $170. The Land Cost lever overrides it |
 | `lever_defaults.unit_type` | All studios (`studio_100`) | Team estimate (Nov. 2026); Honolulu's default is half studios, half one-bedrooms. The Unit Mix lever overrides it |
 
 Honolulu's AMI growth (4%) is measured on median family income, while Maui's (3.9%) is measured on the HHFDC 100% row the model actually uses for rents. Maui's median family income grew more slowly over the same years ($84,900 to $110,900, 2.25% a year).

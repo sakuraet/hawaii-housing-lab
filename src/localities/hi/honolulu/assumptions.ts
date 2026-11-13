@@ -4,6 +4,7 @@
 // one permitting and construction time for every zone, and 4% rent growth.
 
 import type {
+  LeverDefaults,
   MarketAssumptions,
   TimingAssumptions,
   ZoneAssumptions,
@@ -36,6 +37,15 @@ export const zones: Record<string, ZoneAssumptions> = {
   Apart: zone(9),
   ApartMix: zone(9),
   "BMX-4": zone(9),
+};
+
+// Honolulu's land cost lever default (the pathway defaults' $130 is the original model's), $ per sqft of lot.
+// Team estimate (Nov. 2026), set after looking at Title Guaranty and QPub
+// land sales; see docs/notes/LAND_COST.md
+export const lever_defaults: LeverDefaults = {
+  land_cost: 170,
+  source:
+    "team estimate (Nov. 2026); Median land sale price per sqft in the county's multi-family, resort and business zones, 2020–2025: Title Guaranty $177.78 (83 sales), QPub $163.97 (140) (sales of $10,000 or more on lots of 1,000 sqft or more, UHERO's housing database)",
 };
 
 export const market: MarketAssumptions = {

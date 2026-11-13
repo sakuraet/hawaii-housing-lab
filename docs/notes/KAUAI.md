@@ -50,7 +50,8 @@ The ones most likely to move results come first.
 | Choice | Current value | Alternative | Why it matters |
 | --- | --- | --- | --- |
 | Market estimates (cap rate, vacancy, cost escalation, opex and assessment growth, parking costs, timing) | Honolulu's | Kauaʻi figures | These drive land value directly |
-| Engine defaults: hard cost, land cost, sale prices | $450/sqft, $130/sqft, Honolulu HHFDC sale tables | Kauaʻi figures | They live in the engine, so the county inherits Honolulu's |
+| Land cost | $50/sqft (`assumptions.lever_defaults`) | Each parcel's assessed value | Team estimate, set after looking at Title Guaranty ($42.69) and QPub ($79.97) land sales in Kauaʻi's multi-family, resort and commercial zones, 2020–2025; QPub's test for vacant land is weaker here. See the [land cost note](LAND_COST.md) |
+| Engine defaults: hard cost, sale prices | $450/sqft, Honolulu HHFDC sale tables | Kauaʻi figures | They live in the engine, so the county inherits Honolulu's |
 | Parking | 2 stalls per unit | — | Twice Hawaiʻi County's 1.25; it drives the parking cost and often the unit count |
 | Property tax rate | $9.40 per $1,000, the top Non-Owner-Occupied Residential tier | The blended rate for the building's value ($8.47 at $8 million); Commercial $8.10 with retail | The engine takes one rate |
 | Workforce housing | None | 20% for R-1 to R-6 projects over 10 units, CN and CG | The exemption covers multiple-family at full density in residential districts of R-10 or more; the engine's rule is county-wide, so it can't apply by zone |
@@ -74,7 +75,7 @@ The ones most likely to move results come first.
 
 ## Known limitations
 
-- Hard cost, land cost and sale prices are Honolulu engine defaults, and the market estimates are Honolulu's; only AMI and rent growth are the county's own.
+- Hard cost and sale prices are Honolulu engine defaults, and the market estimates are Honolulu's; only AMI and rent growth are the county's own. Land cost ($50/sqft) is Kauaʻi's own, a team estimate.
 - Height comes from each parcel's `height`, so the parcel data must carry the right limit:
     - 40 ft and 4 stories for multiple-family in residential districts, and no more than 10 ft above a residence within 30 ft (8-4.5(b)(2));
     - 35 ft and 2 stories in CN; 50 ft in CG (8-6.3(f)).

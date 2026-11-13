@@ -11,14 +11,14 @@ import { describe, expect, it } from "vitest";
 import {
   BILL7_MAX_HEIGHT,
   bicycleRequired,
-  calcParcel,
+  calcParcel as calcParcelAt,
   calcSingle,
   DEFAULT_INPUTS,
   IMX1_PDT_MAX_UNITS,
   LOADING,
   legalParkingRatio,
   overallLevel,
-  parcelInputs,
+  parcelInputs as parcelInputsAt,
   pathwayEnvelope,
   PDT_FRONT_NO_PARKING_FT,
   roundHalfUp,
@@ -27,6 +27,16 @@ import {
   type ProgramId,
 } from "../src";
 import parcels from "./data/gauge-parcels.json";
+
+// These tests and their snapshots are the original package's, which priced
+// Honolulu land at $130 per sqft (the pathway defaults, DEFAULT_INPUTS).
+// Honolulu's own default is now $170 (its lever_defaults), so they run at
+// $130 to keep checking the model against the package
+const FEASIM_LAND = { land_cost: 130 };
+const calcParcel = (...[program, parcel, levers = {}, opts]: Parameters<typeof calcParcelAt>) =>
+  calcParcelAt(program, parcel, { ...FEASIM_LAND, ...levers }, opts);
+const parcelInputs = (...[program, parcel, levers = {}, opts]: Parameters<typeof parcelInputsAt>) =>
+  parcelInputsAt(program, parcel, { ...FEASIM_LAND, ...levers }, opts);
 
 const SAMPLE = parcels as unknown as Record<ProgramId, Parcel[]>;
 const PROGRAMS: ProgramId[] = ["bill6", "bill7", "standard", "tod", "h201"];

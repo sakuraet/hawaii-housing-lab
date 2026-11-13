@@ -5,6 +5,7 @@
 // the county's own.
 
 import type {
+  LeverDefaults,
   MarketAssumptions,
   TimingAssumptions,
   ZoneAssumptions,
@@ -24,6 +25,15 @@ export const timing: TimingAssumptions = {
 export const default_zone: ZoneAssumptions = { excavation_depth_ft: 4 };
 
 export const zones: Record<string, ZoneAssumptions> = {};
+
+// Hawaiʻi County's land cost lever default (Honolulu's: $170), $ per sqft of lot.
+// Team estimate (Nov. 2026), set after looking at Title Guaranty and QPub
+// land sales; see docs/notes/LAND_COST.md
+export const lever_defaults: LeverDefaults = {
+  land_cost: 55,
+  source:
+    "team estimate (Nov. 2026); Median land sale price per sqft in the county's multi-family, resort and business zones, 2020–2025: Title Guaranty $48.30 (285 sales), QPub $44.78 (325) (sales of $10,000 or more on lots of 1,000 sqft or more, UHERO's housing database)",
+};
 
 export const market: MarketAssumptions = {
   // Honolulu's

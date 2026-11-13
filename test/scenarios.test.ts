@@ -5,13 +5,14 @@
 import { describe, expect, it } from "vitest";
 
 import sample from "../data/sample/parcels.csv?raw";
-import { calcParcel } from "../src/parcels";
+import { calcParcel, countyLeverDefaults, DEFAULT_INPUTS, parcelInputs } from "../src/parcels";
 import { parseParcelCsv } from "../src/scenarios/parcels";
 import { runParcels, summarizeRuns } from "../src/scenarios/run";
 import {
   SCENARIOS,
   SCENARIO_FEE_SCALE,
   SCENARIO_PARKING_RATIO,
+  baselinePathway,
   scenarioOf,
   scenarioSetup,
 } from "../src/scenarios/scenarios";
@@ -88,6 +89,26 @@ describe("the fee lever", () => {
   });
 });
 
+describe("each county's land cost default", () => {
+  it("Honolulu $170, Maui $75, Hawaiʻi $55, Kauaʻi $50; a lever setting still wins", () => {
+    const expected = { "hi-honolulu": 170, "hi-maui": 75, "hi-hawaii": 55, "hi-kauai": 50 };
+    // a multi-family zone in each county
+    const zone: Record<string, string> = { "hi-honolulu": "A-2", "hi-maui": "A-2", "hi-hawaii": "RM-2", "hi-kauai": "R-20" };
+    for (const [locality, land] of Object.entries(expected)) {
+      expect(countyLeverDefaults(locality).land_cost, locality).toBe(land);
+      const p = { locality, lot_sqft: 20000, zone_class: zone[locality], height: 45 };
+      expect(parcelInputs(baselinePathway(locality), p).land_cost, locality).toBe(land);
+      expect(parcelInputs(baselinePathway(locality), p, { land_cost: 99 }).land_cost).toBe(99);
+    }
+    // a parcel with no locality is Honolulu's
+    expect(parcelInputs("bill6", { lot_sqft: 20000, zone_class: "A-2", height: 60 }).land_cost).toBe(170);
+  });
+
+  it("the pathway defaults keep the original model's $130", () => {
+    expect(DEFAULT_INPUTS.bill6.land_cost).toBe(130);
+  });
+});
+
 describe("the parcel runner with a scenario", () => {
   const { parcels } = parseParcelCsv(sample);
   const base = runParcels(parcels);
@@ -117,9 +138,11 @@ describe("the parcel runner with a scenario", () => {
 
   it("fees: lower fees can make the open-space bonus pay", () => {
     const p = { lot_sqft: 9374.1, zone_class: "BMX-4", height: 40 };
-    // this lot takes the open-space bonus at 85% of fees, but not at 90%
-    expect(calcParcel("bill6", p, { fee_scale: 0.9 }).max_units).toBe(calcParcel("bill6", p).max_units);
-    expect(calcParcel("bill6", p, { fee_scale: 0.85 }).max_units).toBeGreaterThan(calcParcel("bill6", p).max_units);
+    // at $130 land, this lot takes the open-space bonus at 85% of fees, but
+    // not at 90%
+    const at = (fee_scale: number) => calcParcel("bill6", p, { land_cost: 130, fee_scale }).max_units;
+    expect(at(0.9)).toBe(at(1));
+    expect(at(0.85)).toBeGreaterThan(at(1));
   });
 
   it("TOD: parcels outside a TOD district (all of the table, for now) keep the baseline", () => {

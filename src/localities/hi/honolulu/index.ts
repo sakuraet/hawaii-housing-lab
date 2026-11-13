@@ -31,5 +31,6 @@ export const honolulu: Locality = {
     zones: assumptions.zones,
     default_zone: assumptions.default_zone,
     market: assumptions.market,
+    lever_defaults: assumptions.lever_defaults,
   },
 };

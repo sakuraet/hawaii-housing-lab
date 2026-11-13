@@ -58,10 +58,10 @@ import {
   WSFC_WAIVER_UNIT_CAP,
   wsfcCategory,
   calcFarBill6,
-  calcParcel,
+  calcParcel as calcParcelAt,
   calcSingle,
   overallLevel,
-  parcelInputs,
+  parcelInputs as parcelInputsAt,
   pathwayEnvelope,
   type Parcel,
   type ProgramId,
@@ -86,6 +86,16 @@ import { calcbill6Single } from "../src/calculations/calc-bill6";
 import { calcH201Single } from "../src/calculations/calc-h201";
 import { calcStandardSingle } from "../src/calculations/calc-standard";
 import { calcTodSingle } from "../src/calculations/calc-tod";
+
+// These tests and their snapshots are the original package's, which priced
+// Honolulu land at $130 per sqft (the pathway defaults, DEFAULT_INPUTS).
+// Honolulu's own default is now $170 (its lever_defaults), so they run at
+// $130 to keep checking the model against the package
+const FEASIM_LAND = { land_cost: 130 };
+const calcParcel = (...[program, parcel, levers = {}, opts]: Parameters<typeof calcParcelAt>) =>
+  calcParcelAt(program, parcel, { ...FEASIM_LAND, ...levers }, opts);
+const parcelInputs = (...[program, parcel, levers = {}, opts]: Parameters<typeof parcelInputsAt>) =>
+  parcelInputsAt(program, parcel, { ...FEASIM_LAND, ...levers }, opts);
 
 const PROGRAMS: ProgramId[] = ["bill6", "bill7", "standard", "tod", "h201"];
 

@@ -37,12 +37,15 @@ export const zones: Record<string, ZoneAssumptions> = {
   "B-3": zone(9),
 };
 
-// Maui's own defaults for the land cost and unit mix levers (Honolulu's: $130
-// per sqft, and half studios, half one-bedrooms)
+// Maui's own defaults for the land cost ($ per sqft of lot) and unit mix
+// levers (Honolulu's: $170, and half studios, half one-bedrooms). Team
+// estimates (Nov. 2026); the land cost is in line with Title Guaranty and
+// QPub land sales, see docs/notes/LAND_COST.md
 export const lever_defaults: LeverDefaults = {
   land_cost: 75,
   unit_type: "studio_100",
-  source: "team estimate (Nov. 2026)",
+  source:
+    "team estimate (Nov. 2026); median land sale price per sqft in A-1, A-2, H-1, H-M, H-2, B-2 and B-3, 2020–2025: Title Guaranty $72.70 (34 sales), QPub $81.37 (68) (sales of $10,000 or more on lots of 1,000 sqft or more, UHERO's housing database)",
 };
 
 export const market: MarketAssumptions = {

@@ -460,7 +460,7 @@ export function countyParkingRatio(unit_type: string, locality?: string): number
 }
 
 /** the county's own lever defaults (`assumptions.lever_defaults`), which go
- *  between the pathway's defaults and the levers set; none for Honolulu */
+ *  between the pathway's defaults and the levers set (Honolulu: $170 land) */
 export function countyLeverDefaults(locality?: string): Partial<SliderInputs> {
   const d = getLocality(locality).assumptions.lever_defaults;
   if (!d) return {};

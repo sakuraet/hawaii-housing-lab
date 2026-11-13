@@ -532,6 +532,16 @@ const COUNTY_PARKING_INFO: Partial<Record<CountyId, string>> = {
   "hi-kauai": `Stalls per unit. Defaults to Kauaʻi's minimum: 2 stalls per unit, whatever its size (CZO 8-4.5). ${PLACEMENT}`,
 };
 
+// the land cost lever's default in each county, and where it comes from
+const LAND_INFO = (place: string, value: number, zones: string, tg: string, qp: string) =>
+  `Price paid for the land, per square foot of lot, used in developer return calculations. ${place}'s default is $${value}/sqft, a team estimate set after looking at land sales in its ${zones} zones, 2020–2025: median $${tg}/sqft in Title Guaranty records and $${qp}/sqft in QPub (sales of $10,000 or more on lots of 1,000 sqft or more).`;
+const COUNTY_LAND_INFO: Record<CountyId, string> = {
+  "hi-honolulu": LAND_INFO("Honolulu", 170, "apartment, resort and business", "177.78", "163.97"),
+  "hi-maui": LAND_INFO("Maui", 75, "apartment, hotel and business", "72.70", "81.37"),
+  "hi-hawaii": LAND_INFO("Hawaiʻi County", 55, "multi-family, resort and commercial", "48.30", "44.78"),
+  "hi-kauai": LAND_INFO("Kauaʻi", 50, "multi-family, resort and commercial", "42.69", "79.97"),
+};
+
 // The calculator's description of a lever. Some differ by pathway (the AMI
 // lever cites each program's own rules), so the pathway's own text wins
 function leverDescription(
@@ -542,6 +552,7 @@ function leverDescription(
   if (GAUGE_LEVER_INFO[key]) return GAUGE_LEVER_INFO[key];
   if (key === "parking_ratio" && COUNTY_PARKING_INFO[county])
     return COUNTY_PARKING_INFO[county];
+  if (key === "land_cost") return COUNTY_LAND_INFO[county];
   const factorKey = CALCULATOR_FACTOR_KEY[key];
   if (!factorKey) return undefined;
   const describe = (p: (typeof CALCULATOR_PROGRAMS)[number] | undefined) =>

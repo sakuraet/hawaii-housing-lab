@@ -40,6 +40,7 @@ export const BILL6_DEFAULTS: GaugeInputs = {
   retail_rent: 5,
   retail_share: 0.1,
   hard_cost_per_sqft: 450,
+  // the original model's; each county's own default replaces it (defaultsFor)
   land_cost: 130,
   opex_ratio: 0.3,
   waivable_fee_basis: "market_units",
@@ -73,10 +74,10 @@ export const PROGRAM_DEFAULTS: Record<string, GaugeInputs> = {
 
 /**
  * a scenario's lever defaults in a county: the pathway it runs (Honolulu's
- * Standard or TOD), the county's own lever defaults outside Honolulu (Maui:
- * $75 land and all studios, and no fixed parking: the county's legal minimum
- * applies, which follows the unit mix), then the scenario's own levers
- * (parking 0.5, fees halved)
+ * Standard or TOD), the county's own lever defaults (land: Honolulu $170, Maui
+ * $75, Hawaiʻi $55, Kauaʻi $50; Maui's unit mix), outside Honolulu no fixed
+ * parking (the county's legal minimum applies, which follows the unit mix),
+ * then the scenario's own levers (parking 0.5, fees halved)
  */
 export function defaultsFor(scenario: string, county?: string): GaugeInputs {
   const { id } = scenarioOf(scenario);
@@ -84,7 +85,7 @@ export function defaultsFor(scenario: string, county?: string): GaugeInputs {
   const base = PROGRAM_DEFAULTS[setup.pathway] ?? BILL6_DEFAULTS;
   const local =
     county === undefined || county === "hi-honolulu"
-      ? {}
+      ? countyLeverDefaults("hi-honolulu")
       : { ...countyLeverDefaults(county), parking_ratio: undefined };
   return { ...base, ...local, ...setup.levers, scenario: id };
 }

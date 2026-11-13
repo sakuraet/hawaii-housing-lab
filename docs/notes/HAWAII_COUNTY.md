@@ -67,7 +67,8 @@ These are judgment calls with a realistic alternative. The ones most likely to m
 | Choice | Current value | Alternative | Why it matters |
 | --- | --- | --- | --- |
 | Market estimates (cap rate, vacancy, cost escalation, opex and assessment growth, parking costs, timing) | Honolulu's figures | Hawaiʻi County sources (Hilo and Kona may differ) | These drive land value directly |
-| Engine defaults: hard cost, land cost, sale prices | $450/sqft hard cost, $130/sqft land, Honolulu HHFDC sale tables | County figures (shipping and labor likely raise hard cost) | They live in the engine, so the county inherits Honolulu's |
+| Land cost | $55/sqft (`assumptions.lever_defaults`) | Each parcel's assessed value | Team estimate, set after looking at Title Guaranty ($48.30) and QPub ($44.78) land sales in the county's multi-family, resort and commercial zones, 2020–2025; see the [land cost note](LAND_COST.md) |
+| Engine defaults: hard cost, sale prices | $450/sqft hard cost, Honolulu HHFDC sale tables | County figures (shipping and labor likely raise hard cost) | They live in the engine, so the county inherits Honolulu's |
 | Property tax class | Apartment, $11.70/$1,000 | Long-Term Rental, $7.75 | Long-Term Rental excludes property "used for commercial or income-producing purposes" (19-53(k)(4)), so whether a rental apartment building qualifies is unclear; it would cut the tax by a third |
 | Lot coverage in RM, RCX and V | 80% | Coverage of buildings only, with parking counted separately | The code has no coverage cap; it requires 20% landscaping that can't include parking, so 80% is an upper bound for buildings and parking together |
 | Side yard by story | Taken at the most stories the height allows | The stories actually built | A building shorter than the limit gets a narrower side yard than modeled, so floor area is slightly understated |
@@ -100,7 +101,7 @@ How the code's rules were read where the model needed a single number. Each is i
 
 Places where the model is approximate:
 
-- Hard cost ($450/sqft), land cost ($130/sqft) and HHFDC sale prices are Honolulu engine defaults, and the market estimates are Honolulu's; only AMI and rent growth are the county's own.
+- Hard cost ($450/sqft) and HHFDC sale prices are Honolulu engine defaults, and the market estimates are Honolulu's; only AMI and rent growth are the county's own. Land cost ($55/sqft) is the county's own, a team estimate.
 - The 80% coverage counts buildings and parking together, while the landscaping rule only keeps parking out of the landscaped area.
 - Side yards are taken at the full height, so shorter buildings are given slightly less floor area than they could have.
 - Height comes from each parcel's `height`, so the parcel data must carry the right limit:

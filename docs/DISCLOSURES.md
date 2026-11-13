@@ -66,4 +66,4 @@ Her later changes, released in `@uhero/feasim` 0.3.0 and on the package's `minor
 - **Code:** commits `46046a0` (no Bill 7 height cap), `9c153ee` (parking and unit mix defaults), `a1c3f57` (built height and floors), `ef4aa9f` (Bill 7 built to its unit caps), `5f7f1a3` (no Bill 7 height step-backs), `43ecb49` (HHFDC 2026 income limits and sale prices), `e7bc18c` (conveyance tax) and `c1e767b` (comments).
 - **Documentation:** the package's `docs/` folder, at `minor-fixes`, is in `docs/model/`, without its developer guide.
 - **Adapted, not copied:** Honolulu's income limits are in its county config, and the conveyance tax schedule is in the state config. The neighbor-island counties' current-zoning runs keep their own parking minimums.
-- **Checked:** Honolulu's results match the package's snapshot tests at `minor-fixes`.
+- **Checked:** Honolulu's results match the package's snapshot tests at `minor-fixes`, at the package's $130 land cost (Honolulu's own default is now $170).
