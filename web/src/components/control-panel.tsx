@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { ProgramId, TodTier } from "feasim-challenge";
+import { SCENARIOS, scenarioSetup, type ScenarioId, type TodTier } from "feasim-challenge";
 
 import {
   Select,
@@ -259,6 +259,15 @@ const RETAIL_FACTORS: FactorConfig[] = [
 
 const FEE_FACTORS: FactorConfig[] = [
   {
+    key: "fee_scale",
+    category: "Building Revenues & Costs",
+    label: "Development Fees",
+    min: 0,
+    max: 1.5,
+    step: 0.05,
+    format: (v) => `${Math.round(v * 100)}% of today's`,
+  },
+  {
     key: "waivable_fee_basis",
     label: "Impact Fees",
     type: "select",
@@ -384,42 +393,7 @@ const FINANCE_FACTORS: FactorConfig[] = [
 // PER-PROGRAM FACTORS
 // =========================================================
 
-// Bill 7: affordable share and park dedication are statutory, not levers.
-const BILL7_FACTORS: FactorConfig[] = [
-  ...ZONING_FACTORS,
-  UNIT_MIX_FACTOR,
-  ...AMI_FACTORS,
-  ...REVENUE_COST_FACTORS,
-  ...RETAIL_FACTORS,
-  // Bill 7 waives the city fees and park dedication (ROH 43-10.8), so both
-  // default to Exempt; switching either on charges it, to show what the
-  // waiver is worth. Same toggles as the calculator.
-  ...FEE_FACTORS,
-  {
-    key: "grant_type",
-    label: "Grant Type",
-    type: "select",
-    options: [
-      { value: "none", label: "No grant" },
-      { value: "post_construct", label: "Post-construction" },
-      { value: "pre_construct", label: "Pre-construction" },
-    ],
-  },
-  {
-    key: "grant_amount",
-    category: "Building Revenues & Costs",
-    // post-construction pays affordable units, pre-construction every unit
-    label: "Grant Amount (per eligible unit)",
-    min: 0,
-    max: 60000,
-    step: 1000,
-    format: (v) => `$${(v / 1000).toFixed(0)}k/unit`,
-  },
-  ...TIMING_FACTORS,
-  ...FINANCE_FACTORS,
-];
-
-// Standard and Before Ord. 26-7 are modelled 100% rental, so the Chapter 29
+// Standard is modelled 100% rental, so the Chapter 29
 // affordability requirement never triggers and there are no affordable units
 // to price — market rent only. Matches STANDARD_FACTORS in the calculator.
 const MARKET_AMI_ONLY = AMI_FACTORS.filter(
@@ -442,48 +416,19 @@ const TOD_FACTORS: FactorConfig[] = [...STANDARD_FACTORS];
 // Bill 6 runs the Standard pathway's lever set
 const BILL6_FACTORS: FactorConfig[] = [...STANDARD_FACTORS];
 
-const H201_FACTORS: FactorConfig[] = [
-  ...ZONING_FACTORS,
-  UNIT_MIX_FACTOR,
-  ...AMI_FACTORS,
-  {
-    key: "affordability",
-    category: "Building Revenues & Costs",
-    // 201H needs at least 50% + 1 of units affordable, as in the calculator
-    label: "Affordability %",
-    min: 0.51,
-    max: 1,
-    step: 0.01,
-    format: (v) => `${(v * 100).toFixed(0)}%`,
-  },
-  ...REVENUE_COST_FACTORS,
-  ...RETAIL_FACTORS,
-  ...FEE_FACTORS,
-  ...TIMING_FACTORS,
-  ...FINANCE_FACTORS,
-];
-
 // =========================================================
 // PROGRAM REGISTRY
 // =========================================================
 
-// Labels and order match the development calculator's PROGRAMS registry:
-// `bill6` is the Standard Development Pathway, `standard` is the pre-Ord. 26-7
-// baseline. Same names in both tools.
-const PROGRAMS = [
-  { id: "bill6", label: "Standard", ready: true },
-  { id: "bill7", label: "Bill 7", ready: true },
-  { id: "tod", label: "TOD", ready: true },
-  { id: "h201", label: "201H", ready: true },
-  { id: "standard", label: "Before Ord. 26-7", ready: true },
-] as const;
+// The scenario buttons, the same in every county. Each runs one of
+// Honolulu's two pathways there (Standard for the baseline, parking and fees;
+// TOD for TOD) and current zoning in the other counties, so the lever sets
+// below are by pathway
+const SCENARIO_OPTIONS = SCENARIOS.map((s) => ({ id: s.id, label: s.label }));
 
 const PROGRAM_FACTORS: Record<string, FactorConfig[]> = {
   bill6: BILL6_FACTORS,
-  bill7: BILL7_FACTORS,
-  standard: STANDARD_FACTORS,
   tod: TOD_FACTORS,
-  h201: H201_FACTORS,
 };
 
 /**
@@ -569,10 +514,12 @@ const IPDT_TIER_INFO =
 
 // the citywide view's own levers, which the calculator doesn't have
 const GAUGE_LEVER_INFO: Partial<Record<keyof GaugeInputs, string>> = {
+  fee_scale:
+    "Every development fee as a share of today's: building permit, plan review, sewer, water, park dedication, grading, the school impact fee and the rest. 100% is today's fees; the Developer Fees scenario starts at 50%. Construction management is not a fee and doesn't change.",
   height_delta:
-    "Raises or lowers every parcel's own height limit by the same amount. Baseline is the limit the pathway gives each parcel, which for Bill 7 is the lower of its zoned height and 60 ft. A parcel pushed to 0 ft or below builds nothing.",
+    "Raises or lowers every parcel's own height limit by the same amount. Baseline is the limit the scenario gives each parcel. A parcel pushed to 0 ft or below builds nothing.",
   far_delta:
-    "Raises or lowers every parcel's own FAR by the same amount. Baseline is the FAR the pathway gives each parcel. A parcel pushed to 0 or below builds nothing.",
+    "Raises or lowers every parcel's own FAR by the same amount. Baseline is the FAR the scenario gives each parcel. A parcel pushed to 0 or below builds nothing.",
 };
 
 // the parking lever in the other counties: each county's own minimum, which
@@ -657,8 +604,8 @@ function SliderRow({
             <button
               type="button"
               onClick={onUnlock}
-              title="Unlock and return to the program default"
-              aria-label={`Unlock ${config.label} and return to the program default`}
+              title="Unlock and return to the scenario default"
+              aria-label={`Unlock ${config.label} and return to the scenario default`}
               className="flex size-3.5 items-center justify-center rounded-sm text-[11px] leading-none text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700"
             >
               &times;
@@ -761,6 +708,15 @@ export function ControlPanel({
   tourAutoStart = true,
 }: Props) {
   const factors = PROGRAM_FACTORS[inputs.program] ?? [];
+  const scenario = inputs.scenario ?? "baseline";
+  // what the scenario does here, and what it still lacks in this county
+  const setup = scenarioSetup(scenario, county);
+  const scenarioNote = [
+    SCENARIOS.find((s) => s.id === scenario)?.description,
+    setup.note,
+  ]
+    .filter(Boolean)
+    .join(" ");
   const isLocked = (key: keyof GaugeInputs) => modified?.[key] !== undefined;
   // Locks persist across pathway switches, so `modified` can hold levers this
   // pathway does not render. Count only the visible ones, or the badge would
@@ -772,11 +728,12 @@ export function ControlPanel({
     : 0;
 
   function set<K extends keyof GaugeInputs>(key: K, value: GaugeInputs[K]) {
-    // `program` is not a lever and must never be locked: it has to go through
-    // onChange so the dashboard rebuilds that pathway's defaults and re-applies
-    // the surviving locks. Everything else is a lever and routes to the
-    // key-aware handler.
-    if (key !== "program" && onFactorChange) onFactorChange(key, value);
+    // `scenario` and `program` are not levers and must never be locked: a
+    // scenario switch goes through onChange so the dashboard rebuilds that
+    // scenario's defaults and re-applies the surviving locks. Everything else
+    // is a lever and routes to the key-aware handler.
+    if (key !== "program" && key !== "scenario" && onFactorChange)
+      onFactorChange(key, value);
     else onChange((prev) => ({ ...prev, [key]: value }));
   }
 
@@ -840,14 +797,15 @@ export function ControlPanel({
               onChange={onCountyChange}
               note={countyNote}
             />
-            {/* the pathways are Honolulu ordinances */}
-            {county === "hi-honolulu" && (
-              <ProgramSelector
-                programs={PROGRAMS}
-                value={inputs.program}
-                onChange={(id) => set("program", id as ProgramId)}
-              />
-            )}
+            {/* the scenarios, the same in every county */}
+            <ProgramSelector
+              label="Scenario"
+              tourId="scenario-selector"
+              programs={SCENARIO_OPTIONS}
+              value={scenario}
+              onChange={(id) => set("scenario", id as ScenarioId)}
+              note={scenarioNote}
+            />
           </div>
         </div>
       </div>
@@ -874,7 +832,7 @@ export function ControlPanel({
                       color: FACTOR_ORANGE,
                       backgroundColor: FACTOR_ORANGE + "14",
                     }}
-                    title="Locked levers keep their value when you switch pathways"
+                    title="Locked levers keep their value when you switch scenarios"
                   >
                     {lockCount} locked
                   </span>

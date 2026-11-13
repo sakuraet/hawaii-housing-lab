@@ -714,6 +714,7 @@ export function calcbill6Single(sliders: SliderInputs): ParcelOutput {
     park_area: hard.park_area,
     land_cost_per_sqft: land_cost,
     waivable_fee_basis,
+    fee_scale: sliders.fee_scale,
     impact_fee_per_unit,
     living_stories: hard.living_stories,
     fu_per_unit: mixFixtureUnits(unit_type, loc),

@@ -1680,6 +1680,9 @@ export interface SliderInputs {
   building_area_per_unit?: number;
   max_far?: number;
   waivable_fee_basis?: FeeBasis;
+  // multiplies every fee in the soft costs (the fee scenario: 0.5 halves
+  // them); construction management is not a fee and is not scaled. Default 1
+  fee_scale?: number;
 }
 
 export interface ParcelOutput {
@@ -1822,6 +1825,8 @@ export type SoftCostInputs = {
   waivable_fee_basis: FeeBasis;
   // school impact fees don't include in waivable_fee_basis as it's a state fee not city
   impact_fee_per_unit: number;
+  // every fee line times this; default 1 (see SliderInputs.fee_scale)
+  fee_scale?: number;
   zoning_application_fee?: number;
   special_district_fee?: number;
   // BWS water charges
@@ -2851,6 +2856,14 @@ export function calcSoftCosts(i: SoftCostInputs): SoftCostBreakdown {
     zoning_application: i.zoning_application_fee ?? 0,
     special_district: i.special_district_fee ?? 0,
   };
+
+  // the fee scenario: every line but construction management is a fee
+  const scale = i.fee_scale ?? 1;
+  if (scale !== 1) {
+    for (const k of Object.keys(b) as (keyof typeof b)[]) {
+      if (k !== "construction_mgmt") b[k] *= scale;
+    }
+  }
 
   return { ...b, total: Object.values(b).reduce((s, v) => s + v, 0) };
 }

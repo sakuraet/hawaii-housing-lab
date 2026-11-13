@@ -98,6 +98,8 @@ export * from "./feasibility";
 // the statewide parcel table the scenarios run on, and running it
 export * from "./scenarios/parcels";
 export * from "./scenarios/run";
+// the baseline and the three benchmark scenarios
+export * from "./scenarios/scenarios";
 
 // matching parcel data's zone names to a county's config
 export { zoneKey } from "./core/zoning";

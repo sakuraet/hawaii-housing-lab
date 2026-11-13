@@ -47,10 +47,12 @@ The full methodology is in [docs/model](model/README.md): the pipeline every pat
 
 | Scenario | What changes | Model inputs it sets | Default and sensitivity range |
 | -------- | ------------ | -------------------- | ----------------------------- |
-| **Baseline** | | | |
-| **Transit-Oriented Density** | | | |
-| **Parking Requirement Reduction** | | | |
-| **Development Fee Reduction** | | | |
+| **Baseline** | Nothing: today's zoning, parking minimums and fees in each county. In Honolulu, the Standard Development Pathway (Ord. 26-7) | Honolulu: the Standard pathway (`bill6`). Other counties: current zoning (`current`) | Each county's own rules |
+| **Transit-Oriented Density** | More height and density near frequent transit | Honolulu: its TOD pathway (PD-T and IPD-T) on parcels in a TOD district. Other counties: not defined yet; needs each parcel's distance to a frequent bus stop | [Q] Height and density rules, and the distance, off Oʻahu |
+| **Parking Requirement Reduction** | No parking minimums; developers build what the market wants | `parking_ratio` (stalls per unit) | Draft 0.5; range 0 to 1.5 [Q] |
+| **Development Fee Reduction** | Development fees cut: permits, plan review, sewer, water, park dedication, grading and the rest | `fee_scale` (share of today's fees) | Draft 0.5 (half); range 0 to 1 [Q] |
+
+Each scenario is defined in `src/scenarios/scenarios.ts`. The design and open decisions are in [the scenario layer note](notes/SCENARIO_LAYER.md).
 
 # Limitations and Known Edge Cases
 

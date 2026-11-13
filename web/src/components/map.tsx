@@ -390,7 +390,14 @@ function ParcelOutlines({
 // open and close without one, so watch the container itself
 function FitContainer({ map }: { map: LeafletMap }) {
   useEffect(() => {
-    const observer = new ResizeObserver(() => map.invalidateSize());
+    const observer = new ResizeObserver(() => {
+      // it can fire once more after the map is removed (a data switch)
+      try {
+        map.invalidateSize();
+      } catch {
+        // the map is gone; the new one has its own observer
+      }
+    });
     observer.observe(map.getContainer());
     return () => observer.disconnect();
   }, [map]);

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { SCENARIOS } from "feasim-challenge";
 
 interface SummaryOverlayProps {
   summary: {
@@ -18,7 +19,8 @@ interface SummaryOverlayProps {
     pctStrong: number | null;
     pctMarginal: number | null;
     pctPoor: number | null;
-    program: string;
+    /** the scenario's id */
+    scenario: string;
   };
   /**
    * Small screens: a one-line bar of the region, unit total and level shares
@@ -30,16 +32,10 @@ interface SummaryOverlayProps {
   onExpandedChange?: (expanded: boolean) => void;
 }
 
-// same names as the program buttons (bill6 is current zoning, "Standard")
-export const PROGRAM_LABEL: Record<string, string> = {
-  bill6: "Standard ",
-  standard: "Before Ord. 26-7 ",
-  bill7: "Bill 7 ",
-  tod: "TOD ",
-  h201: "201H ",
-  // the other counties run on their own current zoning
-  current: "Current Zoning ",
-};
+// the scenario buttons' names
+export const SCENARIO_LABEL: Record<string, string> = Object.fromEntries(
+  SCENARIOS.map((s) => [s.id, `${s.label} `])
+);
 
 function pct(v: number | null, decimals = 1) {
   if (v == null || !isFinite(v)) return "—";
@@ -72,7 +68,7 @@ export function ScenarioSummaryOverlay({
   };
 
   const programLabel =
-    PROGRAM_LABEL[summary.program] ?? summary.program.toUpperCase();
+    SCENARIO_LABEL[summary.scenario] ?? summary.scenario.toUpperCase();
 
   if (compact) {
     return (
@@ -333,7 +329,7 @@ function Delta({
   return (
     <div className={`${inline ? "" : "mt-0.5"} text-xs ${tone}`}>
       <span className="font-semibold tabular-nums">{label}</span>{" "}
-      <span className="text-slate-500">vs. defaults</span>
+      <span className="text-slate-500">vs. Baseline</span>
     </div>
   );
 }

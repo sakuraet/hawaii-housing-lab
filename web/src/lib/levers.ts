@@ -24,6 +24,8 @@ export { BILL6_DEFAULTS, defaultsFor, PROGRAM_DEFAULTS };
 const statutoryGrantFor = (s: GaugeInputs) =>
   s.grant_type === "pre_construct" ? GRANT.pre_construct : GRANT.post_construct;
 
+const scenarioIn = (s: GaugeInputs) => s.scenario ?? "baseline";
+
 const defaultValueFor = <K extends keyof GaugeInputs>(
   key: K,
   state: GaugeInputs,
@@ -31,10 +33,10 @@ const defaultValueFor = <K extends keyof GaugeInputs>(
 ): GaugeInputs[K] => {
   if (key === "grant_amount")
     return statutoryGrantFor(state) as GaugeInputs[K];
-  return defaultsFor(state.program, county)[key];
+  return defaultsFor(scenarioIn(state), county)[key];
 };
 
-/** levers in `inputs` that differ from their pathway's defaults */
+/** levers in `inputs` that differ from their scenario's defaults */
 function locksIn(inputs: GaugeInputs, county?: string): Partial<GaugeInputs> {
   const locks: Partial<GaugeInputs> = {};
   for (const key of factorKeysFor(inputs.program)) {
@@ -53,10 +55,10 @@ function locksIn(inputs: GaugeInputs, county?: string): Partial<GaugeInputs> {
  */
 export function useLevers(initial?: GaugeInputs, county?: string) {
   const [inputs, setInputs] = useState<GaugeInputs>(
-    () => initial ?? defaultsFor(BILL6_DEFAULTS.program, county)
+    () => initial ?? defaultsFor("baseline", county)
   );
 
-  // levers moved off their default: shown orange and kept across pathway
+  // levers moved off their default: shown orange and kept across scenario
   // switches (like `modified` in the calculator)
   const [modified, setModified] = useState<Partial<GaugeInputs>>(() =>
     initial ? locksIn(initial, county) : {}
@@ -92,38 +94,39 @@ export function useLevers(initial?: GaugeInputs, county?: string) {
     });
   };
 
-  // pathway switch: load its defaults, then reapply the locks it shows
-  // (locks are kept until reset, even for levers a pathway hides)
+  // scenario switch: load its defaults (which pick its pathway), then reapply
+  // the locks it shows (locks are kept until reset, even for levers a pathway
+  // hides)
   const handleInputsChange: React.Dispatch<
     React.SetStateAction<GaugeInputs>
   > = (action) => {
     setInputs((prev) => {
       const next = typeof action === "function" ? action(prev) : action;
-      if (next.program !== prev.program) {
-        const defaults = defaultsFor(next.program, county);
-        const keys = factorKeysFor(next.program);
+      if (scenarioIn(next) !== scenarioIn(prev)) {
+        const defaults = defaultsFor(scenarioIn(next), county);
+        const keys = factorKeysFor(defaults.program);
         const carried: Partial<GaugeInputs> = {};
         for (const key of Object.keys(modified) as (keyof GaugeInputs)[]) {
           if (keys.has(key)) carried[key] = modified[key] as never;
         }
-        return { ...defaults, ...carried, program: next.program };
+        return { ...defaults, ...carried };
       }
       return next;
     });
   };
 
   const handleReset = () => {
-    setInputs(defaultsFor(inputs.program, county));
+    setInputs(defaultsFor(scenarioIn(inputs), county));
     setModified({});
   };
 
-  // a county switch: its defaults, with the locks kept (a lock now at the
-  // new county's default is a lock no more)
+  // a county switch: the scenario's defaults there (TOD runs Honolulu's TOD
+  // pathway only on Oʻahu), with the locks kept (a lock now at the new
+  // county's default is a lock no more)
   const changeCounty = (next: string) => {
     const rebased = {
-      ...defaultsFor(inputs.program, next),
+      ...defaultsFor(scenarioIn(inputs), next),
       ...modified,
-      program: inputs.program,
     };
     setInputs(rebased);
     setModified(locksIn(rebased, next));
@@ -167,7 +170,7 @@ export function derivedLevers(
   const parking: Partial<GaugeInputs> = otherCounty
     ? {
         parking_ratio: countyParkingRatio(
-          inputs.unit_type ?? defaultsFor(inputs.program, county).unit_type ?? "one_bb_100",
+          inputs.unit_type ?? defaultsFor(scenarioIn(inputs), county).unit_type ?? "one_bb_100",
           county
         ),
       }

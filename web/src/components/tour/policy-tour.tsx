@@ -30,25 +30,25 @@ function Level({ tone, children }: { tone: string; children: string }) {
 }
 
 const PROGRAM_STEP: TourStep = {
-  target: "program-selector",
-  title: "Pick a development pathway",
+  target: "scenario-selector",
+  title: "Pick a scenario",
   body: (
     <>
       <p>
-        Each button is a set of zoning and program rules a project can be built
-        under: the Standard pathway, Bill 7, transit-oriented development (TOD),
-        201H, and the rules in place before Ord. 26-7.
+        Each button is a policy, the same in every county: the Baseline
+        (today&apos;s rules), transit-oriented development (TOD), no parking
+        minimums, and lower developer fees.
       </p>
       <p>
-        Switching pathways reloads that program&apos;s defaults, so you can
-        compare them under the same market conditions.
+        Switching scenarios reloads that scenario&apos;s defaults, and the
+        summary shows the change from the Baseline.
       </p>
     </>
   ),
   placement: "bottom",
   task: {
-    prompt: "Try it: click a different pathway.",
-    done: "Pathway switched. Every result now follows its rules.",
+    prompt: "Try it: click a different scenario.",
+    done: "Scenario switched. Every result now follows its rules.",
   },
 };
 
@@ -69,13 +69,13 @@ const LOCK_STEP: TourStep = {
       <p>
         <Swatch color={FACTOR_TEAL} />
         <span className="font-bold">Teal</span>{" "}
-        <span>levers are at the pathway&apos;s default.</span>
+        <span>levers are at the scenario&apos;s default.</span>
       </p>
       <p>
         <Swatch color={FACTOR_ORANGE} />
         <strong>Orange </strong>levers are ones you changed. A locked lever
-        keeps your value when you switch pathways, so you can hold a scenario
-        constant and change only the regulation.
+        keeps your value when you switch scenarios, so you can hold your
+        assumptions constant and change only the policy.
       </p>
     </>
   ),
@@ -87,7 +87,7 @@ const RESET_STEP: TourStep = {
   title: "Start over anytime",
   body: (
     <p>
-      Reset to defaults unlocks every lever and returns the pathway to its
+      Reset to defaults unlocks every lever and returns the scenario to its
       starting assumptions.
     </p>
   ),
@@ -99,7 +99,7 @@ const DONE_STEP: TourStep = {
   body: (
     <>
       <p>
-        That&apos;s the whole loop: choose a pathway, move the levers, and read
+        That&apos;s the whole loop: choose a scenario, move the levers, and read
         how feasibility responds.
       </p>
       <p>
@@ -162,8 +162,9 @@ const GAUGE_STEPS: TourStep[] = [
         <p>
           The summary adds up the maximum potential units across every modeled
           parcel, and how many of them pencil: units on parcels rated Strong.
-          The ▲/▼ next to each number is the change from this pathway&apos;s
-          defaults, so you can see what your lever changes add or remove.
+          The ▲/▼ next to each number is the change from the Baseline
+          scenario at its defaults, so you can see what a policy and your
+          lever changes add or remove.
         </p>
         {LEVELS_BODY}
       </>

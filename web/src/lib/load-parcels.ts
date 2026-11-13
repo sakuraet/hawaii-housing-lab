@@ -17,14 +17,31 @@ const fetchJson = (file: string) => async () => {
   if (!res.ok) throw new Error(`${file}: HTTP ${res.status}`);
   return { default: (await res.json()) as unknown };
 };
-// Honolulu has a file per pathway; each other county has one file, run on
-// its current zoning
+// The TOD scenario's parcels: every Standard-pathway parcel, with the TOD
+// district fields added where it is in one, plus the district parcels only
+// TOD allows housing on. Outside a district a parcel keeps its Baseline result
+// (dashboard.tsx), so the scenario's change is TOD's alone
+async function loadTodScenario(): Promise<{ default: unknown }> {
+  const [base, tod] = await Promise.all([
+    fetchJson("parcels-bill6.json")(),
+    fetchJson("parcels-tod.json")(),
+  ]);
+  const todRows = tod.default as ParcelRow[];
+  const byTmk = new Map(todRows.map((r) => [r.tmk, r]));
+  const merged = (base.default as ParcelRow[]).map((r) => {
+    const t = byTmk.get(r.tmk);
+    return t ? { ...r, ...t } : r;
+  });
+  const seen = new Set(merged.map((r) => r.tmk));
+  return { default: [...merged, ...todRows.filter((r) => !seen.has(r.tmk))] };
+}
+
+// Honolulu has a file for each pathway the scenarios run (bill6 for the
+// baseline, parking and fees; tod, merged with bill6, for TOD); each other
+// county has one file, run on its current zoning
 const PATHWAY_LOADERS: Record<string, () => Promise<{ default: unknown }>> = {
   bill6: fetchJson("parcels-bill6.json"),
-  bill7: fetchJson("parcels-bill7.json"),
-  standard: fetchJson("parcels-standard.json"),
-  tod: fetchJson("parcels-tod.json"),
-  h201: fetchJson("parcels-h201.json"),
+  tod: loadTodScenario,
 };
 const LOADERS: Record<string, () => Promise<{ default: unknown }>> = {
   ...PATHWAY_LOADERS,

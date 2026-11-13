@@ -1,8 +1,10 @@
-// Runs a parcel table through the engine on current zoning and writes the
-// results, totals by county, and the zones not modeled.
+// Runs a parcel table through the engine under a scenario (the baseline,
+// current zoning, by default) and writes the results, totals by county, and
+// the zones not modeled.
 //
 // Usage (from the repo root, after npm run build):
 //   node scripts/run-parcels.mjs <parcels.csv> [out-dir] [--basis land|total]
+//     [--scenario baseline|tod|parking|fees]
 //
 // The table has the columns of PARCEL_COLUMNS (src/scenarios/parcels.ts);
 // extra columns are ignored. out-dir defaults to out/parcel-runs, which git
@@ -15,19 +17,27 @@
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
-import { parseParcelCsv, runParcels, summarizeRuns } from "../dist/index.js";
+import { SCENARIOS, parseParcelCsv, runParcels, summarizeRuns } from "../dist/index.js";
 
 const args = process.argv.slice(2);
 const basisAt = args.indexOf("--basis");
 const land_basis = basisAt >= 0 ? args.splice(basisAt, 2)[1] : "land";
+const scenarioAt = args.indexOf("--scenario");
+const scenario = scenarioAt >= 0 ? args.splice(scenarioAt, 2)[1] : "baseline";
 const [input, outDir = join("out", "parcel-runs")] = args;
-if (!input || (land_basis !== "land" && land_basis !== "total")) {
-  console.error("usage: node scripts/run-parcels.mjs <parcels.csv> [out-dir] [--basis land|total]");
+if (
+  !input ||
+  (land_basis !== "land" && land_basis !== "total") ||
+  !SCENARIOS.some((s) => s.id === scenario)
+) {
+  console.error(
+    "usage: node scripts/run-parcels.mjs <parcels.csv> [out-dir] [--basis land|total] [--scenario baseline|tod|parking|fees]"
+  );
   process.exit(1);
 }
 
 const { parcels, problems } = parseParcelCsv(readFileSync(input, "utf8"));
-const runs = runParcels(parcels, { land_basis });
+const runs = runParcels(parcels, { land_basis, scenario });
 const summary = summarizeRuns(runs);
 
 // quotes a field only when it needs it (reasons quote zone names)
@@ -85,7 +95,7 @@ writeFileSync(join(outDir, "summary.csv"), csv(SUMMARY, summary.map((s) => SUMMA
 writeFileSync(join(outDir, "not_modeled.csv"), csv(["locality", "zone_label", "status", "reason", "parcels"], notRunRows));
 writeFileSync(join(outDir, "problems.txt"), problems.length ? problems.join("\n") + "\n" : "");
 
-console.log(`${parcels.length} parcels run from ${input} (land basis: ${land_basis})`);
+console.log(`${parcels.length} parcels run from ${input} (scenario: ${scenario}, land basis: ${land_basis})`);
 if (problems.length) console.log(`${problems.length} rows left out; see problems.txt`);
 console.table(summary);
 if (notRunRows.length) {
