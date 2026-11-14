@@ -104,6 +104,15 @@ describe("each county's land cost default", () => {
     expect(parcelInputs("bill6", { lot_sqft: 20000, zone_class: "A-2", height: 60 }).land_cost).toBe(170);
   });
 
+  it("Maui and Hawaiʻi County default to all studios; Honolulu and Kauaʻi keep half studios", () => {
+    expect(countyLeverDefaults("hi-maui").unit_type).toBe("studio_100");
+    expect(countyLeverDefaults("hi-hawaii").unit_type).toBe("studio_100");
+    expect(countyLeverDefaults("hi-honolulu").unit_type).toBeUndefined();
+    expect(countyLeverDefaults("hi-kauai").unit_type).toBeUndefined();
+    const p = { locality: "hi-hawaii", lot_sqft: 17000, zone_class: "CV-10", height: 45 };
+    expect(parcelInputs("current", p).unit_type).toBe("studio_100");
+  });
+
   it("the pathway defaults keep the original model's $130", () => {
     expect(DEFAULT_INPUTS.bill6.land_cost).toBe(130);
   });
