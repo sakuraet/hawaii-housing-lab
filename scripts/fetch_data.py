@@ -12,6 +12,8 @@ the zip's SHA-256, the feature count and the fields.
   zoning_maui       County of Maui zoning
   height_honolulu   City and County of Honolulu zoning map height limits, from the City's open data
                     (HOLIS) feature service rather than the State's files
+  tiger_hawaii      Census Bureau TIGER/Line 2024 roads, linear water and area water for Hawaii County
+                    (public domain), for its parking exemptions (parking_exempt.py)
 
 Usage: python scripts/fetch_data.py [name ...]   (default: every layer)
 """
@@ -42,6 +44,16 @@ FEATURE_LAYERS = {
     ),
 }
 PAGE = 1000
+
+# Census Bureau TIGER/Line files, kept as zips: name: (base url, file paths, title)
+TIGER_LAYERS = {
+    "tiger_hawaii": (
+        "https://www2.census.gov/geo/tiger/TIGER2024/",
+        ["ROADS/tl_2024_15001_roads.zip", "LINEARWATER/tl_2024_15001_linearwater.zip",
+         "AREAWATER/tl_2024_15001_areawater.zip"],
+        "TIGER/Line 2024, Hawaii County (FIPS 15001): roads, linear water, area water",
+    ),
+}
 
 # name: (file stem, map service layer id, title)
 LAYERS = {
@@ -118,9 +130,25 @@ def get_features(name: str) -> None:
     print(f"{name}: {len(features):,} features")
 
 
+def get_tiger(name: str) -> None:
+    """TIGER/Line zips, read in place (zip://)."""
+    base, files, title = TIGER_LAYERS[name]
+    out = GIS / name
+    out.mkdir(parents=True, exist_ok=True)
+    lines = [f"# {title}", "", f"- Source: {base} (U.S. Census Bureau; public domain), downloaded {date.today().isoformat()}"]
+    for f in files:
+        path = out / Path(f).name
+        modified = fetch(base + f, path)
+        sha = hashlib.sha256(path.read_bytes()).hexdigest()
+        n = len(gpd.read_file(f"zip://{path}"))
+        lines.append(f"- {f} (last-modified {modified}): {n:,} features; SHA-256 {sha}")
+        print(f"{name}: {path.name}, {n:,} features")
+    (out / "SOURCE.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+
 def main() -> None:
     sys.stdout.reconfigure(encoding="utf-8")
-    every = list(LAYERS) + list(FEATURE_LAYERS)
+    every = list(LAYERS) + list(FEATURE_LAYERS) + list(TIGER_LAYERS)
     names = sys.argv[1:] or every
     unknown = [n for n in names if n not in every]
     if unknown:
@@ -128,6 +156,8 @@ def main() -> None:
     for n in names:
         if n in FEATURE_LAYERS:
             get_features(n)
+        elif n in TIGER_LAYERS:
+            get_tiger(n)
         else:
             get(n)
 

@@ -34,11 +34,11 @@ It downloads about 300 MB and writes the parcel table and the map files. To reru
 
 | Step | Script | What it does | Writes |
 | --- | --- | --- | --- |
-| 1 | `fetch_data.py` | Downloads the statewide parcel layer and the four counties' zoning layers from the Hawaiʻi Statewide GIS Program, and Honolulu's zoning map height limits from the City's open data | `data/gis/<layer>/`, each with a `SOURCE.md` |
+| 1 | `fetch_data.py` | Downloads the statewide parcel layer and the four counties' zoning layers from the Hawaiʻi Statewide GIS Program, Honolulu's zoning map height limits from the City's open data, and the Census Bureau's TIGER/Line roads and water for Hawaiʻi County | `data/gis/<layer>/`, each with a `SOURCE.md` |
 | 2 | `clean_parcels.py` | Repairs invalid parcel shapes and merges rows that share a TMK | `data/gis/parcels/parcels_clean.gpkg` |
 | 3 | `clean_zoning.py` | Repairs the zoning layers and uses each county code's district names | `data/gis/zoning_clean.gpkg` |
 | 4 | `join_zoning.py` | Gives each parcel the district covering most of it, applies Hawaiʻi County's recent rezonings, and adds Maui's community plan area and Honolulu's mapped height | `data/joined/parcels_zoning.gpkg` |
-| 5 | `export_parcels.py` | Writes the parcel table the engine runs, with each parcel's height limit from `zone_heights.csv` | `data/parcels_statewide.csv` |
+| 5 | `export_parcels.py` | Writes the parcel table the engine runs, with each parcel's height limit from `zone_heights.csv` and Hawaiʻi County's parking exemptions (`parking_exempt.py`) | `data/parcels_statewide.csv` |
 | 6 | `run-parcels.mjs` | Builds the engine and runs every parcel on current zoning | `out/parcel-runs/` |
 | 7 | `export_map.py` | Writes each county's parcel positions and lot outlines for the map, for the parcels the engine runs (Honolulu: its apartment, mixed-use and Waikīkī districts) | `web/public/data/parcels-<county>.json`, `parcel-shapes-<county>.json` |
 
@@ -61,7 +61,8 @@ Git ignores everything these steps write. `common.py` holds the paths they share
 ### Not built yet
 
 - **Honolulu's map files:** the tool still reads Honolulu from its pathway files (`parcels-bill6.json` and so on). Step 7 writes `parcels-hi-honolulu.json` too, to check against them.
-- **Assessed values, existing use, transit distance and parking exemptions:** blank in the table.
+- **Assessed values, existing use and transit distance:** blank in the table.
+- **Parking exemptions:** set for Hawaiʻi County only (downtown Hilo and Kainaliu, HCC 25-4-59.2; see `parking_exempt.py`). Honolulu's are in its pathway files, and Maui and Kauaʻi have none in the model.
 - **Street addresses:** not in the public layers; the map shows each parcel's TMK.
 
 ## The parcel table

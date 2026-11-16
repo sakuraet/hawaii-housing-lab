@@ -528,7 +528,7 @@ const PLACEMENT =
   "Stalls fill a surface lot first, then the ground floor and podium floors, which count toward height but not FAR.";
 const COUNTY_PARKING_INFO: Partial<Record<CountyId, string>> = {
   "hi-maui": `Stalls per unit. Defaults to Maui's minimum for the unit mix: 1 stall per studio or one-bedroom, 2 per two- or three-bedroom, 3 per four-bedroom (MCC 19.36B.020, as amended by Ord. 5983), so 1 for all studios. ${PLACEMENT}`,
-  "hi-hawaii": `Stalls per unit. Defaults to Hawaiʻi County's minimum: 1.25 stalls per multiple-family unit, whatever its size (HCC 25-4-51). ${PLACEMENT}`,
+  "hi-hawaii": `Stalls per unit. Defaults to Hawaiʻi County's minimum: 1.25 stalls per multiple-family unit, whatever its size (HCC 25-4-51(a)(6)); 1 in downtown Hilo's CDH district. None is required in the downtown Hilo core (for districts of 1,000 sqft of land per unit or denser) or along the Belt Highway in Kainaliu (25-4-59.2). ${PLACEMENT}`,
   "hi-kauai": `Stalls per unit. Defaults to Kauaʻi's minimum: 2 stalls per unit, whatever its size (CZO 8-4.5). ${PLACEMENT}`,
 };
 

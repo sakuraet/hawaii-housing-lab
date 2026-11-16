@@ -169,10 +169,14 @@ export function derivedLevers(
   const otherCounty = county !== undefined && county !== "hi-honolulu";
   const parking: Partial<GaugeInputs> = otherCounty
     ? {
-        parking_ratio: countyParkingRatio(
-          inputs.unit_type ?? defaultsFor(scenarioIn(inputs), county).unit_type ?? "one_bb_100",
-          county
-        ),
+        // an exempt parcel needs none (Hawaiʻi County: downtown Hilo and the
+        // Kainaliu frontage, 25-4-59.2)
+        parking_ratio: parcel?.row.parking_exempt
+          ? 0
+          : countyParkingRatio(
+              inputs.unit_type ?? defaultsFor(scenarioIn(inputs), county).unit_type ?? "one_bb_100",
+              county
+            ),
       }
     : inputs.program === "bill6" ||
     inputs.program === "standard" ||
