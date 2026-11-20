@@ -1683,6 +1683,11 @@ export interface SliderInputs {
   // multiplies every fee in the soft costs (the fee scenario: 0.5 halves
   // them); construction management is not a fee and is not scaled. Default 1
   fee_scale?: number;
+  // the challenge's benchmark: every fee together comes to this much per
+  // unit ($50,000), in place of the county's schedules; each fee line keeps
+  // its share of the county's total. fee_scale then applies to it. Unset:
+  // the county's schedules
+  fee_per_unit?: number;
 }
 
 export interface ParcelOutput {
@@ -1827,6 +1832,8 @@ export type SoftCostInputs = {
   impact_fee_per_unit: number;
   // every fee line times this; default 1 (see SliderInputs.fee_scale)
   fee_scale?: number;
+  // all fees per unit, in place of the schedules (see SliderInputs.fee_per_unit)
+  fee_per_unit?: number;
   zoning_application_fee?: number;
   special_district_fee?: number;
   // BWS water charges
@@ -2858,11 +2865,20 @@ export function calcSoftCosts(i: SoftCostInputs): SoftCostBreakdown {
   };
 
   // the fee scenario: every line but construction management is a fee
+  const feeKeys = (Object.keys(b) as (keyof typeof b)[]).filter(
+    (k) => k !== "construction_mgmt"
+  );
+  // the benchmark: the fees total fee_per_unit for every unit, spread over
+  // the lines in the county's proportions (all on the building permit if the
+  // county charges none); fee_scale then applies
   const scale = i.fee_scale ?? 1;
-  if (scale !== 1) {
-    for (const k of Object.keys(b) as (keyof typeof b)[]) {
-      if (k !== "construction_mgmt") b[k] *= scale;
-    }
+  if (i.fee_per_unit != null) {
+    const target = i.fee_per_unit * i.max_units * scale;
+    const modeled = feeKeys.reduce((s, k) => s + b[k], 0);
+    for (const k of feeKeys) b[k] = modeled > 0 ? (b[k] * target) / modeled : 0;
+    if (modeled <= 0) b.building_permit = target;
+  } else if (scale !== 1) {
+    for (const k of feeKeys) b[k] *= scale;
   }
 
   return { ...b, total: Object.values(b).reduce((s, v) => s + v, 0) };

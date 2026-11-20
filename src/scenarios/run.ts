@@ -8,7 +8,7 @@ import { overallLevel, type Level } from "../feasibility";
 import { getLocality } from "../localities";
 import { calcParcel } from "../parcels";
 import { landCostPerSqft, toParcel, type LandBasis, type StatewideParcel } from "./parcels";
-import { baselinePathway, scenarioSetup, type ScenarioId } from "./scenarios";
+import { baselinePathway, feeSourceLevers, scenarioSetup, type FeeSource, type ScenarioId } from "./scenarios";
 
 /** run: the engine ran; not_modeled: the zone has no rules in the county's
  *  config, or does not allow multi-family housing; error: the engine
@@ -36,6 +36,9 @@ export interface ParcelRun {
 export interface RunOptions {
   /** the scenario to run; default "baseline" */
   scenario?: ScenarioId;
+  /** whose fees: each county's schedules (default) or the challenge's
+   *  $50,000 per unit */
+  fee_source?: FeeSource;
   /** levers for every parcel, on top of the scenario's */
   levers?: Partial<SliderInputs>;
   /** which assessed values make the land cost; default "land" */
@@ -61,7 +64,7 @@ export function runParcel(p: StatewideParcel, opts: RunOptions = {}): ParcelRun 
     return { ...run, status: "not_modeled", reason: `multi-family housing is not permitted in ${zone_class}` };
   try {
     const setup = scenarioSetup(opts.scenario ?? "baseline", p.locality);
-    const set = { ...setup.levers, ...opts.levers };
+    const set = { ...feeSourceLevers(opts.fee_source ?? "county"), ...setup.levers, ...opts.levers };
     const levers = land_cost === undefined ? set : { ...set, land_cost };
     const parcel = { ...toParcel(p), zone_class };
     // Honolulu's TOD rules only reach parcels in a TOD special district; the

@@ -4,8 +4,10 @@
 import {
   countyLeverDefaults,
   pathwayEnvelope,
+  feeSourceLevers,
   scenarioOf,
   scenarioSetup,
+  type FeeSource,
   type ScenarioId,
   type Envelope,
   type ProgramId,
@@ -19,6 +21,9 @@ import type { ParcelRow } from "@/lib/parcels";
 export interface GaugeInputs extends SliderInputs {
   /** the scenario the levers start from; it picks the pathway (`program`) */
   scenario?: ScenarioId;
+  /** whose fees: each county's schedules, or the challenge's $50,000 per
+   *  unit (the model's fee_per_unit) */
+  fee_source?: FeeSource;
   height_delta?: number;
   far_delta?: number;
 }
@@ -49,6 +54,7 @@ export const BILL6_DEFAULTS: GaugeInputs = {
   parking_ratio: 0.95,
   // every development fee at today's level; the fee scenario lowers it
   fee_scale: 1,
+  fee_source: "county",
   permitting_months: 18,
   const_months: 12,
   leaseup_months: 9,
@@ -110,7 +116,8 @@ export function parcelLevers(
   inputs: GaugeInputs,
   opts: Parameters<typeof pathwayEnvelope>[2] = {}
 ): SliderInputs {
-  const { height_delta = 0, far_delta = 0, ...levers } = inputs;
+  const { height_delta = 0, far_delta = 0, fee_source = "county", ...rest } = inputs;
+  const levers = { ...rest, ...feeSourceLevers(fee_source) };
   if (height_delta === 0 && far_delta === 0) return levers;
   const envelope = pathwayEnvelope(pathway, parcel, opts);
   if (hasNoLimits(envelope)) return levers;

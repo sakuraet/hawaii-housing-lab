@@ -226,6 +226,7 @@ export function calcTodSingle(sliders: SliderInputs): ParcelOutput {
     land_cost_per_sqft: land_cost,
     waivable_fee_basis,
     fee_scale: sliders.fee_scale,
+    fee_per_unit: sliders.fee_per_unit,
     impact_fee_per_unit,
     zoning_application_fee: FEES.zoning.tod_application,
     special_district_fee: specialDistrictTotal(lot_sqft),

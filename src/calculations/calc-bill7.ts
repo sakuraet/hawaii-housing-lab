@@ -250,6 +250,7 @@ export function calcBill7Single(sliders: SliderInputs): ParcelOutput {
     land_cost_per_sqft: land_cost,
     waivable_fee_basis,
     fee_scale: sliders.fee_scale,
+    fee_per_unit: sliders.fee_per_unit,
     impact_fee_per_unit: 0,
     living_stories,
     fu_per_unit: mixFixtureUnits(unit_type),

@@ -512,7 +512,11 @@ export function PolicyGaugeDashboard() {
   // what the summary card's unit changes are measured against, so each
   // scenario shows its change from today's rules
   const baseline = useMemo(() => {
-    const defaults = defaultsFor("baseline", county);
+    // on the same fee basis as the scenario, so the fee cut is all that differs
+    const defaults = {
+      ...defaultsFor("baseline", county),
+      fee_source: mapInputs.fee_source,
+    };
     const results = runPathway(
       defaults.program,
       activeParcels,
@@ -522,13 +526,13 @@ export function PolicyGaugeDashboard() {
       county,
       // the cache key says whose parcels these are (the TOD scenario's
       // include parcels the Baseline file doesn't)
-      `${dataKeyFor(mapInputs.program, county)}|baseline`
+      `${dataKeyFor(mapInputs.program, county)}|baseline|${mapInputs.fee_source}`
     );
     return summarize(
       results,
       todStatusOf(programIn(defaults.program, county), results, "base", "base")
     );
-  }, [activeParcels, mapInputs.program, county]);
+  }, [activeParcels, mapInputs.program, mapInputs.fee_source, county]);
 
   // TOD only: the selected parcel's regime for its card, and whether housing
   // is not applicable there at its tier

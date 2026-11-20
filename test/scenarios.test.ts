@@ -1,16 +1,20 @@
 // The four scenarios (src/scenarios/scenarios.ts): what each runs in each
-// county, the fee lever the fee scenario uses, and the parcel runner with a
+// county, the fee levers the fee scenario uses (a share of the fees, and the
+// challenge's $50,000-per-unit benchmark), and the parcel runner with a
 // scenario.
 
 import { describe, expect, it } from "vitest";
 
 import sample from "../data/sample/parcels.csv?raw";
-import { calcParcel, countyLeverDefaults, DEFAULT_INPUTS, parcelInputs } from "../src/parcels";
+import type { ProgramId } from "../src/calculations";
+import { calcParcel, countyLeverDefaults, DEFAULT_INPUTS, parcelInputs, type Parcel } from "../src/parcels";
 import { parseParcelCsv } from "../src/scenarios/parcels";
 import { runParcels, summarizeRuns } from "../src/scenarios/run";
 import {
+  BENCHMARK_FEE_PER_UNIT,
   SCENARIOS,
   SCENARIO_FEE_SCALE,
+  feeSourceLevers,
   SCENARIO_PARKING_RATIO,
   baselinePathway,
   scenarioOf,
@@ -66,8 +70,8 @@ describe("the fee lever", () => {
   });
 
   it("0.5 halves every fee line but construction management", () => {
-    const full = calcParcel("bill6", parcel).soft_cost_breakdown;
-    const half = calcParcel("bill6", parcel, { fee_scale: 0.5 }).soft_cost_breakdown;
+    const full = calcParcel("bill6", parcel).soft_cost_breakdown!;
+    const half = calcParcel("bill6", parcel, { fee_scale: 0.5 }).soft_cost_breakdown!;
     for (const [k, v] of Object.entries(full)) {
       if (k === "total") continue;
       const expected = k === "construction_mgmt" ? v : v * 0.5;
@@ -86,6 +90,58 @@ describe("the fee lever", () => {
         calcParcel(pathway, p).dev_roc
       );
     }
+  });
+});
+
+describe("the challenge's $50,000-per-unit fee benchmark", () => {
+  const cases: [string, ProgramId, Record<string, unknown>][] = [
+    ["hi-honolulu", "bill6", { lot_sqft: 20000, zone_class: "A-2", height: 60 }],
+    ["hi-maui", "current", { locality: "hi-maui", lot_sqft: 20000, zone_class: "A-2", height: 60 }],
+    ["hi-hawaii", "current", { locality: "hi-hawaii", lot_sqft: 17000, zone_class: "CV-10", height: 45 }],
+    ["hi-kauai", "current", { locality: "hi-kauai", lot_sqft: 20000, zone_class: "R-20", height: 40 }],
+  ];
+  const fees = (b: Record<string, number>) =>
+    Object.entries(b).reduce((s, [k, v]) => (k === "total" || k === "construction_mgmt" ? s : s + v), 0);
+
+  it.each(cases)("%s: the fees come to $50,000 a unit, and the cut to $25,000", (_, pathway, p) => {
+    const parcel = p as unknown as Parcel;
+    const county = calcParcel(pathway, parcel);
+    const bench = calcParcel(pathway, parcel, feeSourceLevers("benchmark"));
+    const cut = calcParcel(pathway, parcel, { ...feeSourceLevers("benchmark"), fee_scale: SCENARIO_FEE_SCALE });
+    const units = bench.max_units;
+    expect(units).toBe(county.max_units);
+    expect(fees(bench.soft_cost_breakdown! as unknown as Record<string, number>)).toBeCloseTo(BENCHMARK_FEE_PER_UNIT * units, 4);
+    expect(fees(cut.soft_cost_breakdown! as unknown as Record<string, number>)).toBeCloseTo(25000 * units, 4);
+    // construction management isn't a fee
+    expect(bench.soft_cost_breakdown!.construction_mgmt).toBeCloseTo(county.soft_cost_breakdown!.construction_mgmt, 6);
+    // each county's own fees are under the benchmark
+    expect(fees(county.soft_cost_breakdown! as unknown as Record<string, number>) / units).toBeLessThan(BENCHMARK_FEE_PER_UNIT);
+  });
+
+  it("the lines keep the county's proportions", () => {
+    const [, pathway, p] = cases[1];
+    const parcel = p as unknown as Parcel;
+    const county = calcParcel(pathway, parcel).soft_cost_breakdown!;
+    const bench = calcParcel(pathway, parcel, feeSourceLevers("benchmark")).soft_cost_breakdown!;
+    const ratio = bench.park_dedication / county.park_dedication;
+    expect(bench.building_permit / county.building_permit).toBeCloseTo(ratio, 9);
+    expect(bench.wsfc / county.wsfc).toBeCloseTo(ratio, 9);
+  });
+
+  it("the county source sets nothing", () => {
+    expect(feeSourceLevers("county")).toEqual({});
+  });
+
+  it("the runner applies the fee source to the baseline and the fee scenario alike", () => {
+    const { parcels } = parseParcelCsv(sample);
+    const base = runParcels(parcels, { fee_source: "benchmark" });
+    const cut = runParcels(parcels, { scenario: "fees", fee_source: "benchmark" });
+    cut.forEach((r, i) => {
+      const b = base[i].output;
+      if (r.status !== "run" || !r.output || !b) return;
+      expect(b.soft_cost - b.soft_cost_breakdown!.construction_mgmt).toBeCloseTo(BENCHMARK_FEE_PER_UNIT * b.max_units, 2);
+      expect(r.output.dev_roc).toBeGreaterThanOrEqual(b.dev_roc);
+    });
   });
 });
 

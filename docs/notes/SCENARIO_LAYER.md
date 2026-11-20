@@ -17,13 +17,18 @@ transit data, and production is a teammate's. The rest is design.
 | Baseline | Standard pathway (`bill6`, current zoning, Ord. 26-7) | `current` | none |
 | TOD | Honolulu's TOD pathway (PD-T and IPD-T) on parcels in a TOD district | Not defined yet: runs the baseline until each parcel has a distance to a frequent bus stop | none |
 | Parking | Baseline pathway | Baseline pathway | `parking_ratio: 0.5` (draft market ratio) |
-| Developer Fees | Baseline pathway | Baseline pathway | `fee_scale: 0.5` (draft: fees halved) |
+| Developer Fees | Baseline pathway | Baseline pathway | `fee_scale: 0.5` (the challenge's 50% cut), on each county's fees or the $50,000 benchmark |
 
 - `scenarioSetup(id, locality)` gives a scenario's pathway and levers in a
   county. A lever the user sets still wins over the scenario's.
 - `fee_scale` (default 1) multiplies every line of `calcSoftCosts` except
-  construction management, in every pathway. `fee_per_unit` (the $50,000
-  benchmark version) isn't built.
+  construction management, in every pathway. `fee_per_unit` (unset by
+  default) makes those lines total that much per unit, each keeping its
+  share of the county's fees; `fee_scale` then applies to it. The fee source
+  (`feeSourceLevers`: `"county"` or `"benchmark"`, $50,000) is set on the
+  baseline and the fee scenario alike: `--fee-source benchmark` on the
+  runner, and the Fee Basis lever in the tool, whose Baseline comparison
+  follows it.
 - `runParcels(parcels, { scenario })` and `node scripts/run-parcels.mjs
   <csv> --scenario fees` run the statewide table under a scenario. The parcel
   table has no TOD district yet, so TOD keeps the baseline on every parcel
@@ -126,9 +131,36 @@ reported:
   sewer, water, park, grading, the rest of `SoftCostBreakdown`) × 0.5.
   Shows that modeled Hawaiʻi fees are often well under or over $50,000.
 
-Engine change: one lever, `fee_scale` (default 1), applied to the fee lines
-in `calcSoftCosts`, and one, `fee_per_unit`, that replaces them. Construction
-management and other non-fee soft costs are not scaled.
+Built: `fee_scale` (default 1) on the fee lines in `calcSoftCosts`, and
+`fee_per_unit`, which sets their total. Construction management (3% of hard
+cost), the only soft cost that isn't a fee, is never scaled.
+
+**What "fees" covers.** Every line of the model's soft costs but
+construction management, all from each county's own schedules: building
+permit and plan review, environmental assessment, sewer, water facilities
+charge and meter, park dedication (fee in lieu at the land cost), site
+permits (grubbing, grading, stockpiling), occupancy and utility permits, and
+Honolulu's TOD zoning application and special district fees. School impact
+fees are $0 in every county (a team choice), and no county charges a traffic
+impact fee in the model. Design, legal and insurance costs aren't modeled
+separately.
+
+**County fees against the benchmark.** On a typical parcel the counties'
+fees come to about $19,000 a unit in Honolulu, $21,000 on Kauaʻi, $28,000
+in Hawaiʻi County and $33,000 on Maui (where park dedication is most of
+it), all under the challenge's $50,000.
+
+**Statewide (November 19, 2026), units on parcels rated strong:**
+
+| Fee source | Run | Honolulu | Hawaiʻi | Kauaʻi | Maui |
+| --- | --- | --- | --- | --- | --- |
+| County fees | Baseline | 985,640 | 17,170 | 0 | 296,641 |
+| County fees | Fees halved | 1,159,695 | 22,388 | 0 | 299,039 |
+| $50,000 per unit | Baseline | 36,595 | 6,570 | 0 | 228,118 |
+| $50,000 per unit | $25,000 per unit | 609,110 | 17,170 | 0 | 298,372 |
+
+The benchmark's change is much larger, because its baseline charges two to
+two and a half times what the counties do.
 
 ### 2. Parking requirement reduction
 

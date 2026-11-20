@@ -51,6 +51,19 @@ export const SCENARIO_PARKING_RATIO = 0.5;
  *  "Hawaiʻi fees" version) */
 export const SCENARIO_FEE_SCALE = 0.5;
 
+/** the challenge's comparability assumption: development fees total
+ *  $50,000 per unit. It is a fee source, not a scenario: set as the
+ *  `fee_per_unit` lever on the baseline and the fee scenario alike, so the
+ *  scenario's 50% cut is $25,000 per unit. Unset, every county's own fee
+ *  schedules apply (about $19,000 to $33,000 per unit) */
+export const BENCHMARK_FEE_PER_UNIT = 50000;
+
+export type FeeSource = "county" | "benchmark";
+
+/** the levers a fee source sets, for any scenario */
+export const feeSourceLevers = (source: FeeSource): Partial<SliderInputs> =>
+  source === "benchmark" ? { fee_per_unit: BENCHMARK_FEE_PER_UNIT } : {};
+
 export const SCENARIOS: readonly Scenario[] = [
   {
     id: "baseline",
@@ -90,12 +103,12 @@ export const SCENARIOS: readonly Scenario[] = [
     id: "fees",
     label: "Developer Fees",
     description:
-      "Development fees cut in half: permits, plan review, sewer, water, park dedication, grading and the rest (draft).",
+      "Development fees cut in half: permits, plan review, sewer, water, park dedication, grading and the rest. On each county's own fees, or on the challenge's $50,000 per unit (so $25,000).",
     setup: (locality) => ({
       pathway: baselinePathway(locality),
       levers: { fee_scale: SCENARIO_FEE_SCALE },
       available: true,
-      note: "Draft: the size of the cut is a placeholder.",
+      note: "The cut is the challenge's 50%.",
     }),
   },
 ];

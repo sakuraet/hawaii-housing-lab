@@ -265,7 +265,18 @@ const FEE_FACTORS: FactorConfig[] = [
     min: 0,
     max: 1.5,
     step: 0.05,
-    format: (v) => `${Math.round(v * 100)}% of today's`,
+    format: (v) => `${Math.round(v * 100)}%`,
+  },
+  {
+    key: "fee_source",
+    label: "Fee Basis",
+    type: "select",
+    // each county's own fee schedules, or the challenge's comparability
+    // assumption of $50,000 per unit (the Baseline comparison uses the same)
+    options: [
+      { value: "county", label: "County fees" },
+      { value: "benchmark", label: "$50,000/unit" },
+    ],
   },
   {
     key: "waivable_fee_basis",
@@ -515,7 +526,9 @@ const IPDT_TIER_INFO =
 // the citywide view's own levers, which the calculator doesn't have
 const GAUGE_LEVER_INFO: Partial<Record<keyof GaugeInputs, string>> = {
   fee_scale:
-    "Every development fee as a share of today's: building permit, plan review, sewer, water, park dedication, grading, the school impact fee and the rest. 100% is today's fees; the Developer Fees scenario starts at 50%. Construction management is not a fee and doesn't change.",
+    "Every development fee as a share of the Fee Basis: building permit, plan review, sewer, water, park dedication, grading, the school impact fee and the rest. 100% is the full fees; the Developer Fees scenario starts at 50%, the challenge's cut. Construction management is not a fee and doesn't change.",
+  fee_source:
+    "Whose fees. County fees: each county's own fees, about $19,000 to $33,000 per unit. $50,000/unit: the challenge's assumption, so results compare across submissions; each fee keeps its share of the county's total. The Baseline the summary compares against uses the same basis.",
   height_delta:
     "Raises or lowers every parcel's own height limit by the same amount. Baseline is the limit the scenario gives each parcel. A parcel pushed to 0 ft or below builds nothing.",
   far_delta:

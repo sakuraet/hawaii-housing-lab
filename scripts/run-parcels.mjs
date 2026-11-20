@@ -4,7 +4,7 @@
 //
 // Usage (from the repo root, after npm run build):
 //   node scripts/run-parcels.mjs <parcels.csv> [out-dir] [--basis land|total]
-//     [--scenario baseline|tod|parking|fees]
+//     [--scenario baseline|tod|parking|fees] [--fee-source county|benchmark]
 //
 // The table has the columns of PARCEL_COLUMNS (src/scenarios/parcels.ts);
 // extra columns are ignored. out-dir defaults to out/parcel-runs, which git
@@ -24,20 +24,24 @@ const basisAt = args.indexOf("--basis");
 const land_basis = basisAt >= 0 ? args.splice(basisAt, 2)[1] : "land";
 const scenarioAt = args.indexOf("--scenario");
 const scenario = scenarioAt >= 0 ? args.splice(scenarioAt, 2)[1] : "baseline";
+// whose fees: each county's schedules, or the challenge's $50,000 per unit
+const feeAt = args.indexOf("--fee-source");
+const fee_source = feeAt >= 0 ? args.splice(feeAt, 2)[1] : "county";
 const [input, outDir = join("out", "parcel-runs")] = args;
 if (
   !input ||
   (land_basis !== "land" && land_basis !== "total") ||
-  !SCENARIOS.some((s) => s.id === scenario)
+  !SCENARIOS.some((s) => s.id === scenario) ||
+  (fee_source !== "county" && fee_source !== "benchmark")
 ) {
   console.error(
-    "usage: node scripts/run-parcels.mjs <parcels.csv> [out-dir] [--basis land|total] [--scenario baseline|tod|parking|fees]"
+    "usage: node scripts/run-parcels.mjs <parcels.csv> [out-dir] [--basis land|total] [--scenario baseline|tod|parking|fees] [--fee-source county|benchmark]"
   );
   process.exit(1);
 }
 
 const { parcels, problems } = parseParcelCsv(readFileSync(input, "utf8"));
-const runs = runParcels(parcels, { land_basis, scenario });
+const runs = runParcels(parcels, { land_basis, scenario, fee_source });
 const summary = summarizeRuns(runs);
 
 // quotes a field only when it needs it (reasons quote zone names)
@@ -95,7 +99,7 @@ writeFileSync(join(outDir, "summary.csv"), csv(SUMMARY, summary.map((s) => SUMMA
 writeFileSync(join(outDir, "not_modeled.csv"), csv(["locality", "zone_label", "status", "reason", "parcels"], notRunRows));
 writeFileSync(join(outDir, "problems.txt"), problems.length ? problems.join("\n") + "\n" : "");
 
-console.log(`${parcels.length} parcels run from ${input} (scenario: ${scenario}, land basis: ${land_basis})`);
+console.log(`${parcels.length} parcels run from ${input} (scenario: ${scenario}, fees: ${fee_source}, land basis: ${land_basis})`);
 if (problems.length) console.log(`${problems.length} rows left out; see problems.txt`);
 console.table(summary);
 if (notRunRows.length) {
