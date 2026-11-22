@@ -1,7 +1,7 @@
 {
   "description": "Probability that a lot gets built within 5 years. Use with feasim: margin R = value of new project / (cost excluding land + parcel's current assessed land + building value).",
   "existing_house_curve": {
-    "formula": "P5 = 1 - (1 - 1/(1 + exp(-z)))^5, z = a + b*ln(R) + c*owner_occupied + d*ln(B/L) + e*steep + f*extreme_tsunami_zone + g*sea_level_rise_3.2ft_zone  (z is the annual odds)",
+    "formula": "P5 = 1 - (1 - 1/(1 + exp(-z)))^5, z = a + b*ln(R) + c*owner_occupied + d*ln(B/L) + e*steep + f*extreme_tsunami_zone + g*sea_level_rise_3.2ft_zone  (z is the log-odds of the annual probability)",
     "coef": {
       "const": -5.65,
       "lnR": 6.077,
@@ -23,7 +23,7 @@
     "terms": {
       "R": "profit ratio from the pro forma (new value / (cost + current land and building value))",
       "owner_occupied": "homeowner exemption on the roll",
-      "ln(B/L)": "assessed building value / land value; typical Oahu lot 0.27",
+      "ln(B/L)": "assessed building value / land value; typical Oahu lot 0.32",
       "steep": "10 m USGS slope at the lot centroid >= 20% (11.5% of Oahu lots)",
       "extreme_tsunami_zone": "State Hazards layer 12",
       "sea_level_rise_3.2ft_zone": "State Hazards layer 15 (1% coastal flood with 3.2 ft sea level rise)"
@@ -35,7 +35,7 @@
       "extreme_tsunami_zone": 0.73,
       "sea_level_rise_3.2ft_zone": 0.72
     },
-    "held_out": "5-fold by plat, 3 repeats: profit+owner 3444.4 -> +B/L 3430.9 -> +steep+coastal 3417.3",
+    "held_out": "out-of-sample log loss, 5-fold by plat, 3 repeats: profit+owner 3444.4 -> +B/L 3430.9 -> +steep+coastal 3417.3",
     "fitted_on": "Oahu single-family-zoned lots with an existing house, 2022 roll vs new-home permits Jan 2022 - Jun 2025 (115,114 lots, 606 rebuilt), annual hazard over 3.5 years",
     "other_islands": "borrowed from Oahu; Maui confirms the owner-occupancy effect; slope and hazard flags are available statewide",
     "valid_range_R": [
@@ -94,7 +94,7 @@
     "FEMA_flood_zone": "no effect on Oahu rebuilds (multiplier 0.93, worse held-out); none on vacant lots",
     "slope_on_vacant_lots": "no held-out gain (land value already reflects it)",
     "lava_zones_Hawaii_County": "zones 1-2 and 3 slightly lower (0.88, 0.84) but held-out gain is marginal; not used",
-    "high_fire_risk": "vacant lots in high fire-risk areas are built MORE often (1.3x), which reflects where growth is (dry leeward areas), not fire; not used because it would imply hazard attracts building",
+    "high_fire_risk": "vacant lots in high fire-risk areas are built more often (1.3x), which reflects where growth is (dry leeward areas), not fire; not used because it would imply hazard attracts building",
     "tsunami_all_zones": "covers nearly every lot; uninformative"
   }
 }

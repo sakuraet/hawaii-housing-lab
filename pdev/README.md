@@ -2,70 +2,70 @@
 
 Patrick Spence. Draft, November 2026.
 
-## What this is for
+## Purpose
 
-Feasim tells us whether a project pencils on a lot. It doesn't tell us how likely the lot is to actually be built in the next five years. That's the number we need to turn "feasible" into "homes produced." This folder holds the evidence for that step and a small set of numbers the tool can use.
+Feasim estimates whether a project is financially feasible on a given parcel. It does not estimate how likely that parcel is to be built within the next five years, and that likelihood is what turns feasible capacity into expected housing production. This folder holds the estimates for that step and the parameters the tool reads.
 
-## The idea in one paragraph
+## Method
 
-An owner builds when a new project is worth more than the property is worth today plus the cost of building. So for each lot we compare the new project's value with the lot's own assessed land and building value, not one land price for every parcel. Then, instead of assuming how often profitable lots get built, we measured it: we matched every Honolulu new-home permit from January 2022 to June 2025 to the 2022 assessment roll.
+An owner builds when the value of a new project exceeds the property's current value plus the cost of construction. For each parcel, the profit ratio compares the new project's value with that parcel's own assessed land and building value, rather than with a uniform land price. The build rate at each profit level is measured, not assumed: every Honolulu new-home permit from January 2022 to June 2025 was matched to the 2022 assessment roll.
 
-## What we found
+## Results
 
 ![Oʻahu build rates](results/oahu_build_rates.png)
 
-| Kind of lot | Share built within 5 years |
+| Parcel type | Share built within 5 years |
 |---|---|
-| Lot with a house, owner lives there | Typical Oʻahu lot: about 1% at break-even, 2% at a 10% profit, 3% at 20%. |
-| Lot with a house, rented or second home | Typical Oʻahu lot: about 2.5% at break-even, 4.5% at a 10% profit, 7% at 20%. Owner-occupied homes are rebuilt at about 40% of this rate. |
-| Vacant lot | Rises with profit, but gently: about 11% at a 20% loss, 16% at break-even, 21% at a 20% profit. Lots far below break-even (a 40% loss or worse) almost never get built: 1 of 112 on Oʻahu. |
-| Lot a developer already controls (active subdivision) | Up to about 90%, but this is an upper bound: those lots were found by where building clustered, so the rate is inflated by construction. |
-| 201H project approved by Council | About 77% of projects (90% of units) had a building permit 3–4 years later |
+| Owner-occupied house | Typical Oʻahu lot: about 1% at break-even, 2% at a 10% profit, 3% at a 20% profit. |
+| Rented house or second home | Typical Oʻahu lot: about 2.5% at break-even, 4.5% at a 10% profit, 7% at a 20% profit. Owner-occupied houses are rebuilt at about 40% of this rate. |
+| Vacant lot | About 11% at a 20% loss, 16% at break-even, 21% at a 20% profit. Lots at a 40% loss or worse are almost never built (1 of 112 on Oʻahu). |
+| Lot in an active developer subdivision | Up to about 90%. This is an upper bound: these lots were identified by clusters of construction, which inflates the rate. |
+| 201H project approved by Council | About 77% of projects (90% of units) had a building permit 3–4 years later. |
 
-Full numbers are in `pdev_table.csv`; the tool can read `pdev_params.json`.
+The full curves are in `pdev_table.csv`; the tool reads `pdev_params.json`.
 
-**How to use it:** for any set of parcels, expected new homes = sum over parcels of (chance it's built) × (net new units). We don't try to pick *which* lots get built; nobody can. A map can show the lots that become viable and the expected total.
+Expected new homes for any set of parcels = the sum over parcels of (probability of development) × (net new units). The model estimates totals. It does not predict which individual parcels will be built.
 
-## How we know it works, and where it doesn't (yet)
+## Validation
 
-- **Holding out parts of Oʻahu:** fitted on the other TMK zones, it predicts the island total within about 10%. Individual districts are off by about 30% on average (urban Honolulu is under-predicted).
-- **Holding out years: it fails.** Fitted on Jan 2022–Sep 2023 and tested on Oct 2023–Jun 2025, it under-predicts by 32–42%. Rebuilding on existing lots roughly halved in 2023 and recovered in 2024. Mortgage rates and home prices don't explain that swing.
-- **The fitting window was slow.** 2022–mid 2025 ran at 76% of the 2005–2025 average for rebuilding on existing lots. So for a typical five years, multiply by about 1.3 (range 1.05–1.44, from every 5-year window since 2005).
-- **Other islands:** the average vacant-lot rate was measured directly on Oʻahu (2.3% a year), Maui (2.5%) and Hawaiʻi County (2.1–2.7%), all with the same rules. Kauaʻi publishes no assessed values, so it borrows the others' median. The existing-house curve can only be fitted on Oʻahu, because only Honolulu publishes parcel-level permits. A version built on lot characteristics predicted Maui within 12%. It doesn't work on the Big Island's very cheap land.
-- **Mainland check:** in 8 Arizona and Oregon counties (2.1 million parcels), vacant lots outside developer subdivisions get built at 2–4% a year, the same range as Hawaiʻi. The county median predicts each Hawaiʻi area within about 30%. A more detailed lot-level model did *not* transfer, so we don't use one.
+- Geographic holdout. Fitted on the other TMK zones, the model predicts the Oʻahu total within about 10%. Individual zones are off by about 30% on average, with urban Honolulu under-predicted.
+- Holdout by year: the model fails this test. Fitted on January 2022 – September 2023 and tested on October 2023 – June 2025, it under-predicts by 32–42%. Rebuilding on existing lots roughly halved in 2023 and recovered in 2024. Mortgage rates and home prices do not explain the swing.
+- Market cycle. Rebuilding on existing lots during the 2022 – mid-2025 fitting window ran at 76% of the 2005–2025 average. For a typical five-year period, results should be multiplied by about 1.3 (range 1.05–1.44, from every five-year window since 2005).
+- Other islands. Average vacant-lot build rates were measured directly, using the same rules, on Oʻahu (2.3% a year), Maui (2.5%) and Hawaiʻi County (2.1–2.7%). Kauaʻi publishes no assessed values, so it uses the median of the other islands. The existing-house curve can only be fitted on Oʻahu, because only Honolulu publishes parcel-level permits. A version based on lot characteristics predicted Maui within 12%, but not Hawaiʻi County, where land values are very low.
+- Mainland comparison. In eight Arizona and Oregon counties (2.1 million parcels), vacant lots outside developer subdivisions are built at 2–4% a year, the same range as Hawaiʻi. The mainland county median predicts each Hawaiʻi area within about 30%. A detailed parcel-level mainland model did not transfer to Hawaiʻi and is not used.
 
-## Other splits tested (held out by neighborhood, every lot)
+## Variables tested
 
-Slope and hazard flags were joined to all 157,402 lots in the test sets: the 10 m USGS slope raster and the State's FEMA flood, extreme-tsunami, 3.2 ft sea-level-rise, lava and fire-risk layers.
+Each variable was evaluated on out-of-sample predictions, with neighborhoods held out, across all 157,402 parcels in the test sets. The parcels were joined to the USGS 10 m slope raster and to the State's FEMA flood, extreme-tsunami, 3.2 ft sea-level-rise, lava and wildfire-risk layers.
 
-**Kept, lots with a house (Oʻahu):**
-- Owner-occupied (homeowner exemption): rebuilt at 0.43x the rate.
-- Building value relative to land: each doubling cuts the rate to about 0.8x (houses with little building for their lot are torn down more).
-- Steep lot (20%+ slope, 11.5% of lots): 0.50x.
-- Extreme-tsunami zone: 0.73x. Sea-level-rise (3.2 ft) zone: 0.72x.
-- Together these cut held-out error from 3444 to 3417 (profit alone: 3504).
+Retained for existing houses (Oʻahu):
+- Owner-occupied (homeowner exemption): 0.43× the rebuild rate.
+- Building value relative to land value: each doubling lowers the rate to about 0.8×. Houses with little building value for their lot are replaced more often.
+- Steep lot (20% or greater slope, 11.5% of lots): 0.50×.
+- Extreme-tsunami zone: 0.73×. Sea-level-rise (3.2 ft) zone: 0.72×.
+- Together, these variables improved out-of-sample fit over profit and owner occupancy alone.
 
-**Rejected:**
-- FEMA flood zone: no effect on rebuilds or vacant lots.
-- Slope on vacant lots: no gain (land value already reflects it).
-- Big Island lava zones: slightly lower rates, but too small a gain to use.
-- High fire risk: vacant lots there are built *more* often (1.3x). That reflects where growth is (dry leeward areas), not fire, so it isn't used.
-- House built since 2005, zone district, lot size: no gain once profit is in the model.
+Rejected:
+- FEMA flood zone: no effect on rebuilds or on vacant lots.
+- Slope on vacant lots: no improvement, since land value already reflects it.
+- Hawaiʻi County lava zones: slightly lower rates, but too small an improvement to include.
+- High wildfire risk: vacant lots in these areas are built more often (1.3×). This reflects where growth occurs (dry leeward areas), not fire risk, so it is excluded.
+- Houses built since 2005, zoning district and lot size: no improvement once profit is included.
 
-## What it can't tell you
+## Limitations
 
-- **Apartment and business zones.** Too few were built in 2022–25 to fit a curve. The TOD, parking and fee scenarios currently borrow the single-family curve; that is an assumption, not a measurement. Older assessment rolls (2010–2021) would fix this.
-- ADUs (not fitted; Honolulu permits since 2016 suggest new options take about two years to ramp up).
-- Which specific lots get built.
-- Big swings in the market. The range above is what history shows, not a forecast.
+- Apartment and commercial zones. Too few were built in 2022–2025 to fit a curve. The TOD, parking and fee scenarios currently use the single-family curve. That is an assumption, not a measurement. Assessment rolls for 2010–2021 would allow a direct estimate.
+- ADUs are not modeled. Honolulu permits since 2016 suggest that new options take about two years to ramp up.
+- Individual parcels. The model estimates totals and does not identify which parcels will be built.
+- Large market shifts. The ranges above reflect historical variation and are not a forecast.
 
 ## Files
 
-- `pdev_table.csv`, `pdev_params.json`: the numbers.
-- `results/`: chart, district checks, held-out tests, quarterly rebuilding counts, county table for AZ/OR/HI.
-- `code/oahu/`: build the Oʻahu dataset, fit the curve, run the tests (Python 3.11; pandas, numpy, scipy, shapely, statsmodels, matplotlib).
-- `code/hawaii_islands/`: Maui and Hawaiʻi County measurements.
+- `pdev_params.json`, `pdev_table.csv`: model parameters and curves.
+- `results/`: charts, zone-level checks, out-of-sample tests, quarterly rebuilding counts and the AZ/OR/HI county table.
+- `code/oahu/`: builds the Oʻahu dataset, fits the curve and runs the tests (Python 3.11; pandas, numpy, scipy, shapely, statsmodels, matplotlib).
+- `code/hawaii_islands/`: Maui and Hawaiʻi County measurements, slope and hazard joins, and the island chart.
 - `code/mainland_check/`: the Arizona and Oregon comparison.
-- `DATA_SOURCES.md`: where every dataset comes from. Raw data isn't committed; the scripts expect it in the working folder.
+- `DATA_SOURCES.md`: the source of every dataset. Raw data is not committed; the scripts expect it in the working folder.
 
-Analysis done with AI assistance (Claude), to be listed in DISCLOSURES.md.
+Analysis was conducted with AI assistance (Claude).
