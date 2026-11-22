@@ -18,8 +18,8 @@ All sources are public and were retrieved in October and November 2026. Raw file
 | County building permits, AZ / OR / HI, 2005–2025 | Census Building Permits Survey, www2.census.gov/econ/bps/County/ | County comparison table (AZ, OR, HI) |
 | County population 2020–2024 | Census population estimates, co-est2024-alldata.csv | Permits per resident, for the county comparison |
 | Mortgage rate, Honolulu house prices, construction materials prices | FRED: MORTGAGE30US, ATNHPIUS46520Q, WPUSI012011 | Market-cycle test |
-| Slope | USGS 3D Elevation Program, 10 m elevation, slope derived | Steep-lot test |
-| Hazard zones (FEMA flood, tsunami evacuation and extreme tsunami, 3.2 ft sea-level rise, lava flow, wildfire risk) | Hawaiʻi Statewide GIS Program hazard layers | Hazard tests |
+| Slope | Hawaiʻi Statewide GIS Program, USGS 10 m slope (percent) image service | Steep-lot test |
+| Hazard zones (FEMA flood, tsunami evacuation and extreme tsunami, 3.2 ft sea-level rise, lava flow, wildfire risk) | Hawaiʻi Statewide GIS Program, Hazards MapServer (layers 3–8, 11, 12, 14, 15) | Hazard tests |
 | Arizona and Oregon parcels with values and year built | Maricopa County (gis.maricopa.gov), Oregon Metro RLIS (Multnomah, Washington, Clackamas), Jackson, Lane, Josephine and Klamath county GIS services | Mainland check |
 
 No personal data is used in the analysis or stored in any output. On Kauaʻi, the owner-name field was used only to exclude government-owned parcels; elsewhere, owner names and mailing addresses were not downloaded or were removed.

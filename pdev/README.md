@@ -71,7 +71,7 @@ All tests below are out-of-sample: the model is fitted on one part of the data a
 
 ## Variables tested
 
-Each variable was kept only if it improved out-of-sample predictions. For this test, the tax-map plats were split into five groups, each group was held out in turn, and the whole procedure was repeated three times with different splits. All 157,402 parcels in the test sets were joined to the USGS 10 m slope data and to the State's FEMA flood, extreme-tsunami, 3.2 ft sea-level-rise, lava and wildfire-risk layers.
+Each variable was kept only if it improved out-of-sample predictions. For this test, the tax-map plats were split into five groups, each group was held out in turn, and the whole procedure was repeated three times with different splits. All 157,402 parcels in the test sets were joined to the USGS 10 m slope data (served by the Hawaiʻi Statewide GIS Program) and to the State's FEMA flood, extreme-tsunami, 3.2 ft sea-level-rise, lava and wildfire-risk layers.
 
 Retained for existing houses (Oʻahu), as multipliers on the annual rebuild rate:
 
