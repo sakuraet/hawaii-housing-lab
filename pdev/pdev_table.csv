@@ -1,0 +1,18 @@
+lot_type,profit_margin,share_built_5yr,low_5yr,high_5yr,applies_to,evidence
+house_rented_or_second_home,-20%,0.006,,,Oahu single-family zones (borrowed for Maui),"Oahu curve at a typical lot (median building/land, not steep, not coastal); see pdev_params.json"
+house_rented_or_second_home,-10%,0.013,,,Oahu single-family zones (borrowed for Maui),"Oahu curve at a typical lot (median building/land, not steep, not coastal); see pdev_params.json"
+house_rented_or_second_home,0%,0.025,,,Oahu single-family zones (borrowed for Maui),"Oahu curve at a typical lot (median building/land, not steep, not coastal); see pdev_params.json"
+house_rented_or_second_home,+10%,0.044,,,Oahu single-family zones (borrowed for Maui),"Oahu curve at a typical lot (median building/land, not steep, not coastal); see pdev_params.json"
+house_rented_or_second_home,+20%,0.073,,,Oahu single-family zones (borrowed for Maui),"Oahu curve at a typical lot (median building/land, not steep, not coastal); see pdev_params.json"
+house_owner_occupied,-20%,0.003,,,Oahu single-family zones (borrowed for Maui),"Oahu curve at a typical lot (median building/land, not steep, not coastal); see pdev_params.json"
+house_owner_occupied,-10%,0.006,,,Oahu single-family zones (borrowed for Maui),"Oahu curve at a typical lot (median building/land, not steep, not coastal); see pdev_params.json"
+house_owner_occupied,0%,0.011,,,Oahu single-family zones (borrowed for Maui),"Oahu curve at a typical lot (median building/land, not steep, not coastal); see pdev_params.json"
+house_owner_occupied,+10%,0.019,,,Oahu single-family zones (borrowed for Maui),"Oahu curve at a typical lot (median building/land, not steep, not coastal); see pdev_params.json"
+house_owner_occupied,+20%,0.032,,,Oahu single-family zones (borrowed for Maui),"Oahu curve at a typical lot (median building/land, not steep, not coastal); see pdev_params.json"
+vacant,-40%,0.066,,,Oahu (curve); other islands use their measured average,fitted curve on Oahu vacant lots; see pdev_params.json
+vacant,-20%,0.108,,,Oahu (curve); other islands use their measured average,fitted curve on Oahu vacant lots; see pdev_params.json
+vacant,0%,0.156,,,Oahu (curve); other islands use their measured average,fitted curve on Oahu vacant lots; see pdev_params.json
+vacant,+10%,0.182,,,Oahu (curve); other islands use their measured average,fitted curve on Oahu vacant lots; see pdev_params.json
+vacant,+20%,0.208,,,Oahu (curve); other islands use their measured average,fitted curve on Oahu vacant lots; see pdev_params.json
+developer_controlled,any,0.9,0.8,0.9,Oahu (141 lots),"upper bound: lots identified by clusters of building in the same window, so biased upward"
+approved_201H_project,any,0.77,0.77,0.9,Oahu (13 projects approved 2019-21),share of projects (77%) and units (90%) with a building permit 3-4 years after Council approval; DPP status report Feb 2024

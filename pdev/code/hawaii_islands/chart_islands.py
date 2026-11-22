@@ -54,4 +54,4 @@ fig.text(0.07,0.944,'Solid lines are measured on that island; dotted or dashed l
 fig.text(0.07,0.034,'Approved projects: 13 Council-approved 201H projects (2019–21) with a building permit 3–4 years later (DPP, Feb 2024). Vacant lots: homes completed on assessment rolls,',fontsize=5.9,color=MUT)
 fig.text(0.07,0.018,'one profit slope shared by all islands. Lots with a house: Honolulu permits 2022–mid 2025, typical lot (not steep, not coastal). Single-family zones only.',fontsize=5.9,color=MUT)
 fig.subplots_adjust(left=0.1,right=0.98,top=0.91,bottom=0.12)
-fig.savefig('/mnt/user-data/outputs/pdev_by_island.png',facecolor='white')
+fig.savefig('../../results/pdev_by_island.png',facecolor='white')
