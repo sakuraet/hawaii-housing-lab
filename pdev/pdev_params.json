@@ -1,0 +1,100 @@
+{
+  "description": "Probability that a lot gets built within 5 years. Use with feasim: margin R = value of new project / (cost excluding land + parcel's current assessed land + building value).",
+  "existing_house_curve": {
+    "formula": "P5 = 1 - (1 - 1/(1 + exp(-z)))^5, z = a + b*ln(R) + c*owner_occupied + d*ln(B/L) + e*steep + f*extreme_tsunami_zone + g*sea_level_rise_3.2ft_zone  (z is the annual odds)",
+    "coef": {
+      "const": -5.65,
+      "lnR": 6.077,
+      "own": -0.843,
+      "lnbl": -0.314,
+      "steep": -0.699,
+      "tsunami_extreme": -0.318,
+      "slr32": -0.327
+    },
+    "bootstrap_sd": {
+      "const": 0.141,
+      "lnR": 0.507,
+      "own": 0.076,
+      "lnbl": 0.047,
+      "steep": 0.157,
+      "tsunami_extreme": 0.137,
+      "slr32": 0.15
+    },
+    "terms": {
+      "R": "profit ratio from the pro forma (new value / (cost + current land and building value))",
+      "owner_occupied": "homeowner exemption on the roll",
+      "ln(B/L)": "assessed building value / land value; typical Oahu lot 0.27",
+      "steep": "10 m USGS slope at the lot centroid >= 20% (11.5% of Oahu lots)",
+      "extreme_tsunami_zone": "State Hazards layer 12",
+      "sea_level_rise_3.2ft_zone": "State Hazards layer 15 (1% coastal flood with 3.2 ft sea level rise)"
+    },
+    "rate_multipliers": {
+      "owner_occupied": 0.43,
+      "each doubling of B/L": 0.8,
+      "steep": 0.5,
+      "extreme_tsunami_zone": 0.73,
+      "sea_level_rise_3.2ft_zone": 0.72
+    },
+    "held_out": "5-fold by plat, 3 repeats: profit+owner 3444.4 -> +B/L 3430.9 -> +steep+coastal 3417.3",
+    "fitted_on": "Oahu single-family-zoned lots with an existing house, 2022 roll vs new-home permits Jan 2022 - Jun 2025 (115,114 lots, 606 rebuilt), annual hazard over 3.5 years",
+    "other_islands": "borrowed from Oahu; Maui confirms the owner-occupancy effect; slope and hazard flags are available statewide",
+    "valid_range_R": [
+      0.6,
+      1.25
+    ]
+  },
+  "vacant_lot": {
+    "formula": "P5 = 1 - (1 - 1/(1 + exp(-(a_island + b*ln(R)))))^5   (annual hazard, 5 years)",
+    "b_shared": 2.111,
+    "a_island": {
+      "Oahu": -3.783,
+      "Maui": -3.913,
+      "Hawaii Co RS/RD": -3.483,
+      "Hawaii Co rural": -4.644
+    },
+    "a_Kauai": {
+      "central": -3.726,
+      "range": [
+        -3.913,
+        -3.483
+      ],
+      "basis": "interpolated: mean and range of the town-type islands (Oahu, Maui, Hawaii Co RS/RD); permits per resident did not order the islands"
+    },
+    "cost_rule": "each island's hard cost per sq ft set so its median vacant lot has R = 1 (Oahu $150, Maui $123, Hawaii Co towns $92, rural $38)",
+    "outcome": "home completed and recorded on the assessment roll (Oahu 2022->2026, Maui 2020->2025, Hawaii Co ~2022->2026)",
+    "tests": "one shared slope beats a flat rate and fits as well as separate slopes, held out by plat across all four island areas; Maui alone is close to flat (44 builds)"
+  },
+  "developer_controlled_5yr": {
+    "value": "about 80-90% (upper bound)",
+    "caution": "those lots were identified by clusters of building in the same window, so the rate is biased upward by construction. Prefer the approved-project rate, or count subdivisions by each project's own schedule."
+  },
+  "approved_project_5yr": {
+    "projects": 0.77,
+    "units": 0.9,
+    "lag_years": "3-4 to building permit",
+    "basis": "13 Council-approved 201H projects 2019-21 (DPP status report, Feb 2024). Oahu only; borrowed for other islands. Of 13 approved 2022-24, 1 had a permit by Feb 2024."
+  },
+  "market_conditions_multiplier": {
+    "central": 1.32,
+    "range": [
+      1.05,
+      1.44
+    ],
+    "basis": "2022-mid 2025 was a slow stretch: rebuilding on existing Oahu lots ran at 76% of its 2005-2025 average. Multiply the curve by this to get a typical five years; the range is the 10th-90th percentile of 5-year windows since 2005. Assumes the slowdown hit all profit levels proportionally."
+  },
+  "not_covered": [
+    "apartment and business zones (too few 2022-25 events to fit; the TOD, parking and fee scenarios currently borrow the single-family curve)",
+    "ADUs",
+    "which specific lots get built: use expected units = sum of P5 x net new units"
+  ],
+  "tested_and_rejected": {
+    "house_built_since_2005": "profit already captures it",
+    "zone_district": "worse on held-out data",
+    "lot_size": "adds nothing",
+    "FEMA_flood_zone": "no effect on Oahu rebuilds (multiplier 0.93, worse held-out); none on vacant lots",
+    "slope_on_vacant_lots": "no held-out gain (land value already reflects it)",
+    "lava_zones_Hawaii_County": "zones 1-2 and 3 slightly lower (0.88, 0.84) but held-out gain is marginal; not used",
+    "high_fire_risk": "vacant lots in high fire-risk areas are built MORE often (1.3x), which reflects where growth is (dry leeward areas), not fire; not used because it would imply hazard attracts building",
+    "tsunami_all_zones": "covers nearly every lot; uninformative"
+  }
+}
