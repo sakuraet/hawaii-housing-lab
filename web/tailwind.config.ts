@@ -2,22 +2,18 @@ import type { Config } from "tailwindcss";
 import defaultTheme from "tailwindcss/defaultTheme";
 import animate from "tailwindcss-animate";
 
-// the theme the gauge was designed with: the UHERO palette and shadcn/ui's
-// color variables (set in src/app/globals.css)
+import { BRAND, LOCK_COLOR } from "./src/lib/theme";
+
+// the Hawaiʻi Housing Lab palette (src/lib/theme.ts) and shadcn/ui's color
+// variables (set in src/app/globals.css)
 const config: Config = {
   darkMode: ["class"],
   content: ["./src/**/*.{ts,tsx}"],
   theme: {
     extend: {
       colors: {
-        ucyan: "#7EC4CA",
-        ublue: "#1D667F",
-        ubeige: "#EEECE1",
-        uorange: "#F6A01B",
-        ugray: "#505050",
-        ugreen: "#9BBB59",
-        upurple: "#8064A2",
-        uteal: "#4BACC6",
+        brand: { ...BRAND, DEFAULT: BRAND[700] },
+        lock: LOCK_COLOR,
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",

@@ -1,5 +1,6 @@
 "use client";
 
+import { LOCK_COLOR } from "@/lib/theme";
 import {
   useCallback,
   useDeferredValue,
@@ -501,11 +502,8 @@ export function PolicyGaugeDashboard() {
 
   // ── Aggregate financial metrics across all valid parcels ────────────────
   const summary = useMemo(
-    () => ({
-      ...summarize(parcelResults, todStatus),
-      scenario: mapInputs.scenario ?? "baseline",
-    }),
-    [parcelResults, mapInputs.scenario, todStatus]
+    () => summarize(parcelResults, todStatus),
+    [parcelResults, todStatus]
   );
 
   // the Baseline scenario on the same parcels, every lever at its default:
@@ -649,7 +647,7 @@ export function PolicyGaugeDashboard() {
           aria-expanded={leversOpen}
           aria-controls="policy-levers"
           aria-label={leversOpen ? "Hide policy levers" : "Show policy levers"}
-          className="absolute left-full top-1/2 flex -translate-y-1/2 flex-col items-center gap-1.5 rounded-r-xl bg-[#1D667F] px-2 py-3 text-white shadow-lg shadow-slate-900/20 transition-colors active:bg-[#2a7d99] lg:hidden"
+          className="absolute left-full top-1/2 flex -translate-y-1/2 flex-col items-center gap-1.5 rounded-r-xl bg-brand px-2 py-3 text-white shadow-lg shadow-slate-900/20 transition-colors active:bg-brand-600 lg:hidden"
         >
           {leversOpen ? (
             <ChevronLeft className="size-4" aria-hidden />
@@ -662,7 +660,7 @@ export function PolicyGaugeDashboard() {
           {lockCount > 0 && (
             <span
               className="flex size-4 items-center justify-center rounded-full text-[10px] font-bold text-white"
-              style={{ backgroundColor: "#F6A01B" }}
+              style={{ backgroundColor: LOCK_COLOR }}
               title={`${lockCount} locked`}
             >
               {lockCount}
@@ -852,7 +850,7 @@ function PanelToggle({
       aria-pressed={pressed}
       className={`flex items-center gap-1.5 border-l border-slate-300 px-2.5 py-1.5 transition-colors first:border-l-0 ${
         pressed
-          ? "bg-[#1D667F] text-white"
+          ? "bg-brand text-white"
           : "hover:bg-slate-100 hover:text-slate-900"
       }`}
     >

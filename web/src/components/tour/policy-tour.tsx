@@ -1,5 +1,6 @@
 "use client";
 
+import { DEFAULT_COLOR, LOCK_COLOR } from "@/lib/theme";
 import { GuidedTour, type TourStep } from "@/components/tour/guided-tour";
 
 // =========================================================
@@ -9,8 +10,8 @@ import { GuidedTour, type TourStep } from "@/components/tour/guided-tour";
 // selector, lock legend, reset), so these steps run unchanged in either view.
 // =========================================================
 
-const FACTOR_TEAL = "#4BACC6";
-const FACTOR_ORANGE = "#F6A01B";
+const FACTOR_DEFAULT = DEFAULT_COLOR;
+const FACTOR_ORANGE = LOCK_COLOR;
 
 function Swatch({ color }: { color: string }) {
   return (
@@ -35,7 +36,7 @@ const PROGRAM_STEP: TourStep = {
   body: (
     <>
       <p>
-        Each button is a policy, the same in every county: the Baseline
+        Each card is a policy, the same in every county: the Baseline
         (today&apos;s rules), transit-oriented development (TOD), no parking
         minimums, and lower developer fees.
       </p>
@@ -67,7 +68,7 @@ const LOCK_STEP: TourStep = {
   body: (
     <>
       <p>
-        <Swatch color={FACTOR_TEAL} />
+        <Swatch color={FACTOR_DEFAULT} />
         <span className="font-bold">Teal</span>{" "}
         <span>levers are at the scenario&apos;s default.</span>
       </p>
@@ -110,17 +111,17 @@ const DONE_STEP: TourStep = {
 };
 
 // =========================================================
-// CITYWIDE VIEW (gauge)
+// THE MAP VIEW (gauge)
 // =========================================================
 
 const GAUGE_STEPS: TourStep[] = [
   {
-    title: "Welcome to the Citywide View",
+    title: "Welcome to the Hawaiʻi Housing Lab",
     body: (
       <>
         <p>
           This map applies one set of assumptions to every eligible parcel in
-          Honolulu and shows where development pencils.
+          the county you pick and shows where development pencils.
         </p>
         <p>
           This tour takes about a minute. Some steps ask you to try a control,
@@ -156,7 +157,7 @@ const GAUGE_STEPS: TourStep[] = [
   },
   {
     target: "summary",
-    title: "The citywide picture",
+    title: "The county picture",
     body: (
       <>
         <p>

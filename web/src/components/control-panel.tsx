@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { SCENARIOS, scenarioSetup, type ScenarioId, type TodTier } from "feasim-challenge";
+import { SCENARIOS, scenarioSetup, type TodTier } from "feasim-challenge";
 
 import {
   Select,
@@ -14,7 +14,9 @@ import {
 import { SliderSlim as Slider } from "@/components/slider-slim";
 import { PROGRAMS as CALCULATOR_PROGRAMS } from "@/localities/honolulu/pathways";
 import { InfoTip } from "@/components/info-tip";
-import { ProgramSelector } from "@/components/program-selector";
+import { CountyTabs } from "@/components/county-tabs";
+import { ScenarioPicker } from "@/components/scenario-picker";
+import { BRAND_COLOR, DEFAULT_COLOR, LOCK_COLOR } from "@/lib/theme";
 import { ToolbarButton } from "@/components/toolbar-button";
 import { PolicyTour } from "@/components/tour/policy-tour";
 import type { GaugeInputs } from "@/localities/honolulu/pathway-defaults";
@@ -45,7 +47,6 @@ interface Props {
   onTourStart?: () => void;
   /** header text, for the full page */
   title?: string;
-  subtitle?: string;
   description?: string;
   /** which tour the header launches */
   tour?: "gauge";
@@ -54,8 +55,8 @@ interface Props {
 }
 
 // lock state colours
-const FACTOR_TEAL = "#4BACC6";
-const FACTOR_ORANGE = "#F6A01B";
+const FACTOR_DEFAULT = DEFAULT_COLOR;
+const FACTOR_ORANGE = LOCK_COLOR;
 
 // same grouping as the development calculator
 const CATEGORY_ORDER = [
@@ -431,7 +432,7 @@ const BILL6_FACTORS: FactorConfig[] = [...STANDARD_FACTORS];
 // PROGRAM REGISTRY
 // =========================================================
 
-// The scenario buttons, the same in every county. Each runs one of
+// The scenario cards, the same in every county. Each runs one of
 // Honolulu's two pathways there (Standard for the baseline, parking and fees;
 // TOD for TOD) and current zoning in the other counties, so the lever sets
 // below are by pathway
@@ -617,7 +618,7 @@ function SliderRow({
         <span className="flex items-center gap-1">
           <span
             className="text-xs font-semibold tabular-nums"
-            style={{ color: locked ? FACTOR_ORANGE : "#1D667F" }}
+            style={{ color: locked ? FACTOR_ORANGE : BRAND_COLOR }}
           >
             {ready ? config.format(shown) : "—"}
           </span>
@@ -671,7 +672,7 @@ function OptionSelect({
   locked?: boolean;
   info?: string;
 }) {
-  const tone = locked ? FACTOR_ORANGE : FACTOR_TEAL;
+  const tone = locked ? FACTOR_ORANGE : FACTOR_DEFAULT;
   return (
     <div className="flex items-center gap-1.5">
       <span className="flex items-center gap-0.5">
@@ -725,9 +726,8 @@ export function ControlPanel({
   county,
   onCountyChange,
   countyNote,
-  title = "Citywide View",
-  subtitle,
-  description = `Adjust policy levers to see how they affect residential development feasibility across ${countyOf(county).label} parcels.`,
+  title = "Hawaiʻi Housing Lab",
+  description = `Adjust policy levers to see how they affect multi-family development feasibility across ${countyOf(county).label} parcels.`,
   tour = "gauge",
   tourAutoStart = true,
 }: Props) {
@@ -735,6 +735,10 @@ export function ControlPanel({
   const scenario = inputs.scenario ?? "baseline";
   // what the scenario does here, and what it still lacks in this county
   const setup = scenarioSetup(scenario, county);
+  // scenarios not defined in this county yet (TOD off Oʻahu)
+  const unavailable = new Set(
+    SCENARIOS.filter((s) => !scenarioSetup(s.id, county).available).map((s) => s.id)
+  );
   const scenarioNote = [
     SCENARIOS.find((s) => s.id === scenario)?.description,
     setup.note,
@@ -789,19 +793,13 @@ export function ControlPanel({
   return (
     <div className="relative flex h-full flex-col overflow-y-auto bg-white">
       {/* Header */}
-      <div className="relative min-h-[220px] shrink-0 px-6 pb-10 pt-8 sm:min-h-[250px] sm:px-8 sm:pb-12 sm:pt-10">
-        <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(12,26,44,0.85),rgba(30,64,88,0.6))]" />
-        <div className="absolute inset-x-0 bottom-0 h-24 bg-[linear-gradient(to_bottom,transparent,rgb(255,255,255))]" />
-
-        <div className="relative z-10 flex flex-col gap-3">
-          <div className="flex items-center justify-between gap-3">
+      <div className="shrink-0 border-t-4 border-brand px-6 pb-6 pt-6 sm:px-8 sm:pt-7">
+        <div className="flex flex-col gap-4">
+          <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
-              <h1 className="text-xl font-bold text-white sm:text-2xl">
+              <h1 className="text-xl font-bold tracking-tight text-slate-900 sm:text-2xl">
                 {title}
               </h1>
-              {subtitle && (
-                <div className="mt-0.5 text-sm text-slate-200">{subtitle}</div>
-              )}
             </div>
             <PolicyTour
               view={tour}
@@ -809,33 +807,28 @@ export function ControlPanel({
               autoStart={tourAutoStart}
             />
           </div>
-          <p className="mb-3 text-xs leading-relaxed text-slate-300 sm:text-sm">
+          <p className="text-xs leading-relaxed text-slate-600 sm:text-sm">
             {description}
           </p>
-          <div className="flex flex-col gap-3">
-            <ProgramSelector
-              label="County"
-              tourId="county-selector"
-              programs={COUNTIES}
-              value={county}
-              onChange={onCountyChange}
-              note={countyNote}
-            />
-            {/* the scenarios, the same in every county */}
-            <ProgramSelector
-              label="Scenario"
-              tourId="scenario-selector"
-              programs={SCENARIO_OPTIONS}
-              value={scenario}
-              onChange={(id) => set("scenario", id as ScenarioId)}
-              note={scenarioNote}
-            />
-          </div>
+          <CountyTabs
+            counties={COUNTIES}
+            value={county}
+            onChange={onCountyChange}
+            note={countyNote}
+          />
+          {/* the scenarios, the same in every county */}
+          <ScenarioPicker
+            scenarios={SCENARIO_OPTIONS}
+            value={scenario}
+            onChange={(id) => set("scenario", id)}
+            unavailable={unavailable}
+            note={scenarioNote}
+          />
         </div>
       </div>
 
       {/* Policy levers */}
-      <div className="z-10 -mt-4 space-y-4 px-6 pb-8 sm:px-8">
+      <div className="space-y-4 px-6 pb-8 sm:px-8">
         {factors.length > 0 ? (
           <div
             data-tour="levers"
@@ -946,7 +939,7 @@ export function ControlPanel({
                     <span className="flex items-center gap-1">
                       <span
                         className="inline-block size-2.5 rounded-sm"
-                        style={{ backgroundColor: FACTOR_TEAL }}
+                        style={{ backgroundColor: FACTOR_DEFAULT }}
                       />
                       <span className="text-slate-600">Unlocked</span>
                     </span>

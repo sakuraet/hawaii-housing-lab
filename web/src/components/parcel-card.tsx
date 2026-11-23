@@ -350,7 +350,7 @@ export function ParcelInfoOverlay({
             type="button"
             data-tour="open-summary"
             onClick={onOpenSummary}
-            className={`w-full rounded-lg bg-[#1D667F] px-3 py-2 text-[11px] font-semibold text-white transition hover:bg-[#1D667F]/90 ${
+            className={`w-full rounded-lg bg-brand px-3 py-2 text-[11px] font-semibold text-white transition hover:bg-brand-600 ${
               compact ? "" : "mt-3"
             }`}
           >

@@ -1,5 +1,6 @@
 "use client";
 
+import { BRAND_COLOR } from "@/lib/theme";
 import {
   useCallback,
   useEffect,
@@ -67,7 +68,7 @@ const SWIPE_PX = 50; // horizontal travel that counts as a swipe on the sheet
 // tips (1300) so one opened during the tour isn't dimmed
 const Z = 1200;
 
-const BRAND = "#1D667F";
+const BRAND = BRAND_COLOR;
 
 // the shade over everything outside the spotlight
 const SHADE = "rgba(15, 23, 42, 0.55)";
@@ -301,7 +302,7 @@ export function GuidedTour({
   className,
   onStart,
 }: GuidedTourProps) {
-  const storageKey = `uhero-tour:${id}`;
+  const storageKey = `hhl-tour:${id}`;
   const titleId = useId();
   const [open, setOpen] = useState(false);
   const [index, setIndex] = useState(0);
@@ -844,7 +845,7 @@ function DesktopCard({
               "rounded-md px-3.5 py-1.5 text-sm font-semibold transition-colors",
               blocked
                 ? "border border-slate-200 text-slate-600 hover:bg-slate-50"
-                : "bg-[#1D667F] text-white hover:bg-[#2a7d99]"
+                : "bg-brand text-white hover:bg-brand-600"
             )}
           >
             {nextLabel(nav)}
@@ -1030,7 +1031,7 @@ function MobileSheet({
             "h-11 flex-[2] rounded-lg text-sm font-semibold",
             blocked
               ? "border border-slate-200 text-slate-700 active:bg-slate-100"
-              : "bg-[#1D667F] text-white active:bg-[#2a7d99]"
+              : "bg-brand text-white active:bg-brand-600"
           )}
         >
           {nextLabel(nav)}

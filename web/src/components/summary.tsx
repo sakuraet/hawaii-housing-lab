@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { SCENARIOS } from "feasim-challenge";
 
 interface SummaryOverlayProps {
   summary: {
@@ -19,8 +18,6 @@ interface SummaryOverlayProps {
     pctStrong: number | null;
     pctMarginal: number | null;
     pctPoor: number | null;
-    /** the scenario's id */
-    scenario: string;
   };
   /**
    * Small screens: a one-line bar of the region, unit total and level shares
@@ -31,11 +28,6 @@ interface SummaryOverlayProps {
   expanded?: boolean;
   onExpandedChange?: (expanded: boolean) => void;
 }
-
-// the scenario buttons' names
-export const SCENARIO_LABEL: Record<string, string> = Object.fromEntries(
-  SCENARIOS.map((s) => [s.id, `${s.label} `])
-);
 
 function pct(v: number | null, decimals = 1) {
   if (v == null || !isFinite(v)) return "—";
@@ -67,9 +59,6 @@ export function ScenarioSummaryOverlay({
     onExpandedChange?.(next);
   };
 
-  const programLabel =
-    SCENARIO_LABEL[summary.scenario] ?? summary.scenario.toUpperCase();
-
   if (compact) {
     return (
       <div className="rounded-2xl border border-white/60 bg-white/70 text-slate-900 shadow-sm backdrop-blur-xl backdrop-saturate-150">
@@ -80,13 +69,8 @@ export function ScenarioSummaryOverlay({
           className="flex w-full items-center gap-3 px-3 py-2 text-left"
         >
           <div className="min-w-0 flex-1">
-            <div className="flex items-baseline justify-between gap-2">
-              <span className="truncate text-sm font-semibold tracking-tight">
-                {summary.title}
-              </span>
-              <span className="shrink-0 text-[10px] font-medium uppercase tracking-[0.2em] text-slate-500">
-                {programLabel}
-              </span>
+            <div className="truncate text-sm font-semibold tracking-tight">
+              {summary.title}
             </div>
             {/* the desktop card's two counts, each with its change */}
             <div className="mt-0.5 flex flex-wrap items-baseline gap-x-3 text-xs tabular-nums text-slate-500">
@@ -135,13 +119,8 @@ export function ScenarioSummaryOverlay({
   return (
     <div className="z-10 rounded-2xl border border-white/60 bg-white/60 p-4 text-slate-900 backdrop-blur-xl backdrop-saturate-150">
       {/* Header */}
-      <div className="flex items-baseline justify-between">
-        <div className="text-lg font-semibold tracking-tight text-slate-900">
-          {summary.title}
-        </div>
-        <div className="text-[10px] font-medium uppercase tracking-[0.2em] text-slate-500">
-          {programLabel}
-        </div>
+      <div className="text-lg font-semibold tracking-tight text-slate-900">
+        {summary.title}
       </div>
 
       {/* Total units */}
@@ -334,7 +313,7 @@ function Delta({
   );
 }
 
-// affordable and market units as a split bar; affordable takes the UHERO blue
+// affordable and market units as a split bar; affordable takes the brand color
 export function UnitSplit({
   affordable,
   market,
@@ -347,11 +326,11 @@ export function UnitSplit({
   return (
     <div className="mt-2">
       <div className="flex h-1.5 overflow-hidden rounded-full bg-slate-300">
-        <div className="bg-[#1D667F]" style={{ width: `${share * 100}%` }} />
+        <div className="bg-brand" style={{ width: `${share * 100}%` }} />
       </div>
       <div className="mt-1.5 flex justify-between text-xs text-slate-500">
         <span className="flex items-center gap-1.5">
-          <span className="h-2 w-2 rounded-full bg-[#1D667F]" />
+          <span className="h-2 w-2 rounded-full bg-brand" />
           <span className="font-semibold tabular-nums text-slate-900">
             {affordable.toLocaleString()}
           </span>
