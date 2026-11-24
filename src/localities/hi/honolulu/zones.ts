@@ -190,7 +190,8 @@ export const zones: Record<string, ZoneRules> = {
     step_back: STEPBACK_40,
   }),
 
-  // residential: lot-scaled FAR before and in the TOD base; Ord. 26-7 FAR 2.0
+  // residential: lot-scaled FAR before and in the TOD base; Ord. 26-7 FAR 2.0.
+  // Table 21-5.1 doesn't permit multi-unit dwellings here, so parcel runs skip it
   "R-5": {
     far: {
       standard: FAR_LOW_DENSITY,
@@ -206,8 +207,8 @@ export const zones: Record<string, ZoneRules> = {
     },
     commercial_coverage: 0,
     bicycle_required: true,
-    residential_permitted: true,
-    source: T21_3_3,
+    residential_permitted: false,
+    source: `${T21_3_3}; uses ROH Table 21-5.1`,
   },
 
   // business and business mixed use (Table 21-3.4); coverage not regulated

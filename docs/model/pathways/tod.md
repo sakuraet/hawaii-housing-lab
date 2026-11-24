@@ -35,7 +35,7 @@ PD-T has four tiers and IPD-T has two; Base is the default for both. Minor and m
 | PD-T | Base | Underlying zoning, no open-space bonus (§ 21-9.100-8(a)(1)(B)) | Zoned height | Nothing: by right |
 | PD-T | Minor Permit | 3.5 in B-2 and BMX-3; 1.2 × base in apartment, AMX, industrial and IMX-1; base in B-1 and BMX-4 | Base + 60 ft or 2 × base, whichever is less, capped at the parenthetical | Minor special district permit; no minimum lot size |
 | PD-T | Major Permit | Same as Minor (the § 21-9.100-8 table has no major row) | Base + 120 ft or 3 × base, whichever is less, capped at the parenthetical | Major special district permit; no minimum lot size |
-| PD-T | PD-T Approval | 7.0 in B-2 and BMX-3; 2 × base in apartment, AMX, industrial and IMX-1; base in B-1 and BMX-4 | The parenthetical height (§ 21-9.100-10(c)(2)); see Heights where there is none | Council approval of a conceptual plan; 20,000 sq ft minimum |
+| PD-T | PD-T Approval | 7.0 in B-2 and BMX-3; 2 × base in apartment, AMX, industrial and IMX-1; base in B-1 and BMX-4 | The parenthetical height (§ 21-9.100-10(c)(2)); see Heights where there is none | Council approval of a conceptual plan; 20,000 sq ft minimum; entirely in the State urban district |
 | IPD-T | Base | Underlying zoning plus the zone's open-space bonus | Zoned height | Nothing: by right |
 | IPD-T | IPD-T Approval | 2 × underlying FAR, at most 7.5; in B-2, BMX-3, BMX-4 and IMX-1 the FAR doubles after the open-space bonus (§ 21-9.100-5(e)(1)(C)); a station plan's FAR where higher | The station plan's height (or the zoned height if higher); with no plan figure, 2 × zoned height, at most 450 ft | Council approval of a conceptual plan; 20,000 sq ft minimum; entirely in the State urban district |
 
@@ -49,7 +49,7 @@ Every parcel gets one of four statuses at its regime's tier, checked in this ord
 | --- | --- | --- | --- | --- |
 | Not modeled | The parcel data has no height limit | Nothing | Gray | Left out |
 | Not applicable | Housing is not permitted in the zone at this tier (see Industrial zones) | 0 units | Orange | Left out |
-| Ineligible | Outside every TOD boundary; zone not in § 21-9.100-5(b)(5); lot under 20,000 sq ft (except PD-T minor and major permits); or not entirely in the State urban district | The base zoning envelope | Feasibility color | Counted |
+| Ineligible | Outside every TOD boundary; zone not in § 21-9.100-5(b)(5); lot under 20,000 sq ft; or not entirely in the State urban district. The last two don't apply to PD-T minor and major permits. IPD-T industrial lots that fail these are not applicable instead (see Industrial zones) | The base zoning envelope; at most 10 units in IMX-1 under PD-T | Feasibility color | Counted |
 | Eligible | Clears every check | The tier's envelope | Feasibility color | Counted |
 
 Eligible districts (§ 21-9.100-5(b)(5)): A-1, A-2, A-3, AMX-1, AMX-2, AMX-3, B-1, B-2, BMX-3, BMX-4, resort, I-1, I-2, I-3 and IMX-1. The 20,000 sq ft minimum is applied per lot: the model does not combine adjacent lots into one project, which the law allows.
@@ -62,8 +62,12 @@ Housing in an industrial zone needs a TOD permit, and under PD-T only IMX-1 can 
 
 | Zone | PD-T Base | PD-T Minor, Major, Approval | IPD-T Base | IPD-T Approval |
 | --- | --- | --- | --- | --- |
-| I-1, I-2, I-3 | Not applicable | Not applicable | Not applicable | Eligible (BMX-3 uses) |
-| IMX-1 | Not applicable | Eligible, capped at 10 units | Not applicable | Eligible, no unit cap |
+| I-1, I-2, I-3 | Not applicable | Not applicable | Not applicable | Eligible (BMX-3 uses); not applicable if the lot can't be approved |
+| IMX-1 | Not applicable | Eligible, capped at 10 units | Not applicable | Eligible, no unit cap; not applicable if the lot can't be approved |
+
+An IPD-T industrial lot that can't be approved (under 20,000 sq ft, or not entirely in the State urban district) has no housing at any tier, because without approval its zoning is the underlying industrial zoning. In the Citywide View's parcel set that is 626 of the 1,054 IPD-T industrial parcels, 621 of them under 20,000 sq ft.
+
+The 10-unit cap applies to every PD-T IMX-1 lot above Base, including one that can't get the selected tier's permit, so a higher tier never allows more than a minor permit does. In the Citywide View's parcel set, 26 of the 62 PD-T IMX-1 parcels can't get PD-T Approval: 22 are under 20,000 sq ft and 4 are not entirely in the State urban district.
 
 The IMX-1 cap is passed to the Housing Policy Simulator as `max_units`, which also shrinks the building to the floor area 10 units need. The law places those units above the ground floor; the model does not force a non-residential ground floor. On very large IMX-1 lots (several exceed 400,000 sq ft) the cap makes PD-T projects infeasible.
 
@@ -232,6 +236,7 @@ The model follows §§ 21-9.100-5, -8 and -10 for FAR, height, eligibility and u
 | Community benefits | Bonuses must be commensurate with benefits (§ 21-9.100-8(a)(1)(E), -5(g)) | Every tier above Base is granted in full and benefits are not priced | Optimistic above Base |
 | IPD-T height at Airport and East Kapolei | Capped at the draft plan's height (§ 21-9.100-5(e)(2)(B)) | 2 × zoned height up to 450 ft; plan figures are only in PDFs | Heights are upper bounds |
 | East Kapolei regime | Still IPD-T until its special district is adopted | Parcels with a parenthetical are PD-T | Anticipates adoption |
+| State urban district | IPD-T projects must be entirely in it (§ 21-9.100-5(b)(4)), and DPP's [PD-T and IPD-T instructions](https://www.honolulu.gov/dpp/wp-content/uploads/sites/56/2025/12/PD-T-and-IPD-T-Instructions-11.25.25.pdf) (November 2025) also require it for PD-T; the special district permits have no such rule (§ 21-9.100-8, Table 21-9.8) | The same. A minor or major permit counts the whole lot, though State land use law can limit housing on the part outside the district | Upper bound for the 19 PD-T lots partly outside it where housing is allowed |
 | Combining lots | Several lots, even across a street, can form one 20,000 sq ft project (§ 21-9.100-5(b)(3), -10(a)(1)) | Each lot stands alone | Small lots understated |
 | IMX-1 under PD-T | Up to 10 units above the ground floor | 10-unit cap; ground floor not forced non-residential | Slightly optimistic |
 | BMX-4 under IPD-T Approval | Doubling after the bonus would give 15.0; (A) caps FAR at 7.5 | Capped at 7.5 | A reading of open text |

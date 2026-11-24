@@ -22,6 +22,7 @@ import {
   pathwayEnvelope,
   PDT_FRONT_NO_PARKING_FT,
   roundHalfUp,
+  todIneligibleReason,
   type Parcel,
   type ParcelOutput,
   type ProgramId,
@@ -252,14 +253,26 @@ describe("gauge: TOD on real parcels", () => {
     expect(checked).toBeGreaterThan(20);
   });
 
+  it("builds no housing on IPD-T industrial lots that can't be approved", () => {
+    const lots = tod.filter(
+      (p) => p.tod_regime === "ipdt" && INDUSTRIAL.includes(p.zone_class) && todIneligibleReason(p) !== null
+    );
+    expect(lots.length).toBeGreaterThan(0);
+    for (const parcel of lots)
+      for (const tier of TIERS) {
+        expect(pathwayEnvelope("tod", parcel, { tier }).status, `${parcel.tmk} ${tier}`).not.toBe("ineligible");
+        expect(calcParcel("tod", parcel, {}, { tier }).max_units, `${parcel.tmk} ${tier}`).toBe(0);
+      }
+  });
+
   it("caps IMX-1 under PD-T at the unit limit", () => {
     const imx = tod.filter((p) => p.zone_class === "IMX-1" && p.tod_regime === "pdt");
     expect(imx.length).toBeGreaterThan(0);
     for (const parcel of imx)
       for (const tier of TIERS) {
         const env = pathwayEnvelope("tod", parcel, { tier });
-        if (env.status !== "eligible") continue;
-        expect(env.max_units, `${parcel.tmk} ${tier}`).toBe(IMX1_PDT_MAX_UNITS);
+        // no housing at base, 10 units at every tier above it
+        expect(env.max_units, `${parcel.tmk} ${tier}`).toBe(tier === "base" ? 0 : IMX1_PDT_MAX_UNITS);
         expect(calcParcel("tod", parcel, {}, { tier }).max_units).toBeLessThanOrEqual(IMX1_PDT_MAX_UNITS);
       }
   });

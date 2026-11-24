@@ -130,13 +130,18 @@ export function todNotApplicableReason(
     return null;
   if (residentialUse(parcel.zone_class, parcel.tod_regime) === "not_permitted")
     return `multi-unit dwelling is not permitted in ${parcel.zone_class} under PD-T`;
-  // IPD-T has no special district permits: anything short of approval is base
-  if (parcel.tod_regime === "pdt" ? tier !== "base" : tier === "with_benefits")
-    return null;
   // Table 21-9.8: housing in IMX-1 needs a minor special district permit
   if (parcel.tod_regime === "pdt")
-    return "IMX-1: housing needs a minor special district permit (Table 21-9.8)";
-  return `housing in ${parcel.zone_class} needs IPD-T approval`;
+    return tier !== "base"
+      ? null
+      : "IMX-1: housing needs a minor special district permit (Table 21-9.8)";
+  // IPD-T has no special district permits: anything short of approval is base,
+  // and base bars housing (Table 21-5.1). A lot that can't be approved (under
+  // 20,000 sq ft, or not entirely urban) is base at every tier
+  const needs = `housing in ${parcel.zone_class} needs IPD-T approval`;
+  if (tier !== "with_benefits") return needs;
+  const ineligible = todIneligibleReason(parcel);
+  return ineligible ? `${needs}: ${ineligible}` : null;
 }
 
 function todEnvelope(
@@ -182,15 +187,24 @@ function todTierEnvelope(
     };
   }
 
-  // § 21-9.100-10(a)(1): the 20,000 sqft minimum is for PD-T approval; minor
-  // and major special district permits have none
+  // § 21-9.100-10(a)(1): the 20,000 sqft minimum is for PD-T approval, as is
+  // the state urban district (DPP's PD-T instructions); minor and major special
+  // district permits have neither (§ 21-9.100-8, Table 21-9.8)
   const sd_permit =
     parcel.tod_regime === "pdt" && (tier === "minor_sd" || tier === "major_sd");
   const reason = todIneligibleReason(
     sd_permit
-      ? { ...parcel, lot_sqft: Math.max(parcel.lot_sqft, TOD_MIN_LOT_SQFT) }
+      ? {
+          ...parcel,
+          lot_sqft: Math.max(parcel.lot_sqft, TOD_MIN_LOT_SQFT),
+          slu_urban: true,
+        }
       : parcel
   );
+  // § 21-9.100-7(c): IMX-1 housing under PD-T is limited to 10 units whether
+  // or not the lot can get the tier's permit
+  const pdt_imx1 =
+    parcel.tod_regime === "pdt" && parcel.zone_class === "IMX-1";
   if (reason) {
     return {
       height_limit: base_height,
@@ -198,13 +212,15 @@ function todTierEnvelope(
       far_source: "base",
       height_source: "base",
       status: "ineligible",
-      status_reason: reason,
+      status_reason: pdt_imx1
+        ? `${reason}; IMX-1 housing is limited to ${IMX1_PDT_MAX_UNITS} units`
+        : reason,
+      ...(pdt_imx1 && { max_units: IMX1_PDT_MAX_UNITS }),
     };
   }
 
   if (parcel.tod_regime === "pdt") {
     const map_bonus = opts.map_bonus_height ?? parcel.tod_map_bonus_height;
-    const imx1 = parcel.zone_class === "IMX-1";
     // by right: the underlying zoning, with no open-space bonus inside a TOD
     // special district (§ 21-9.100-8(a)(1)(B))
     if (tier === "base") {
@@ -236,7 +252,7 @@ function todTierEnvelope(
             : "pdt_map_bonus",
       status: "eligible",
       // § 21-9.100-7(c)
-      ...(imx1 && {
+      ...(pdt_imx1 && {
         max_units: IMX1_PDT_MAX_UNITS,
         status_reason: `IMX-1 under PD-T: up to ${IMX1_PDT_MAX_UNITS} units above the ground floor, with a special district permit`,
       }),

@@ -9,8 +9,8 @@ Output: web/public/data/parcels-<county>.json         one row per parcel on the 
 
 Only parcels the engine ran (status "run" in runs.csv) are exported: zones the county configs list as
 allowing multi-family housing. Honolulu is limited further to its apartment, mixed-use and Waikiki
-districts (MAP_ZONES): R-5, B-1, B-2 and ResMix run in the engine but are left off the map, as in the
-tool's Honolulu pathway files. Each row has tmk (9 digits), locality, zone_class (the config zone the
+districts (MAP_ZONES): B-1, B-2 and ResMix run in the engine but are left off the map, as in the
+tool's Honolulu pathway files. R-5 and the other single-family districts don't run. Each row has tmk (9 digits), locality, zone_class (the config zone the
 engine matched, e.g. Kauai "R-20/ST-P" runs as "R-20"), zone_label (the code's name), lot_sqft, height,
 lat and lng, and island. lat and lng are a point inside the parcel's shape (representative_point,
 which unlike the centroid always falls inside an oddly shaped lot), in WGS 84, 6 decimals (about

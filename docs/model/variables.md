@@ -151,7 +151,7 @@ Levers are user inputs. The default for each pathway is set in `DEFAULT_INPUTS` 
 | `todPlanCeiling` | Function |  | Looks up a station area's FAR and height ceilings for a precinct. |  |  | calc-shared.ts |
 | `PDT_FRONT_NO_PARKING_FT` | Constant | 40 | No at-grade or ground-floor parking within this many feet of the front lot line in a TOD special district. | ROH 21-9.100-8(c)(1) | 2 Years | calc-shared.ts |
 | `frontStripSqft` | Function |  | Ground inside the yards within the no-parking depth of the front lot line. | ROH 21-9.100-8(c)(1) |  | calc-shared.ts |
-| `todIneligibleReason` / `todNotApplicableReason` | Function |  | Eligibility gates (regime, district, 20,000 sq ft minimum, State Land Use urban) and IMX-1 housing permits. | ROH 21-9.100-5(b); Table 21-9.8 |  | parcels.ts |
+| `todIneligibleReason` / `todNotApplicableReason` | Function |  | Eligibility gates (regime, district, 20,000 sq ft minimum, State Land Use urban) and industrial housing permits: IMX-1 under PD-T, and IPD-T approval, which an ineligible lot can't get. | ROH 21-9.100-5(b); Table 21-9.8 |  | parcels.ts |
 | `TodTier` | Type |  | Permit tiers: base, minor_sd, major_sd, with_benefits (PD-T or IPD-T approval). Minor and major are PD-T only. |  |  | parcels.ts |
 | `pathwayEnvelope` | Function |  | A pathway's height limit and FAR for a parcel: TOD tier rules; Bill 7 FAR 4.0 and 60 ft; Standard and 201H `calcFarBill6`; Before Ord. 26-7 `calcFAR`; each with the open-space bonus where allowed. |  |  | parcels.ts |
 

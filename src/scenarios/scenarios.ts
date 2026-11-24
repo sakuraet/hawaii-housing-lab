@@ -91,7 +91,7 @@ export const SCENARIOS: readonly Scenario[] = [
             levers: {},
             tod_tier: SCENARIO_TOD_TIER,
             available: true,
-            note: "Approval needs a 20,000 sq ft lot; smaller lots keep their zoning. Community benefits are not priced.",
+            note: "Approval needs a 20,000 sq ft lot; smaller lots keep their zoning, which bars most housing on industrial land. Community benefits are not priced.",
           }
         : {
             pathway: baselinePathway(locality),

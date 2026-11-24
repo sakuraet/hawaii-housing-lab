@@ -625,8 +625,68 @@ describe("TOD pathway", () => {
       expect(todNotApplicableReason(TOD.ipdtIndustrial, tier)).toMatch(/needs IPD-T approval/);
     }
     expect(todNotApplicableReason(TOD.ipdtIndustrial, "with_benefits")).toBeNull();
+    // and a lot that can't be approved has no housing at any tier
+    for (const zone_class of ["I-1", "I-2", "I-3", "IMX-1"]) {
+      const small = { ...TOD.ipdtIndustrial, zone_class, lot_sqft: 10000 };
+      const notUrban = { ...TOD.ipdtIndustrial, zone_class, slu_urban: false };
+      expect(todNotApplicableReason(small, "with_benefits"), zone_class).toMatch(/needs IPD-T approval: .*20,000 sqft minimum/);
+      expect(todNotApplicableReason(notUrban, "with_benefits"), zone_class).toMatch(/needs IPD-T approval: .*urban district/);
+      for (const tier of TIERS)
+        for (const lot of [small, notUrban]) {
+          expect(pathwayEnvelope("tod", lot, { tier }), `${zone_class} ${tier}`).toMatchObject({ status: "not_applicable", max_units: 0 });
+          expect(calcParcel("tod", lot, {}, { tier }).max_units, `${zone_class} ${tier}`).toBe(0);
+        }
+      // at exactly the minimum, approval is possible
+      expect(todNotApplicableReason({ ...small, lot_sqft: 20000 }, "with_benefits"), zone_class).toBeNull();
+    }
+    // a small lot in a zone that allows housing keeps its zoning instead
+    expect(pathwayEnvelope("tod", TOD.smallLot, { tier: "with_benefits" }).status).toBe("ineligible");
     // other zones: always applicable
     for (const tier of TIERS) expect(todNotApplicableReason(TOD.ipdtCore, tier)).toBeNull();
+  });
+
+  it("needs the state urban district for PD-T and IPD-T approval, not for special district permits", () => {
+    // § 21-9.100-5(b)(4) is IPD-T's; DPP's instructions add it for PD-T
+    // approval; § 21-9.100-8 and Table 21-9.8 have none
+    const urban: Parcel = { ...TOD.pdtMapBonus, zone_class: "BMX-3", lot_sqft: 30000 };
+    const notUrban: Parcel = { ...urban, slu_urban: false };
+    for (const tier of ["minor_sd", "major_sd"] as const) {
+      const env = pathwayEnvelope("tod", notUrban, { tier });
+      expect(env, tier).toEqual(pathwayEnvelope("tod", urban, { tier }));
+      expect(env.status, tier).toBe("eligible");
+    }
+    expect(pathwayEnvelope("tod", notUrban, { tier: "with_benefits" })).toMatchObject({
+      status: "ineligible",
+      far_source: "base",
+      status_reason: expect.stringMatching(/urban district/),
+    });
+    // IPD-T has no special district permits, so the urban rule still applies
+    expect(pathwayEnvelope("tod", TOD.notUrban, { tier: "with_benefits" }).status).toBe("ineligible");
+  });
+
+  it("caps IMX-1 under PD-T at 10 units on lots that can't get the permit", () => {
+    // a small lot, and a lot outside the urban district, keep their zoning at
+    // PD-T Approval but not more than 10 units
+    const small = { ...TOD.pdtImx1, lot_sqft: 10000 };
+    const notUrban = { ...TOD.pdtImx1, lot_sqft: 95000, slu_urban: false };
+    for (const lot of [small, notUrban]) {
+      const env = pathwayEnvelope("tod", lot, { tier: "with_benefits" });
+      expect(env).toMatchObject({ status: "ineligible", far_source: "base", max_units: IMX1_PDT_MAX_UNITS });
+      expect(env.status_reason).toMatch(/limited to 10 units/);
+      // minor and major permits have no lot minimum or urban rule
+      for (const tier of ["minor_sd", "major_sd"] as const)
+        expect(pathwayEnvelope("tod", lot, { tier }), tier).toMatchObject({ status: "eligible", max_units: IMX1_PDT_MAX_UNITS });
+      for (const tier of ["minor_sd", "major_sd", "with_benefits"] as const) {
+        const units = calcParcel("tod", lot, {}, { tier }).max_units;
+        expect(units, tier).toBeGreaterThan(0);
+        expect(units, tier).toBeLessThanOrEqual(IMX1_PDT_MAX_UNITS);
+      }
+    }
+    // base still has no housing
+    for (const lot of [small, notUrban])
+      expect(pathwayEnvelope("tod", lot, { tier: "base" })).toMatchObject({ status: "not_applicable", max_units: 0 });
+    // the cap is IMX-1's only: a small PD-T lot in another zone has none
+    expect(pathwayEnvelope("tod", { ...small, zone_class: "BMX-3" }, { tier: "with_benefits" }).max_units).toBeUndefined();
   });
 
   it("caps IMX-1 under PD-T at 10 units", () => {

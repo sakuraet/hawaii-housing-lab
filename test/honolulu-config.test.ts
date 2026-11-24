@@ -137,7 +137,8 @@ describe("Honolulu config: zoning matches the code", () => {
     }
     if (z !== "BMX-4") expect(zr.step_back).toEqual(zoneStepBack(z));
     expect(zr.bicycle_required).toBe(bicycleRequired(z));
-    expect(zr.residential_permitted).toBe(residentialUse(z, "pdt") === "permitted");
+    // R-5 changed since (see below)
+    if (z !== "R-5") expect(zr.residential_permitted).toBe(residentialUse(z, "pdt") === "permitted");
     expect(zr.name ?? z).toBe(zoneName(z));
   });
 });
@@ -161,6 +162,13 @@ describe("Honolulu config: changes since 0.1.0", () => {
   it("rent growth 4% instead of 3.5% (commit 27716f3)", () => {
     expect(HOLD.annual_rent_growth).toBe(0.035);
     expect(assumptions.market.annual_rent_growth).toBe(0.04);
+  });
+
+  it("R-5 is not a multi-family district (ROH Table 21-5.1)", () => {
+    // 0.1.0 lists no use by district beyond the industrial ones, so it treats
+    // R-5 as permitted; the parcel runs would count 100,958 single-family lots
+    expect(residentialUse("R-5", "pdt")).toBe("permitted");
+    expect(rules.zones["R-5"].residential_permitted).toBe(false);
   });
 
   it("ground-floor retail in B-1 and B-2, at BMX's share (commit bbf49e1)", () => {

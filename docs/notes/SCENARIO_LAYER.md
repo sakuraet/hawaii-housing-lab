@@ -40,7 +40,8 @@ transit data, and production is a teammate's. The rest is design.
   (`SCENARIO_TOD_TIER`, PD-T and IPD-T alike), because the Base tier is the
   underlying zoning: it changes no policy, and gives less floor area than
   Bill 6 on some district parcels. Approval needs a 20,000 sq ft lot, so
-  smaller ones keep their zoning, and its community benefits are not priced.
+  smaller ones keep their zoning (industrial lots have no housing, except up
+  to 10 units in IMX-1 under PD-T), and its community benefits are not priced.
   The tier levers can still be moved. Its summary card shows each scenario's change from
   the Baseline at its default levers, on the same parcels. Bill 7, 201H and
   the pre-Ord. 26-7 rules are no longer in the tool; they stay in the engine
@@ -198,8 +199,9 @@ coverage do not bind (the spec allows this).
 Engine changes:
 - Single-family zones in each county config, tagged `single_family: true`
   with `residential_permitted: false`, so the baseline skips them and this
-  scenario finds them. Today they are not listed, and a parcel in one stops
-  with an error.
+  scenario finds them. Today Honolulu's R-5 is listed with
+  `residential_permitted: false` (ROH Table 21-5.1) and the rest are not
+  listed; the baseline leaves both out as not modeled.
 - Land cost from the parcel's assessed value, not the flat `land_cost` per
   sqft: `landCostPerSqft(parcel, "total")` in `src/scenarios/parcels.ts`,
   passed as `land_cost`. Every calculator multiplies `land_cost` by the lot
