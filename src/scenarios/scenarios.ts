@@ -9,6 +9,7 @@
 // rules stay in the engine but are not scenarios.
 
 import type { ProgramId, SliderInputs } from "../calculations";
+import type { TodTier } from "../parcels";
 
 export type ScenarioId = "baseline" | "tod" | "parking" | "fees";
 
@@ -18,6 +19,8 @@ export interface ScenarioSetup {
   pathway: ProgramId;
   /** levers the scenario sets, on top of the pathway defaults */
   levers: Partial<SliderInputs>;
+  /** TOD only: the permit tier it starts at */
+  tod_tier?: TodTier;
   /** false: not defined for this county yet, so it runs the baseline */
   available: boolean;
   /** why it isn't available, or what is still a draft */
@@ -46,6 +49,10 @@ export const baselinePathway = (locality?: string): ProgramId =>
 /** parking: minimums removed, so developers build what the market wants;
  *  stalls per unit, every county. Draft */
 export const SCENARIO_PARKING_RATIO = 0.5;
+
+/** TOD: the permit tier, in PD-T and IPD-T districts alike. Approval is the
+ *  full bonus; Base is the underlying zoning, so it would change no policy */
+export const SCENARIO_TOD_TIER: TodTier = "with_benefits";
 
 /** fees: every development fee times this. Draft (half, as the design's
  *  "Hawaiʻi fees" version) */
@@ -76,10 +83,16 @@ export const SCENARIOS: readonly Scenario[] = [
     id: "tod",
     label: "TOD",
     description:
-      "More height and density near frequent transit. In Honolulu, the city's TOD rules (PD-T and IPD-T) around rail stations.",
+      "More height and density near frequent transit. In Honolulu, the city's TOD rules around rail stations, at full approval (PD-T and IPD-T).",
     setup: (locality) =>
       isHonolulu(locality)
-        ? { pathway: "tod", levers: {}, available: true }
+        ? {
+            pathway: "tod",
+            levers: {},
+            tod_tier: SCENARIO_TOD_TIER,
+            available: true,
+            note: "Approval needs a 20,000 sq ft lot; smaller lots keep their zoning. Community benefits are not priced.",
+          }
         : {
             pathway: baselinePathway(locality),
             levers: {},

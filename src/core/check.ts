@@ -89,6 +89,13 @@ export function checkLocality(loc: Locality): string[] {
       share(`rules.zones.${zone}.current.units_round_up_at`, z.current.units_round_up_at);
     if (z.current?.yards?.side_rear_height_fraction != null)
       share(`rules.zones.${zone}.current.yards.side_rear_height_fraction`, z.current.yards.side_rear_height_fraction);
+    // a divisor and sizes, so they must be more than 0
+    const overZero = (key: string, v: number | undefined) => {
+      if (v != null && Number.isFinite(v) && v <= 0) add(`rules.zones.${zone}.${key}`, "must be more than 0");
+    };
+    overZero("open_space_floor_per_sqft", z.open_space_floor_per_sqft);
+    overZero("tall_height.above_ft", z.tall_height?.above_ft);
+    overZero("tall_height.min_lot_sqft", z.tall_height?.min_lot_sqft);
     z.open_space?.bands.forEach((b, i) => share(`rules.zones.${zone}.open_space.bands[${i}].base`, b.base));
   }
 

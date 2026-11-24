@@ -4,9 +4,13 @@
 
 import { describe, expect, it } from "vitest";
 
+import { calcParcel } from "../src/parcels";
 import {
   calcParkingIncome,
   calcPropertyTax,
+  exitCapRate,
+  HOLD,
+  holdEgi,
   mixRentByAmi,
   podiumEnvelope,
   rentByAmi,
@@ -94,5 +98,34 @@ describe("cap rate, property tax and parking", () => {
     expect(oth.stalls).toBe(hnl.stalls);
     expect(hnl.parking_cost).toBeGreaterThan(0);
     expect(oth.parking_cost).toBeCloseTo(2 * hnl.parking_cost, 6);
+  });
+});
+
+describe("the hold in every county", () => {
+  const cases = [
+    ["hi-maui", "B-2", 0.039],
+    ["hi-hawaii", "RM-2", 0.047],
+    ["hi-kauai", "R-20", 0.036],
+  ] as const;
+
+  it("rents age off the county's own growth", () => {
+    for (const [, , g] of cases) {
+      expect(holdEgi(100, 0, 8, g)).toBeCloseTo(100 * (1 + g - HOLD.age_rent_drag) ** 8, 9);
+      expect(holdEgi(100, 100, 8, g)).toBeCloseTo(100 * (1 + g) ** 8, 9);
+    }
+  });
+
+  it.each(cases)("%s %s: rent aging lowers the IRR, and the exit cap widens with the hold", (locality, zone_class) => {
+    const parcel = { locality, lot_sqft: 20000, zone_class, height: 45 };
+    const run = () => calcParcel("current", parcel);
+    const aged = run();
+    const saved = HOLD.age_rent_drag;
+    (HOLD as { age_rent_drag: number }).age_rent_drag = 0;
+    const unaged = run();
+    (HOLD as { age_rent_drag: number }).age_rent_drag = saved;
+    expect(aged.dev_levered_irr!).toBeLessThan(unaged.dev_levered_irr!);
+    // a cost-side return, so it doesn't change
+    expect(aged.dev_roc).toBe(unaged.dev_roc);
+    expect(aged.dev_exit_cap).toBe(Math.round(exitCapRate(aged.dev_entry_cap!, 8) * 10000) / 10000);
   });
 });

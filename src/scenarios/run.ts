@@ -72,7 +72,7 @@ export function runParcel(p: StatewideParcel, opts: RunOptions = {}): ParcelRun 
     // every parcel does)
     const pathway =
       setup.pathway === "tod" && !parcel.tod_regime ? baselinePathway(p.locality) : setup.pathway;
-    const output = calcParcel(pathway, parcel, levers);
+    const output = calcParcel(pathway, parcel, levers, pathway === "tod" ? { tier: setup.tod_tier } : {});
     return { ...run, output, level: overallLevel(output) };
   } catch (e) {
     return { ...run, status: "error", reason: e instanceof Error ? e.message : String(e) };

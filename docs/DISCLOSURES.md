@@ -67,3 +67,11 @@ Her later changes, released in `@uhero/feasim` 0.3.0 and on the package's `minor
 - **Documentation:** the package's `docs/` folder, at `minor-fixes`, is in `docs/model/`, without its developer guide.
 - **Adapted, not copied:** Honolulu's income limits are in its county config, and the conveyance tax schedule is in the state config. The neighbor-island counties' current-zoning runs keep their own parking minimums.
 - **Checked:** Honolulu's results match the package's snapshot tests at `minor-fixes`, at the package's $130 land cost (Honolulu's own default is now $170).
+
+Her changes after that, released in `@uhero/feasim` 0.5.0 (`main`) and on the package's `business-districts` branch (at `3d36e15`, not yet merged there), were ported the same way:
+- **Code, from `main`:** commits `7493e23` (parking defaults), `e045c30` (IRR solver), `aae7764` (exit cap spread), `17e7bdc` (rents age with the building) and `2fb484e` (open-space bonus toggle).
+- **Code, from `business-districts`:** commits `bbf49e1` (ground-floor retail in B-1 and B-2), `f2fd0e6` (loading and bicycle parking sized for the units built; 8-year fallback hold) and `3d36e15` (business district rules).
+- **Documentation and tests:** the package's `docs/` pages and their snapshot tests at `3d36e15`.
+- **Adapted, not copied:** the business district rules are in Honolulu's zoning config, and the hold-period changes use each county's own rent growth.
+- **Not ported:** the refactors that merged the pathways into a shared pipeline (`97ad9dc`, `edd8544`, `433334a`), and the dev-flip and first IRR test blocks (`e5004d2`), by a UHERO staff member who is not on the team. One test case from that commit, "flip at completion (0-year hold)", is kept so the snapshots match.
+- **Checked:** every parcel in the Honolulu map files, in every pathway, gives the same result as the package at `3d36e15`, at $130 land, at the defaults and (on one parcel in four) with seven sets of lever changes. The package's snapshots pass unchanged.

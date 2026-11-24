@@ -1,11 +1,15 @@
 # Model documentation
 
-How the model works and where its numbers come from, for Honolulu's pathways. These pages come from the documentation of UHERO's `@uhero/feasim` package (its `minor-fixes` branch, November 9, 2026), which this repository's engine was built from. The [README](../../README.md) covers running the engine and the tool.
+How the model works and where its numbers come from, for Honolulu's pathways. These pages come from the documentation of UHERO's `@uhero/feasim` package (its `business-districts` branch, November 16, 2026), which this repository's engine was built from. The [README](../../README.md) covers running the engine and the tool.
 
 **What's different in this repository:**
 
 - **Rules and assumptions are in county config files.** Honolulu's are in `src/localities/hi/honolulu/`, and each neighbor-island county has its own folder. The constants these pages name keep their names in `src/calculations/calc-shared.ts`, which reads Honolulu's values from that config. For example, `INCOME_LIMITS` is `honolulu.rules.income_limits`, and the conveyance tax schedule is in the state config, `src/localities/hi/state.ts`.
 - **The neighbor-island counties run one more pathway, `current`.** It is current zoning, read from each zone's `current` rules. For Honolulu, `current` is the same as `bill6`. Each county's rules and sources are in [docs/notes](../notes/), for example [MAUI.md](../notes/MAUI.md).
+- **No shared FAR pipeline.** The package runs `bill6` and `standard` on one file, `calc-far-pathway.ts`, and shares the hold and flip code. Here each pathway keeps its own file, because `bill6` also runs every county's current zoning. The results are the same.
+- **Business district rules are in the zoning config.** `OPEN_SPACE_FLOOR_PER_SQFT`, `BMX4_TALL_HEIGHT` and `BMX4_TALL_MIN_LOT_SQFT` are each zone's `open_space_floor_per_sqft` and `tall_height` (`src/localities/hi/honolulu/zones.ts`).
+- **The aging of rents, the exit cap spread and the parking sizing apply in every county.** Market rents age off each county's own rent growth. The parking defaults that changed (TOD 0.9, 201H 0.9, Bill 7 0.35) are Honolulu pathways' only.
+- **Parcel data.** The pages say B-1 lots are 40 ft and lots under 500 sq ft are left out. That describes the package's parcel set; this repository's tables don't apply it.
 - **The tool in `web/` is a Citywide View only,** across all four counties. The Project View these pages mention is UHERO's single-lot calculator; here it corresponds to `calcSingle`.
 
 ## Start here

@@ -129,12 +129,13 @@ describe("Honolulu config: zoning matches the code", () => {
 
   it.each(ZONES)("%s: commercial share, bonus, open space, step-back, uses", (z) => {
     const zr = rules.zones[z];
-    expect(zr.commercial_coverage).toBe(commercialFracByZone(z));
+    // B-1 and B-2 retail and BMX-4's step-back changed since (see below)
+    if (z !== "B-1" && z !== "B-2") expect(zr.commercial_coverage).toBe(commercialFracByZone(z));
     expect(zr.open_space_far_ceiling).toBe(OPEN_SPACE_FAR_CEILING[z]);
     for (let f = 0; f <= 8; f += 0.25) {
       expect(at(zr.open_space, f), `FAR ${f}`).toBe(waikikiOpenSpaceFrac(z, f));
     }
-    expect(zr.step_back).toEqual(zoneStepBack(z));
+    if (z !== "BMX-4") expect(zr.step_back).toEqual(zoneStepBack(z));
     expect(zr.bicycle_required).toBe(bicycleRequired(z));
     expect(zr.residential_permitted).toBe(residentialUse(z, "pdt") === "permitted");
     expect(zr.name ?? z).toBe(zoneName(z));
@@ -150,7 +151,7 @@ describe("Honolulu config: zone assumptions match the code", () => {
 });
 
 // Values changed on purpose since 0.1.0, by the team in UHERO's package
-// (@uhero/feasim 0.2.1). Everything else must still match 0.1.0.
+// (@uhero/feasim 0.2.1 and later). Everything else must still match 0.1.0.
 describe("Honolulu config: changes since 0.1.0", () => {
   it("one permitting and construction time for every zone (commit 91255fe)", () => {
     // 0.1.0 set them by zone; 0.2.1 uses 18 and 12 months everywhere
@@ -160,6 +161,22 @@ describe("Honolulu config: changes since 0.1.0", () => {
   it("rent growth 4% instead of 3.5% (commit 27716f3)", () => {
     expect(HOLD.annual_rent_growth).toBe(0.035);
     expect(assumptions.market.annual_rent_growth).toBe(0.04);
+  });
+
+  it("ground-floor retail in B-1 and B-2, at BMX's share (commit bbf49e1)", () => {
+    expect(commercialFracByZone("B-1")).toBe(0);
+    expect(commercialFracByZone("B-2")).toBe(0);
+    for (const z of ["B-1", "B-2"]) {
+      expect(rules.zones[z].commercial_coverage).toBe(rules.zones["BMX-3"].commercial_coverage);
+    }
+  });
+
+  it("BMX-4: no step-back, a 10:1 plaza, and 350 ft on small lots (commit 3d36e15)", () => {
+    expect(zoneStepBack("BMX-4")).toBeDefined();
+    expect(rules.zones["BMX-4"].step_back).toBeUndefined();
+    expect(rules.zones["BMX-4"].open_space_floor_per_sqft).toBe(10);
+    expect(rules.zones["BMX-4"].tall_height).toEqual({ above_ft: 350, min_lot_sqft: 35000 });
+    for (const z of ["B-2", "BMX-3"]) expect(rules.zones[z].open_space_floor_per_sqft).toBe(5);
   });
 });
 

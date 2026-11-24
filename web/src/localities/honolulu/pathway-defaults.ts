@@ -70,7 +70,7 @@ const TOD_DEFAULTS: GaugeInputs = {
   ...BILL6_DEFAULTS,
   program: "tod",
   floor_height: 10,
-  parking_ratio: 0.85,
+  parking_ratio: 0.9,
 };
 
 export const PROGRAM_DEFAULTS: Record<string, GaugeInputs> = {

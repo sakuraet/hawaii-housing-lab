@@ -14,6 +14,7 @@ import {
   BENCHMARK_FEE_PER_UNIT,
   SCENARIOS,
   SCENARIO_FEE_SCALE,
+  SCENARIO_TOD_TIER,
   feeSourceLevers,
   SCENARIO_PARKING_RATIO,
   baselinePathway,
@@ -38,12 +39,18 @@ describe("the scenarios", () => {
   });
 
   it("TOD runs Honolulu's TOD pathway; elsewhere it isn't defined yet and runs the baseline", () => {
-    expect(scenarioSetup("tod", "hi-honolulu")).toMatchObject({ pathway: "tod", available: true });
+    expect(scenarioSetup("tod", "hi-honolulu")).toMatchObject({
+      pathway: "tod",
+      tod_tier: SCENARIO_TOD_TIER,
+      available: true,
+    });
+    expect(SCENARIO_TOD_TIER).toBe("with_benefits");
     for (const c of COUNTIES.slice(1)) {
       const s = scenarioSetup("tod", c);
       expect(s.available).toBe(false);
       expect(s.pathway).toBe("current");
       expect(s.levers).toEqual({});
+      expect(s.tod_tier).toBeUndefined();
     }
   });
 
@@ -202,12 +209,12 @@ describe("the parcel runner with a scenario", () => {
   });
 
   it("fees: lower fees can make the open-space bonus pay", () => {
-    const p = { lot_sqft: 9374.1, zone_class: "BMX-4", height: 40 };
-    // at $130 land, this lot takes the open-space bonus at 85% of fees, but
-    // not at 90%
+    const p = { lot_sqft: 7640, zone_class: "BMX-3", height: 200 };
+    // at $130 land, this lot takes the open-space bonus at 60% of fees, but
+    // not at 70%
     const at = (fee_scale: number) => calcParcel("bill6", p, { land_cost: 130, fee_scale }).max_units;
-    expect(at(0.9)).toBe(at(1));
-    expect(at(0.85)).toBeGreaterThan(at(1));
+    expect(at(0.7)).toBe(at(1));
+    expect(at(0.6)).toBeGreaterThan(at(1));
   });
 
   it("TOD: parcels outside a TOD district (all of the table, for now) keep the baseline", () => {

@@ -53,6 +53,8 @@ import {
   sizeConstructionLoan,
   SliderInputs,
   solveIRR,
+  exitCapRate,
+  holdEgi,
   StepBack,
   stepBackOf,
   VACANCY,
@@ -74,7 +76,8 @@ export const BILL6_DEFAULT_HEIGHT_LIMIT = 30;
 export const BILL6_DEFAULT_FLOOR_HEIGHT = 10;
 export const BILL6_DEFAULT_LAND_COST = 130;
 export const BILL6_DEFAULT_PERMANENT_RATE = 0.0675;
-export const BILL6_DEFAULT_HOLD_YEARS = 10;
+// every pathway but Bill 7 holds 8 years (DEFAULT_INPUTS)
+export const BILL6_DEFAULT_HOLD_YEARS = 8;
 
 // =========================================================
 // STEP 1: HARD COSTS
@@ -131,7 +134,7 @@ function bill6Hard(
     lot_sqft,
     coverage_plate:
       envelopeCoverage(zone_class, far, coverage, loc) *
-      lotAfterOpenSpace(lot_sqft, open_space_bonus),
+      lotAfterOpenSpace(lot_sqft, open_space_bonus, zone_class, loc),
     setback: setback ?? 10,
     stepback,
     yards,
@@ -296,8 +299,11 @@ function bill6Rental(
   const residential_egi = pgi - vacancy_loss;
   const retail_egi = retail_pgi - retail_vacancy_loss;
   const egi = residential_egi + retail_egi;
+  // affordable rent income, which grows with ami in a hold
+  const affordable_egi =
+    pgi > 0 ? residential_egi * ((affordable_rent * afd_rent_units * 12) / pgi) : 0;
 
-  return { pri, pgi, egi, retail_pgi, retail_egi, residential_egi };
+  return { pri, pgi, egi, retail_pgi, retail_egi, residential_egi, affordable_egi };
 }
 
 // =========================================================
@@ -498,6 +504,7 @@ function bill6Hold(
   min_dscr: number,
   cap_rate: number,
   gross_sales: number,
+  affordable_egi: number,
   loc: Locality = honolulu
 ): Partial<ParcelOutput> {
   const land_cost = land_cost_sqft * lot_sqft;
@@ -534,7 +541,7 @@ function bill6Hold(
   const is_bankable_display = perm_loan_balance === 0 ? null : perm.is_bankable;
 
   const entry_cap = cap_rate;
-  const exit_cap = entry_cap + HOLD.exit_cap_spread;
+  const exit_cap = exitCapRate(entry_cap, hold_years);
 
   const hold_months = hold_years * 12;
   const total_with_hold = total_months + hold_months;
@@ -560,7 +567,7 @@ function bill6Hold(
 
   for (let yr = 1; yr <= hold_years; yr++) {
     if (yr > 1) {
-      current_egi *= 1 + loc.assumptions.market.annual_rent_growth;
+      current_egi = holdEgi(egi, affordable_egi, yr - 1, loc.assumptions.market.annual_rent_growth);
       // expenses run on their own inflation series, not as a fixed share of EGI
       current_opex *= 1 + loc.assumptions.market.annual_opex_growth;
       assessed_value *= 1 + loc.assumptions.market.annual_assessment_growth;
@@ -575,7 +582,11 @@ function bill6Hold(
     }
 
     if (yr === hold_years) {
-      const forward_noi = current_noi * (1 + loc.assumptions.market.annual_rent_growth);
+      // next year's noi, at next year's egi growth
+      const forward_noi =
+        current_noi *
+        (holdEgi(egi, affordable_egi, yr, loc.assumptions.market.annual_rent_growth) /
+          holdEgi(egi, affordable_egi, yr - 1, loc.assumptions.market.annual_rent_growth));
       const gross_sale = forward_noi / exit_cap;
       stored_selling_costs = sellingCosts(gross_sale, loc.state);
       const net_reversion =
@@ -904,6 +915,7 @@ export function calcbill6Single(sliders: SliderInputs): ParcelOutput {
           min_dscr,
           noi_result.cap_rate,
           sale.gross_sales,
+          rev.affordable_egi,
           loc
         );
 

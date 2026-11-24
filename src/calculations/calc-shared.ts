@@ -240,7 +240,6 @@ export const TIMING = {
 export const FINANCING = {
   loan_fee: 0.0075,
   construction_rate: 0.08,
-  dev_fee: 0.1,
   contingency: 1.1,
   cost_carried: 0.1,
   equity: 0.1,
@@ -286,9 +285,42 @@ export const HOLD = {
   annual_rent_growth: honoluluMarket.annual_rent_growth,
   annual_opex_growth: honoluluMarket.annual_opex_growth,
   annual_assessment_growth: honoluluMarket.annual_assessment_growth,
-  exit_cap_spread: 0.005,
+  // a building's market rents fall behind new buildings' as it ages: 1%/yr
+  // off rent growth is a 1.4-1.5%/yr noi decline (egi is ~1.45x noi), near
+  // bokhari & geltner's 1.38%/yr. affordable rents follow ami, not age. The
+  // same in every county
+  age_rent_drag: 0.01,
+  // exit cap widens 7.5 bps per year held, up to 75 bps (cbre's typical
+  // going-in to exit spread is 50-60 bps). The same in every county
+  exit_cap_spread_per_year: 0.00075,
+  exit_cap_spread_max: 0.0075,
   tax_exemption_years: 15,
 };
+
+/** egi in a hold year (0 = the stabilized year): affordable rent grows with
+ *  ami; market rent, parking and retail grow at rent growth less the age drag.
+ *  `rent_growth` is the county's own (Honolulu's by default) */
+export function holdEgi(
+  egi: number,
+  affordable_egi: number,
+  years: number,
+  rent_growth: number = HOLD.annual_rent_growth
+): number {
+  const afd = Math.min(Math.max(0, affordable_egi), egi);
+  return (
+    afd * (1 + rent_growth) ** years +
+    (egi - afd) * (1 + rent_growth - HOLD.age_rent_drag) ** years
+  );
+}
+
+/** cap rate at sale after a hold: the entry cap plus the spread for the years held */
+export function exitCapRate(entry_cap: number, hold_years: number): number {
+  const spread = Math.min(
+    HOLD.exit_cap_spread_max,
+    HOLD.exit_cap_spread_per_year * Math.max(0, hold_years)
+  );
+  return entry_cap + spread;
+}
 
 // Honolulu's market cap rate, the same for every zone, from its config
 export const DEFAULT_CAP_RATE = honoluluMarket.cap_rate;
@@ -361,7 +393,7 @@ export function mixPostGrant(mix_key: string): number {
 // parking: the default stalls per dwelling unit (TOD), and Honolulu's stall
 // sizes, costs and rent, read from its config (assumptions.market.parking)
 export const PARKING = {
-  stalls_per_unit: 0.85,
+  stalls_per_unit: 0.9,
   ...honoluluMarket.parking,
 };
 
@@ -1621,13 +1653,16 @@ export interface SliderInputs {
   profit_margin?: number;
   affordable_ami?: string;
   /** § 21-3.120-2(b) open-space FAR bonus on offer, in FAR, included in
-   *  max_far. It costs lot_sqft/5 of ground per 1.0 FAR, so it is both an
-   *  uplift and a land cost; calcSingle takes it only if it raises the
-   *  residual land value. */
+   *  max_far. It costs lot_sqft over the district's ratio (openSpaceRatio) of
+   *  ground per 1.0 FAR, so it is both an uplift and a land cost; calcSingle
+   *  takes it only if it raises the residual land value. */
   open_space_bonus?: number;
   /** FAR without the open-space bonus, for that comparison. Defaults to
    *  max_far - open_space_bonus. */
   far_without_bonus?: number;
+  /** "on" or "off" builds with or without the bonus; "auto" (the default)
+   *  lets the model choose */
+  open_space_bonus_mode?: OpenSpaceBonusMode;
   market_ami?: string;
   construction_rate?: number;
   equity?: number;
@@ -1817,6 +1852,8 @@ export interface ParcelOutput {
 // soft cost waiver types
 export type FeeBasis = "all_units" | "market_units" | "none";
 
+export type OpenSpaceBonusMode = "auto" | "on" | "off";
+
 // soft cost inputs (shared across all pathways)
 export type SoftCostInputs = {
   hard_cost: number;
@@ -1957,9 +1994,36 @@ export function openSpaceBonusOver(
   return ceiling == null ? 0 : Math.max(0, ceiling - far);
 }
 
-/** lot left for the building once the bonus's public open space (5:1) is set aside */
-export function lotAfterOpenSpace(lot_sqft: number, bonus = 0): number {
-  return lot_sqft - Math.min(lot_sqft, (bonus * lot_sqft) / 5);
+/** floor area earned per sq ft of public open space in the district (5
+ *  where its zoning config sets none) */
+export function openSpaceRatio(
+  zone_class?: string,
+  loc: Locality = honolulu
+): number {
+  return (zone_class && zoneRules(loc, zone_class)?.open_space_floor_per_sqft) || 5;
+}
+
+/** lot left for the building once the bonus's public open space is set aside */
+export function lotAfterOpenSpace(
+  lot_sqft: number,
+  bonus = 0,
+  zone_class?: string,
+  loc: Locality = honolulu
+): number {
+  return lot_sqft - Math.min(lot_sqft, (bonus * lot_sqft) / openSpaceRatio(zone_class, loc));
+}
+
+/** the zoned height the district's own rules allow on this lot (the starting
+ *  height; levers can still set another). Honolulu's BMX-4 is the only
+ *  district with such a rule: above 350 ft needs a 35,000 sq ft project */
+export function zoneHeightCap(
+  zone_class: string,
+  lot_sqft: number,
+  height: number,
+  loc: Locality = honolulu
+): number {
+  const tall = zoneRules(loc, zone_class)?.tall_height;
+  return tall && lot_sqft < tall.min_lot_sqft ? Math.min(height, tall.above_ft) : height;
 }
 
 export function calcFarTod(
@@ -2384,9 +2448,9 @@ function slimFootprint(plates: number[], area: number): number {
   return hi;
 }
 
-// building envelope with surface or podium parking; parking counts toward
-// height, not FAR
-export function podiumEnvelope(i: {
+// one podiumEnvelope layout, with loading and bicycle parking sized for at
+// most `sizing_units` units
+function podiumLayout(i: {
   plates: number[];
   far_cap: number;
   // most ground-floor retail the zone allows (sqft); 0 for none
@@ -2412,7 +2476,10 @@ export function podiumEnvelope(i: {
   // whose loading, bicycle parking and parking cost figures apply; Honolulu
   // by default
   loc?: Locality;
-}) {
+},
+  // units the loading and bicycle parking are sized for (see podiumEnvelope)
+  sizing_units = Infinity
+) {
   const loc = i.loc ?? honolulu;
   const park = loc.assumptions.market.parking;
   const plates = i.plates;
@@ -2478,7 +2545,8 @@ export function podiumEnvelope(i: {
       (Math.max(0, Math.min(i.far_cap, above[0]) - retail_sqft) * EFFICIENCY) /
         i.unit_size
     ),
-    i.max_units ?? Infinity
+    i.max_units ?? Infinity,
+    sizing_units
   );
   const loading_spaces = i.loading
     ? loadingSpaces(most_units, retail_sqft, i.joint_use ?? 1, loc)
@@ -2549,6 +2617,7 @@ export function podiumEnvelope(i: {
         parking_cost: parking_sqft * park.surface_cost_per_sqft,
         parking_share: gross_sqft > 0 ? parking_sqft / gross_sqft : 0,
         living_stories,
+        sized_units: most_units,
       };
     }
   }
@@ -2707,7 +2776,38 @@ export function podiumEnvelope(i: {
     parking_cost: parking_sqft * park.cost_per_sqft,
     parking_share: gross_sqft > 0 ? parking_sqft / gross_sqft : 0,
     living_stories,
+    sized_units: most_units,
   };
+}
+
+// building envelope with surface or podium parking; parking counts toward
+// height, not FAR. Loading (§ 21-6.110) and bicycle parking (§ 21-6.40) are
+// sized for the units built, not the most the envelope could hold, so a
+// limit that doesn't bind can't change the building. Takes the smallest
+// sizing that covers the units built, unless sizing for the most builds more.
+export function podiumEnvelope(
+  i: Parameters<typeof podiumLayout>[0]
+): Omit<ReturnType<typeof podiumLayout>, "sized_units"> {
+  const strip = ({ sized_units: _, ...out }: ReturnType<typeof podiumLayout>) => out;
+  const first = podiumLayout(i);
+  if (!(i.loading || i.bicycle) || first.units >= first.sized_units)
+    return strip(first);
+  // units built mostly fall as the sizing rises, so "covers what it builds"
+  // holds from some sizing up: find the smallest. Floors and podium levels
+  // are whole, so the fall isn't strictly monotonic; the comparison below
+  // keeps the result from ever building fewer units than `first`.
+  let best = first;
+  let lo = first.units;
+  let hi = first.sized_units;
+  while (lo < hi) {
+    const mid = Math.floor((lo + hi) / 2);
+    const layout = podiumLayout(i, mid);
+    if (layout.units <= mid) {
+      best = layout;
+      hi = mid;
+    } else lo = mid + 1;
+  }
+  return strip(best.units >= first.units ? best : first);
 }
 
 // parking: calculate annual parking income
@@ -2756,43 +2856,49 @@ export function solveIRR(cashflows: number[], isMonthly: boolean): number {
   const hasNegative = cashflows.some((cf) => cf < 0);
   if (!hasPositive || !hasNegative) return NaN;
 
-  // horner's method for evaluating the polynomial efficiently
+  // only the sign of npv matters for bisection. below 0% the discount factor
+  // exceeds 1 and npv overflows on long holds (20^279 at -95%/month), so take
+  // the future value there instead: same sign, every factor under 1
   const n = cashflows.length;
-  const npv = (r: number) => {
-    const d = 1 / (1 + r);
+  const f = (r: number) => {
     let acc = 0;
-    for (let t = n - 1; t >= 0; t--) acc = acc * d + cashflows[t];
+    if (r < 0) {
+      for (let t = 0; t < n; t++) acc = acc * (1 + r) + cashflows[t];
+    } else {
+      const d = 1 / (1 + r);
+      for (let t = n - 1; t >= 0; t--) acc = acc * d + cashflows[t];
+    }
     return acc;
   };
 
   let lo = -0.95;
   let hi = isMonthly ? 1.0 : 10.0;
+  let fLo = f(lo);
+  const fHi = f(hi);
 
-  let npvLo = npv(lo);
-  let npvHi = npv(hi);
+  if (!Number.isFinite(fLo) || !Number.isFinite(fHi)) return NaN;
+  if (fLo === 0) return annualize(lo, isMonthly);
+  if (fHi === 0) return annualize(hi, isMonthly);
+  if (fLo * fHi > 0) return NaN;
 
-  if (!Number.isFinite(npvLo) || !Number.isFinite(npvHi)) return NaN;
-  if (npvLo * npvHi > 0) return NaN;
-
-  for (let i = 0; i < 200; i++) {
+  for (let i = 0; i < 200 && (hi - lo) / 2 >= 1e-12; i++) {
     const mid = (lo + hi) / 2;
-    const npvMid = npv(mid);
-
-    if (!Number.isFinite(npvMid)) return NaN;
-
-    if (Math.abs(npvMid) < 1e-7 || (hi - lo) / 2 < 1e-10) {
-      return isMonthly ? Math.pow(1 + mid, 12) - 1 : mid;
-    }
-
-    if (npvLo * npvMid < 0) {
+    const fMid = f(mid);
+    if (!Number.isFinite(fMid)) return NaN;
+    if (fMid === 0) return annualize(mid, isMonthly);
+    if (fLo * fMid < 0) {
       hi = mid;
-      npvHi = npvMid;
     } else {
       lo = mid;
-      npvLo = npvMid;
+      fLo = fMid;
     }
   }
-  return NaN;
+  return annualize((lo + hi) / 2, isMonthly);
+}
+
+// a monthly rate as an annual one
+function annualize(r: number, isMonthly: boolean): number {
+  return isMonthly ? Math.pow(1 + r, 12) - 1 : r;
 }
 
 // =========================================================

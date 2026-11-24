@@ -36,9 +36,12 @@ transit data, and production is a teammate's. The rest is design.
 - The tool (`web/`) has a Scenario box for every county in place of
   Honolulu's program box. Its TOD scenario runs every Standard-pathway parcel
   plus the district parcels only TOD allows housing on: TOD rules inside a
-  district, the Baseline outside. At the Base tier, TOD gives less floor area
-  than Bill 6 on some district parcels, so its total capacity can fall while
-  the units that pencil rise. Its summary card shows each scenario's change from
+  district, the Baseline outside. It starts at full approval
+  (`SCENARIO_TOD_TIER`, PD-T and IPD-T alike), because the Base tier is the
+  underlying zoning: it changes no policy, and gives less floor area than
+  Bill 6 on some district parcels. Approval needs a 20,000 sq ft lot, so
+  smaller ones keep their zoning, and its community benefits are not priced.
+  The tier levers can still be moved. Its summary card shows each scenario's change from
   the Baseline at its default levers, on the same parcels. Bill 7, 201H and
   the pre-Ord. 26-7 rules are no longer in the tool; they stay in the engine
   and its tests.
@@ -150,17 +153,21 @@ fees come to about $19,000 a unit in Honolulu, $21,000 on Kauaʻi, $28,000
 in Hawaiʻi County and $33,000 on Maui (where park dedication is most of
 it), all under the challenge's $50,000.
 
-**Statewide (November 19, 2026), units on parcels rated strong:**
+**Statewide (November 23, 2026), units on parcels rated strong:**
 
 | Fee source | Run | Honolulu | Hawaiʻi | Kauaʻi | Maui |
 | --- | --- | --- | --- | --- | --- |
-| County fees | Baseline | 985,640 | 17,170 | 0 | 296,641 |
-| County fees | Fees halved | 1,159,695 | 22,388 | 0 | 299,039 |
-| $50,000 per unit | Baseline | 36,595 | 6,570 | 0 | 228,118 |
-| $50,000 per unit | $25,000 per unit | 609,110 | 17,170 | 0 | 298,372 |
+| County fees | Baseline | 366,399 | 17,170 | 0 | 227,732 |
+| County fees | Fees halved | 726,434 | 22,388 | 0 | 296,572 |
+| $50,000 per unit | Baseline | 0 | 6,570 | 0 | 208,245 |
+| $50,000 per unit | $25,000 per unit | 60,432 | 17,170 | 0 | 228,809 |
 
-The benchmark's change is much larger, because its baseline charges two to
-two and a half times what the counties do.
+These include the November 2026 package changes ([DISCLOSURES](../DISCLOSURES.md)).
+Before them, the county-fee Baseline was 985,640 in Honolulu and 296,641 on
+Maui, and the fees-halved run 1,159,695 and 299,039; Hawaiʻi and Kauaʻi were
+the same. The drop is the aging of market rents (1 point a year off rent
+growth), which lowers the levered IRR and equity multiple: without it, the
+Baseline would be 994,674 and 296,641.
 
 ### 2. Parking requirement reduction
 

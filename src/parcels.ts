@@ -22,6 +22,8 @@ import {
   PDT_FRONT_NO_PARKING_FT,
   openSpaceBonus,
   openSpaceBonusOver,
+  openSpaceRatio,
+  zoneHeightCap,
   residentialUse,
   todHeightLimit,
   todHeightPdt,
@@ -83,7 +85,7 @@ export interface Envelope {
   status_reason?: string;
   /** TOD: IMX-1 unit cap under PD-T */
   max_units?: number;
-  /** FAR earned by public open space, its ground given up at 5:1 */
+  /** FAR earned by public open space, its ground given up at the district's ratio */
   open_space_bonus?: number;
   /** FAR without that bonus, where it isn't max_far - open_space_bonus */
   far_without_bonus?: number;
@@ -311,7 +313,14 @@ export function pathwayEnvelope(
   assertPathway(loc, program);
   // TOD and Bill 7 are Honolulu pathways, so their rules stay Honolulu's
   if (program === "tod") return todEnvelope(parcel, opts);
-  const height = parcel.height > 0 ? parcel.height : DEFAULT_HEIGHT[program];
+  // the district's own height rules over the map's (BMX-4 above 350 ft only
+  // on 35,000 sq ft lots); a starting height, which height_limit can override
+  const height = zoneHeightCap(
+    parcel.zone_class,
+    parcel.lot_sqft,
+    parcel.height > 0 ? parcel.height : DEFAULT_HEIGHT[program],
+    loc
+  );
   switch (program) {
     // current zoning in any county: its FAR (Infinity where the code sets
     // none) and any unit cap from lot area per unit. Honolulu's is Ord.
@@ -363,7 +372,10 @@ export function todOpenSpaceCostSqft(
   opts: TodEnvelopeOpts | number = {}
 ): number {
   const o = typeof opts === "number" ? { density_bonus: opts } : opts;
-  return ((todEnvelope(parcel, o).open_space_bonus ?? 0) * parcel.lot_sqft) / 5;
+  return (
+    ((todEnvelope(parcel, o).open_space_bonus ?? 0) * parcel.lot_sqft) /
+    openSpaceRatio(parcel.zone_class)
+  );
 }
 
 /** Each pathway's default assumptions, all but the parcel's envelope. With no
@@ -405,7 +417,8 @@ export const DEFAULT_INPUTS: Record<ProgramId, SliderInputs> = (() => {
     // where current is bill6 and takes its 0.95 (see parcelInputs)
     current: { ...standard, program: "current", setback: undefined, parking_ratio: undefined },
     bill6: { ...standard, program: "bill6" },
-    tod: { ...standard, program: "tod", floor_height: 10, parking_ratio: 0.85 },
+    // stalled (hawaii appleseed 2025): discretionary rentals average 0.90
+    tod: { ...standard, program: "tod", floor_height: 10, parking_ratio: 0.9 },
     h201: {
       ...standard,
       program: "h201",
@@ -414,6 +427,8 @@ export const DEFAULT_INPUTS: Record<ProgramId, SliderInputs> = (() => {
       affordability: 0.51,
       // GET-exempt, so opex matches Bill 7
       opex_ratio: 0.19,
+      // stalled (hawaii appleseed 2025): discretionary rentals average 0.90
+      parking_ratio: 0.9,
     },
     bill7: {
       program: "bill7",
@@ -434,7 +449,8 @@ export const DEFAULT_INPUTS: Record<ProgramId, SliderInputs> = (() => {
       waivable_fee_basis: "none",
       park: "exempt",
       setback: 10,
-      parking_ratio: 0.5,
+      // stalled: bill 7 rentals average 0.27; 0.35 also from developer interviews
+      parking_ratio: 0.35,
       permitting_months: 18,
       const_months: 12,
       leaseup_months: 9,
@@ -448,11 +464,6 @@ export const DEFAULT_INPUTS: Record<ProgramId, SliderInputs> = (() => {
   };
 })();
 
-/**
- * Model inputs for a parcel: pathway defaults, then `levers` (undefined = not
- * set), then the parcel's envelope. `levers.height_limit` / `max_far` override
- * the envelope, including Bill 7's 60 ft cap. `opts` is TOD only.
- */
 /** the county's legal parking minimum, stalls per unit, for a unit mix
  *  (Maui: 1 per studio or one-bedroom, Ord. 5983) */
 export function countyParkingRatio(unit_type: string, locality?: string): number {
@@ -470,6 +481,14 @@ export function countyLeverDefaults(locality?: string): Partial<SliderInputs> {
   return out;
 }
 
+/**
+ * Model inputs for a parcel: pathway defaults, then the county's lever
+ * defaults, then `levers` (undefined = not set), then the parcel's envelope.
+ * `levers.height_limit` / `max_far` override the envelope, including Bill 7's
+ * 60 ft cap. An overridden `max_far` includes any open-space bonus, unless
+ * `open_space_bonus_mode` is "off": then it is the FAR built, with no plaza.
+ * `opts` is TOD only.
+ */
 export function parcelInputs(
   program: ProgramId,
   parcel: Parcel,
@@ -498,6 +517,12 @@ export function parcelInputs(
     inputs.front_no_parking_ft = envelope.front_no_parking_ft;
   } else if (envelope.open_space_bonus !== undefined) {
     inputs.open_space_bonus = envelope.open_space_bonus;
+  }
+  // a Max FAR override counts the bonus in it, and the plaza stays set aside;
+  // with the bonus off, the override is the FAR built, no plaza given up
+  if (set.open_space_bonus_mode === "off" && set.max_far != null) {
+    inputs.open_space_bonus = 0;
+    delete inputs.far_without_bonus;
   }
   // § 21-6.20(a) exemption
   if (program === "current" || program === "bill6" || program === "standard" || program === "h201")

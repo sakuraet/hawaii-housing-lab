@@ -20,6 +20,8 @@ In the code the steps are numbered slightly differently (sale value and RLV have
 
 Physical inputs (lot size, height, zone class) are user sliders in the Project View but read from parcel records in the Citywide View; every financial and policy input is user-adjustable in both. These are the shared defaults; where a pathway uses a different value, its page lists it under Default assumptions.
 
+***Citywide View parcels:*** lots under 500 sq ft are left out of every pathway's parcel set, because a lot that small can't hold a feasible project under any pathway (the smallest lot in the set is 515 sq ft). The B-1 and B-2 parcels follow the same rule.
+
 | Input | Default | Notes |
 | --- | --- | --- |
 | Hard cost | $450 per sq ft | Residential construction; retail adds $15 per sq ft |
@@ -34,7 +36,7 @@ Physical inputs (lot size, height, zone class) are user sliders in the Project V
 | Permitting, construction, lease-up | 18, 12 and 9 months | The same for every pathway and zone, in the Project View and the package (no longer set by zone) |
 | Operating expense ratio | 30% of EGI |  |
 | Unit mix | Half studio, half one-bedroom | Unit sizes: studio 300, one-bedroom 500, two-bedroom 700 sq ft |
-| Parking | 0.95 stalls per unit | Bill 7 0.5, TOD 0.85. A flat default: it does not follow the unit mix or the § 21-6.20(a) exemption |
+| Parking | 0.95 stalls per unit | Bill 7 0.35, TOD and 201H 0.9 ([Stalled](https://static1.squarespace.com/static/601374ae84e51e430a1829d8/t/68f15c7cbf563d6a7080bf8f/1760648316670/Stalled_FINAL.pdf) (Hawaiʻi Appleseed, 2025), Table 4; Bill 7 also developer interviews). A flat default: it does not follow the unit mix or the § 21-6.20(a) exemption |
 
 ***Note:*** with `parking_ratio` left unset, the model applies the Article 6 minimum (0 on exempt parcels) instead. Only `calcSingle` can do this: `calcParcel` fills an unset lever from `DEFAULT_INPUTS`.
 
@@ -96,7 +98,21 @@ The envelope is the building the lot allows: the number of floors the height lim
 \text{buildable area} = \min\left(\text{FAR} \times \text{lot},\ \sum_{\text{storeys}} \text{floor plate}\right)
 ```
 
-***Note:*** whichever of FAR, lot coverage, the yards and the height limit binds first sets the building. Moving a lever that is not the binding one (for example Setbacks when FAR binds, or Max FAR when height binds) can leave the results unchanged.
+### Which limit sets the building
+
+Each limit is a cap, and the building is the largest one that fits under all of them, so the first limit reached sets its size:
+
+- **Height:** how many floors there are (floors = height limit ÷ floor height).
+- **Lot coverage and yards:** how big each floor plate is.
+- **FAR:** the most floor area, FAR × lot area.
+- **Parking:** the units whose required stalls fit on the ground floor, the podium, or a surface lot (see [Parking and Loading](#parking-and-loading)).
+- **Unit caps**, where the law sets one: Bill 7's unit cap and the IMX-1 cap under PD-T.
+
+Units built are the fewest any of these allows. Raising a limit that isn't the binding one leaves the building and its results unchanged: Max FAR on a lot its height already caps, or Setbacks on a lot FAR already caps, for example. Loading and bicycle parking are sized for the units built (see [Loading spaces](#loading-spaces--21-6110-table-21-65)), so they don't change when a limit that doesn't bind is raised.
+
+Two choices are the model's, not limits:
+- **The open-space bonus** in B-2, BMX-3 and BMX-4 trades ground for floor area, and the model takes it only where it raises the residual land value (see [Open-space bonus](#open-space-bonus)).
+- **Units:** where a limit is raised and more units fit, the model builds them, even if the extra units add more cost than value. A developer could choose to build fewer.
 
 ### Lot coverage
 
@@ -119,6 +135,39 @@ Retail built = the smallest of that cap, the Ground-Floor Retail share (default 
 
 The Setbacks slider (default 10 ft) sets the front, side and rear yards. Step-backs above 40 ft add to the side and rear yards (see Height Setbacks).
 
+### Business districts (Table 21-3.4)
+
+B-1, B-2, BMX-3 and BMX-4 follow Table 21-3.4 and §§ 21-3.110-1, 21-3.120-1 and 21-3.120-2.
+
+**Modeled:**
+
+- FAR: B-1 1.0, B-2 2.5, BMX-3 2.5, BMX-4 4.0. Lot coverage is not regulated.
+- Open-space bonus up to 3.5 FAR in B-2 and BMX-3 and 7.5 in BMX-4, none in B-1; each square foot of public open space earns 5 sq ft of floor area (10 in BMX-4). See [Open-space bonus](#open-space-bonus).
+- Height: the zoned height in the parcel data, which the Max Height lever adds to or subtracts from. B-1 parcels are 40 ft (Table 21-3.4); 18 B-1 lots matched to a higher height-map zone were checked and set to 40 ft. BMX-4 starts at 350 ft at most on lots under 35,000 sq ft (§ 21-3.120-1(a)(1)). These are starting heights, not caps: as in every district, a user can raise the height to test a taller building.
+- Step-back above 40 ft (1 ft per 10 ft) in B-2 and BMX-3. None in B-1 or BMX-4.
+
+**Not modeled:**
+
+- BMX-4's height setback, by decision: no part of a building may rise above a 65° plane drawn from the street centerline, over at least half of each street frontage (§ 21-3.120-2(c)(5)). It is deliberately left out: it needs each street's width, which the parcel data lacks, and a tower can meet it by where it sits on the lot. BMX-4 buildings are limited only by yards, height and FAR, which can be optimistic on lots along narrow streets.
+- Transitional height setbacks where a lot adjoins a residential, apartment or resort lot (§ 21-3.110-1(c)(2) and (4), § 21-3.120-2(c)(3) and (4)); they need the neighbouring lots' zoning.
+- Arcade bonuses: 3 sq ft of floor area per square foot of arcade (5 in BMX-4).
+- Above 350 ft in BMX-4: the major special district permit and the 35% of the lot kept as public open space (§ 21-3.120-1(a)(3), (b)).
+- The 5 ft front yard for structures up to 12 ft tall, and open space or an arcade in place of the front yard on streets wider than 50 ft (Table 21-3.4, note 5).
+- Yards that follow the adjoining district's dwelling yards (Table 21-3.4, notes 3 and 4).
+
+**Lots under 5,000 sq ft:** Table 21-3.4 sets a 5,000 sq ft minimum lot area, but about 800 B and BMX parcels are smaller. They are existing nonconforming lots, which can still be built on, so the model keeps them.
+
+**Yards, planned for a later version:** the model uses the one Setbacks value for every yard in every zone. The law's yards for multifamily dwellings differ by district:
+
+| District | Front yard (law) | Side and rear yards (law) | The model (default) | Effect |
+| --- | --- | --- | --- | --- |
+| B-1 | 10 ft | 10 ft | 10 ft all around | Matches |
+| B-2 | 5 ft | 10 ft | 10 ft all around | Front yard 5 ft too deep: slightly conservative |
+| BMX-3 | 10 ft | 10 ft | 10 ft all around | Matches |
+| BMX-4 | 5 ft | 0 ft | 10 ft all around | Much too strict: the floor plate on a 10,000 sq ft lot is about 36% smaller than the law requires |
+
+The fix would be zone-specific default yards whenever the Setbacks lever is left at its default; it changes results in every zone, so it waits for a later version.
+
 ### Floor Area Ratio (FAR)
 
 Each pathway has its own FAR rule, set out in the Envelope section of its pathway page. The Project View's Max FAR slider shows it and can override it; the Citywide View's Max FAR lever adds to or subtracts from it.
@@ -126,6 +175,8 @@ Each pathway has its own FAR rule, set out in the Envelope section of its pathwa
 ### Open-space bonus
 
 B-2, BMX-3 and BMX-4 lots can raise their FAR by giving up ground as public open space (§ 21-3.110-1(c), § 21-3.120-2(c)). The bonus is optional, the way it is for a developer: `calcSingle` runs the project with and without it and keeps the one with the higher residual land value, or the bigger building when neither pencils. The bonus costs ground, so it often isn't worth it on lower buildings that can't use the extra floor area. `open_space_bonus` on the result is the bonus taken (0 when the project is better without it). Each pathway page says whether the bonus applies.
+
+**Choosing it yourself:** `open_space_bonus_mode` overrides that choice. "auto" (the default) is the comparison above, "on" always takes the bonus and "off" never does. The setting does nothing where no bonus is offered.
 
 **How it is computed:** The bonus fills the gap between the pathway's own FAR and the district's ceiling, and is never negative:
 
@@ -141,13 +192,13 @@ B-2, BMX-3 and BMX-4 lots can raise their FAR by giving up ground as public open
 
 Apartment, AMX, B-1, industrial and IMX-1 zones have no bonus in the model.
 
-**The ground it costs:** The model sets aside open space at 5:1, one square foot of plaza for every five square feet of bonus floor area, and builds the coverage footprint on what remains:
+**The ground it costs:** Each square foot of public open space earns 5 sq ft of floor area in B-2 and BMX-3 (§ 21-3.110-1(c)(5), § 21-3.120-2(c)(7)) and 10 sq ft in BMX-4 (§ 21-3.120-2(c)(8)). The model sets that plaza aside and builds the coverage footprint on what remains:
 
 ```math
-\text{plaza} = \frac{\text{bonus} \times \text{lot}}{5}
+\text{plaza} = \frac{\text{bonus} \times \text{lot}}{\text{ratio}}, \quad \text{ratio} = 5 \text{ (B-2, BMX-3)}, \ 10 \text{ (BMX-4)}
 ```
 
-***Example:*** a 20,000 sq ft BMX-4 lot gets 3.5 bonus FAR, gives up 14,000 sq ft of plaza and builds on the remaining 6,000 sq ft. The plaza stays set aside even when the user overrides Max FAR.
+***Example:*** a 20,000 sq ft BMX-4 lot gets 3.5 bonus FAR, gives up 7,000 sq ft of plaza and builds on the remaining 13,000 sq ft. A 20,000 sq ft BMX-3 lot gets 1.0 bonus FAR and gives up 4,000 sq ft. Arcades, which earn 3 sq ft (5 in BMX-4) per square foot, are not modeled. The plaza stays set aside even when the user overrides Max FAR. An overridden Max FAR includes the bonus, so "auto" may still build it at Max FAR less the bonus. With `open_space_bonus_mode` "off", the override is the FAR built and no plaza is set aside: BMX-3 at a proposed 4.0 builds the full 4.0, not 4.0 less a 1.0 bonus.
 
 ***Note:*** Bill 7 never takes the bonus. In TOD the comparison runs only when the FAR without the bonus is known: when the user sets Max FAR, or in the Citywide View, where the parcel's TOD envelope supplies it. Otherwise the TOD tier's FAR, which already includes the bonus, is used as is.
 
@@ -193,6 +244,7 @@ With no parking and FAR not limiting the building, the step-back reduces the pro
 ### Deviations and what is not modeled
 
 - Transitional setbacks next to residential or apartment lots are not modeled; they depend on each parcel's neighbors.
+- BMX-4 has no step-back: its rule is a 65° plane from the street centerline, which is not modeled (see [Business districts](#business-districts-table-21-34)).
 - The Bill 18 draft rule (step-back above 40 ft on buildings over 75 ft) is not current law. Bill 18 scenarios can still be run by setting the step-back inputs directly.
 - Lot shape is always assumed to be twice as deep as it is wide, with frontage on the short side.
 
@@ -233,7 +285,7 @@ Dropping stalls from the exempt parcels frees ground and podium floors for units
 \text{stalls} = \mathrm{round}\left(j \times \left(r \times \text{units} + \frac{\text{retail sq ft}}{500}\right)\right)
 ```
 
-- **r:** stalls per unit, set by the Parking lever. It defaults to 0.95 (Bill 7 0.5, TOD 0.85). With the lever unset, the model uses the legal minimum: the unit mix's average private dwelling area ÷ 1,000. Common areas and accessory recreation areas are excluded (§ 21-6.20(b)(2)(A)), so the unit sizes alone count: studio 300, one-bedroom 500, two-bedroom 700 sq ft.
+- **r:** stalls per unit, set by the Parking lever. It defaults to 0.95 (Bill 7 0.35, TOD and 201H 0.9). With the lever unset, the model uses the legal minimum: the unit mix's average private dwelling area ÷ 1,000. Common areas and accessory recreation areas are excluded (§ 21-6.20(b)(2)(A)), so the unit sizes alone count: studio 300, one-bedroom 500, two-bedroom 700 sq ft.
 - **j:** 0.9 when housing and retail both need stalls (Table 21-6.2, residential with retail/commercial), else 1.
 - A fraction of 0.5 or more rounds up (§ 21-6.20(b)(1)).
 
@@ -261,7 +313,7 @@ Dropping stalls from the exempt parcels frees ground and podium floors for units
 | Retail | 10,001 to 20,000 / 20,001 to 40,000 / 40,001 to 60,000 sq ft | 2 / 3 / 4 |
 | Retail | Each additional 50,000 sq ft or major fraction | +1 |
 
-Lots over 7,500 sq ft reserve ground for these spaces, with the same 90% joint-use rate and half-up rounding (§ 21-6.110(b)(3)). One space is 19 ft by 8 ft 6 in (161.5 sq ft); when more than one is required, a third of them (rounded half up) are 35 ft by 12 ft (420 sq ft) (§ 21-6.130(a)). Loading takes ground area in the parking area and is costed as parking: surface rate on a surface lot, structured rate inside the building. The count is sized for the most units the lot can hold, before parking takes any floor area, so it never falls short. Results report it as `loading_spaces`.
+Lots over 7,500 sq ft reserve ground for these spaces, with the same 90% joint-use rate and half-up rounding (§ 21-6.110(b)(3)). One space is 19 ft by 8 ft 6 in (161.5 sq ft); when more than one is required, a third of them (rounded half up) are 35 ft by 12 ft (420 sq ft) (§ 21-6.130(a)). Loading takes ground area in the parking area and is costed as parking: surface rate on a surface lot, structured rate inside the building. The count is sized for the units actually built, so it never falls short of the code minimum for them. Loading and bicycle space take ground, and less of it leaves room for more units, so the model searches for the smallest sizing that still covers every unit built, and never builds fewer units than sizing for the most units the lot could hold would. An earlier version sized both for the most units the height and FAR could hold, before parking took any floor area; raising a limit that didn't bind could then reserve more ground, push parking into another podium level and make the same building worse (a 45,085 sq ft, 60 ft B-2 lot went from 215 units at FAR 4.0 to 214 at FAR 5.0, with $7.8 million more hard cost). Results report it as `loading_spaces`.
 
 ### Bicycle parking (§ 21-6.40, Table 21-6.3)
 
@@ -275,7 +327,7 @@ Bicycle parking is required in the apartment, AMX, business, BMX, resort and Wai
 - **Vehicle spaces:** in the commercial rate are the retail's own car stalls (1 per 500 sq ft, before the joint-use reduction; none on exempt parcels).
 - **Rounding:** "or portion" rounds up; the total for each type rounds a fraction of 0.5 or more up (§ 21-6.40(b)).
 - **Space size:** 2 ft × 6 ft plus the 5 ft clear zone on the 2 ft access side, 22 sq ft per space (§ 21-6.40(d)(1)). The area is set aside in the parking area with the loading spaces and costed as parking.
-- **Count basis:** like loading, the count is sized for the most units the lot can hold, so it can run a few percent above the units built.
+- **Count basis:** like loading, the count is sized for the units actually built (see Loading spaces), so it meets the code minimum for them and can run slightly above it.
 
 ***Example:*** 40 one-bedroom units over 2,000 sq ft of retail need 5 short-term and 21 long-term spaces, 572 sq ft and $27,375 of racks and lockers.
 
@@ -356,7 +408,15 @@ Each pathway's default setting and its waivers are listed on its [pathway page](
 
 ### Park dedication
 
-Park land is charged only on units not exempt under § 22-7.3(j); in other words only market units count toward the park dedication requirement. The requirement is the lesser of 110 sq ft per unit and 10% of floor area. The Park Dedication toggle sets how it is paid: in lieu (a $200 application fee plus the land value of the required area at the land cost) or exempt (no cost).
+The requirement is the lesser of 110 sq ft per unit and 10% of the "maximum permitted floor area" (§ 22-7.5). The same rule covers apartment, resort and mixed-use districts (§ 22-7.5(b)(1)), planned developments such as PD-T (§ 22-7.5(b)(2)) and multifamily housing in special district precincts (§ 22-7.5(c)(2)), so it is the same in every pathway. The model applies it to the floor area it builds, bonus floor area included; DPP counts a project's granted floor area, not the base zoning's ([Halewaiolu Senior Residences, 2020/GEN-16](https://hnldoc.ehawaii.gov/hnldoc/document-download?id=8192), Table 5: 5.9 FAR rather than 4.0).
+
+Park land is charged only on units not exempt under § 22-7.3(j). § 22-7.3(j) exempts four kinds of affordable units: (1) Chapter 29 affordable units; (2) affordable units under a PD-T or IPD-T permit (§ 21-9.100-10, -5); (3) affordable rentals under HRS § 201H-36(a)(5); and (4) Chapter 32 rentals at or below 100% AMI, at or below HUD's 100% AMI rent limits. In the model only 201H (units at 80% AMI) and Bill 7 have affordable units; current zoning, pre-Ord. 26-7 and TOD charge every unit.
+
+The Park Dedication toggle sets how it is paid: in lieu (a $200 application fee plus "the value of the land that would otherwise have been required", § 22-7.3(a), at the land cost) or exempt (no cost). The toggle means the same in every pathway: in lieu charges the units § 22-7.3(j) does not exempt, which in the model are the market units.
+
+**Land value.** The model values the park land at the Land Cost lever. DPP values it at the market value of similar lots in the zone with the proposed development, not the assessed value: in the Halewaiolu report it used $300 per sq ft where the applicant used the $53.20 assessed value. The Land Cost lever is a market price for a developable lot, so it follows DPP's approach rather than the assessed value. It may still run low where a project gets more floor area than the base zoning allows (a TOD bonus, or 201H above the base FAR), since DPP values the land with that development in mind. The code keeps the Land Cost lever; the residual land value can't stand in for it, since the residual land value depends on the fees, park dedication included.
+
+***Sunset:*** § 22-7.3(j) is repealed on June 30, 2027 (Ords. 18-1 and 19-8). After that, affordable units owe park dedication unless the Council extends it or the project gets another waiver. The model keeps the exemption.
 
 ### Wastewater system facility charges
 
@@ -601,7 +661,12 @@ Debt service uses a 30-year amortization at a 6.75% permanent rate, both user in
 
 **Entry cap:** The market cap rate (default 5.1% for every zone) values the building at stabilization. It anchors gross development value and the return-on-cost benchmark.
 
-**Exit cap:** The exit cap values the building at sale after the hold period: the entry cap plus 50 basis points. A buyer further out from stabilization is pricing an older asset in a less certain market and demands a higher yield than a buyer of a new building.
+**Exit cap:** The exit cap values the building at sale after the hold period: the entry cap plus 7.5 basis points for each year held, up to 75 basis points at 10 years (`exitCapRate`). At the 5.1% default, a 1-year hold sells at 5.175%, a 5-year hold at 5.475%, and a hold of 10 years or more at 5.85%. A flip sells at the entry cap.
+
+- **Why it widens:** the further out the sale, the more market risk the buyer prices in. Investors surveyed by CBRE expect exit caps above going-in caps, at "a more typical level of between 50 and 60 bps" ([CBRE Q4 2025 Multifamily Underwriting Survey](https://cbre.com/insights/briefs/core-multifamily-buyer-sentiment-improves-in-q4-2025); the spread was 20 bps for core assets in Q4 2025).
+- **Why it grows with the hold:** a fixed spread charges a 1-year hold as much as a 10-year one, which wiped out most of a short hold's development profit (a 1-year hold earned 14% against the flip's 26%). The traditional ½ to 1 point rule of thumb has no theory behind it, and the exit cap should be chosen consistently with the hold's income growth ([Wang, Grissom & Chan, 1990](https://ideas.repec.org/a/jre/issued/v5n21990p231-246.html)). With the spread tied to the years held, IRR falls steadily from the flip to longer holds.
+- **Not aging:** building age shows up mostly in income, not the cap rate. Bokhari and Geltner find depreciation of 1.5% a year, 92% of it from falling real income and "only 0.17%/year" from cap rate creep ([Bokhari & Geltner, 2018](https://dspace.mit.edu/handle/1721.1/120153)). The model puts aging in income instead (see [Aging](#aging)).
+- **Market cycles:** not modeled; the spread is the same in every year. Test a cycle by changing the Cap Rate lever.
 
 ### Cash flow by developer strategy
 
@@ -613,8 +678,8 @@ Debt service uses a 30-year amortization at a 6.75% permanent rate, both user in
 
 **Hold:** The developer holds the building for the hold period, then sells:
 
-- **Each year:** NOI minus permanent debt service. Rents grow 4% a year, affordable and market alike (see [Rent growth](#rent-growth)), operating expenses 3.5%, and assessed value 2%. The 3.5% and 2% are the expense and property tax escalation rates California's TCAC requires in the 15-year cash flow every LIHTC applicant files (4 CCR § 10327(g)(1)); operating expenses follow their own series rather than a fixed share of EGI.
-- **At exit:** the next year's NOI ÷ exit cap, less the selling costs on that price and the remaining loan balance.
+- **Each year:** NOI minus permanent debt service. Affordable rents grow 4% a year and market rents, parking and retail 3% (4% less the [aging](#aging) drag; see [Rent growth](#rent-growth)), operating expenses 3.5%, and assessed value 2%. The 3.5% and 2% are the expense and property tax escalation rates California's TCAC requires in the 15-year cash flow every LIHTC applicant files (4 CCR § 10327(g)(1)); operating expenses follow their own series rather than a fixed share of EGI.
+- **At exit:** the next year's NOI ÷ exit cap (NOI grown at next year's income growth), less the selling costs on that price and the remaining loan balance.
 - **Property tax exemptions:** a pathway with a 15-year improvement exemption pays tax on land only for those years (see Property Tax).
 
 ## Revenue
@@ -647,6 +712,15 @@ Each pathway sets its affordable share of units, listed in the Affordability sec
 Affordable and market rents both grow 4% a year: Honolulu's HUD income limits, which set the affordable rent caps, grew 4.4% a year from 2015 to 2026, and market rents grew 3.6% to 4.3% a year. The constants are `FINANCING.ami_escalation` (to lease-up) and `HOLD.annual_rent_growth` (over the hold) in `src/calculations/calc-shared.ts`.
 
 Bill 7's affordable rent cap is tied to HUD's current limits, so it rises every year (see [Bill 7](pathways/bill7.md#affordability)).
+
+#### Aging
+
+Over the hold, a building's market rents fall behind those of new buildings. Market rent, parking and retail income grow 1% a year slower than rent growth, so 3% instead of 4% (`HOLD.age_rent_drag`, applied in `holdEgi`). Affordable rents keep the full 4%: they are set by HUD's limits, which bind whatever the building's age.
+
+- **Source:** Bokhari and Geltner find real depreciation of 1.5% a year across 107,805 US sales, from 1.82% a year for new buildings to 1.12% at 50 years, with apartments slightly faster. 92% of it, 1.38% a year, is "decline in current real income", and only 0.17% a year is cap rate creep. They conclude that pro formas growing cash flow at a standard 3% are "substantially biased on the high side, especially for newer buildings" ([Bokhari & Geltner, 2018](https://dspace.mit.edu/handle/1721.1/120153)).
+- **Why 1% of rent:** their 1.38% is a decline in NOI. Operating expenses and property tax grow on their own series, so a 1% drag on rent takes NOI growth down by 1.4% to 1.5% a year (EGI is about 1.45 times NOI).
+- **Oʻahu:** they also find less depreciation where land is physically scarce, so 1% may be on the high side for Oʻahu.
+- **Effect:** on a 20,000 sq ft BMX-3 lot under current zoning, levered IRR at a 20-year hold falls from 13.0% to 10.8%, and at a 1-year hold from 20.6% to 19.8%. Bill 7 moves least (0.5 points or less), since 80% of its units are affordable.
 
 **Affordable rents follow HUD income limits:** Honolulu's median family income grew 4.05% a year from 2015 ($86,900) to 2025 ($129,300), and the income limits that set rent caps grew 4.4% a year from 2015 to 2026. The 2026 increase of 1.3% followed a 9.2% year. HUD caps any single year's increase at 10%, and the limits used for these projects don't fall. Since 2020, growth has averaged 3.4% a year.
 

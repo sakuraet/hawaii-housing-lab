@@ -14,6 +14,7 @@ import {
   overallLevel,
   pathwayEnvelope,
   rlvRatio,
+  SCENARIO_TOD_TIER,
   type Envelope,
   type TodTier,
 } from "feasim-challenge";
@@ -129,7 +130,7 @@ function movedLevers(sliders: GaugeInputs, county: CountyId): GaugeInputs {
 const inTodDistrict = (parcel: ParcelRow) => Boolean(parcel.tod_regime);
 
 // a TOD-scenario lever still at the TOD default goes back to the Baseline's
-// (parking 0.85 to 0.95, 10 ft floors to the Standard pathway's); a lever the
+// (parking 0.9 to 0.95, 10 ft floors to the Standard pathway's); a lever the
 // user moved stays
 function outsideTodLevers(s: GaugeInputs): GaugeInputs {
   const tod = defaultsFor("tod");
@@ -349,9 +350,10 @@ export function PolicyGaugeDashboard() {
     if (!parcelsLoading) void prefetchAllParcels();
   }, [parcelsLoading]);
 
-  // PD-T and IPD-T parcels each take their own tier
-  const [todTierPdt, setTodTierPdt] = useState<TodTier>("base");
-  const [todTierIpdt, setTodTierIpdt] = useState<TodTier>("base");
+  // PD-T and IPD-T parcels each take their own tier, starting at the TOD
+  // scenario's (full approval)
+  const [todTierPdt, setTodTierPdt] = useState<TodTier>(SCENARIO_TOD_TIER);
+  const [todTierIpdt, setTodTierIpdt] = useState<TodTier>(SCENARIO_TOD_TIER);
 
   const [selectedParcelId, setSelectedParcelId] = useState<string | null>(null);
   // Whether the user has clicked a parcel since this pathway loaded. Until

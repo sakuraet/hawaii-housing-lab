@@ -78,6 +78,11 @@ export interface ZoneRules {
   commercial_coverage: number;
   /** open-space bonus FAR ceiling; absent = no bonus */
   open_space_far_ceiling?: number;
+  /** floor area the bonus earns per sqft of public open space; absent = 5 */
+  open_space_floor_per_sqft?: number;
+  /** heights above `above_ft` need a lot of at least `min_lot_sqft`; smaller
+   *  lots start at `above_ft` (Honolulu BMX-4); absent = no such rule */
+  tall_height?: { above_ft: number; min_lot_sqft: number };
   /** required open space as a share of the lot, by FAR (special districts) */
   open_space?: Schedule;
   step_back?: StepBackRule;
