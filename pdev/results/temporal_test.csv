@@ -1,0 +1,4 @@
+spec,B_observed,B_predicted,pct_err,ll_model,ll_base_rate,deciles_in_90,vacant_obs,vacant_pred
+R only,468,319.2,-31.8,2808.7,3117.3,6,66,8.6
+R x vacant,468,302.2,-35.4,2762.3,3117.3,6,66,51.7
+R x vacant + lot covariates,468,273.5,-41.6,2777.6,3117.3,5,66,50.7
