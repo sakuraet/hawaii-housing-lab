@@ -42,6 +42,7 @@ remain freely available to end users.]
 | `lightningcss` 1.33.0 and its platform binaries | MPL-2.0 | Dev only | Flagged, resolved; see below |
 | `axe-core` 4.14.0 | MPL-2.0 | Dev only | Flagged, resolved; see below |
 | `feasim-challenge` (repo root) and `feasim-web` (`web/`) | No `license` field in `package.json`; covered by the repository's Apache-2.0 [LICENSE](../LICENSE) | Runtime | ok: this repository's own packages, which the SBOM may list as unknown |
+| [Rubik](https://fonts.google.com/specimen/Rubik) (the tool's font) | SIL Open Font License 1.1 | Runtime | ok: OSI-approved and can be bundled. `next/font` downloads it from Google Fonts when the tool is built and serves it with the tool, so it isn't in the repository and browsers don't call Google |
 | Python data scripts (`scripts/requirements.txt`): pandas, geopandas, shapely, numpy | BSD-3-Clause | Data build only | ok: permissive |
 | pyogrio, pyproj, GDAL (`libgdal-core`) | MIT | Data build only | ok: permissive |
 

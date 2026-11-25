@@ -54,7 +54,8 @@ const config: Config = {
         sm: "calc(var(--radius) - 4px)",
       },
       fontFamily: {
-        sans: defaultTheme.fontFamily.sans,
+        // Rubik (src/app/layout.tsx), then the system fonts
+        sans: ["var(--font-rubik)", ...defaultTheme.fontFamily.sans],
       },
       keyframes: {
         "fade-in": { from: { opacity: "0%" }, to: { opacity: "100%" } },

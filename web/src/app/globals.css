@@ -8,6 +8,11 @@
   }
 }
 
+/* the map's labels and popups in the tool's font (Leaflet sets Helvetica) */
+body .leaflet-container {
+  font-family: inherit;
+}
+
 ::-webkit-scrollbar {
   width: 4px;
 }
