@@ -248,12 +248,12 @@ describe("a Maui parcel runs end to end", () => {
 describe("Maui's lever defaults", () => {
   const parcel = { locality: "hi-maui", lot_sqft: 20000, zone_class: "A-2", height: 60 };
 
-  it("$75 land and all studios, where Honolulu has $130 and half studios", () => {
+  it("$75 land and all studios, where Honolulu has $170 and half studios", () => {
     const inputs = parcelInputs("current", parcel);
     expect(inputs.land_cost).toBe(75);
     expect(inputs.unit_type).toBe("studio_100");
     const oahu = parcelInputs("current", { ...parcel, locality: "hi-honolulu" });
-    expect(oahu.land_cost).toBe(130);
+    expect(oahu.land_cost).toBe(170);
     expect(oahu.unit_type).toBe("studio50_1br50");
   });
 

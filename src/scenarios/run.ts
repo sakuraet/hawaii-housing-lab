@@ -1,6 +1,6 @@
-// Runs the parcel table through the engine on current zoning: each parcel's
-// result, or why it was not run, and totals by county. The scenarios build on
-// this; see docs/notes/SCENARIO_LAYER.md.
+// Runs the parcel table through the engine under a scenario (the baseline,
+// current zoning, unless one is given): each parcel's result, or why it was
+// not run, and totals by county. See docs/notes/SCENARIO_LAYER.md.
 
 import type { ParcelOutput, SliderInputs } from "../calculations";
 import { zoneKey } from "../core/zoning";
@@ -8,6 +8,7 @@ import { overallLevel, type Level } from "../feasibility";
 import { getLocality } from "../localities";
 import { calcParcel } from "../parcels";
 import { landCostPerSqft, toParcel, type LandBasis, type StatewideParcel } from "./parcels";
+import { baselinePathway, feeSourceLevers, scenarioSetup, type FeeSource, type ScenarioId } from "./scenarios";
 
 /** run: the engine ran; not_modeled: the zone has no rules in the county's
  *  config, or does not allow multi-family housing; error: the engine
@@ -33,13 +34,18 @@ export interface ParcelRun {
 }
 
 export interface RunOptions {
-  /** levers for every parcel, on top of the pathway defaults */
+  /** the scenario to run; default "baseline" */
+  scenario?: ScenarioId;
+  /** whose fees: each county's schedules (default) or the challenge's
+   *  $50,000 per unit */
+  fee_source?: FeeSource;
+  /** levers for every parcel, on top of the scenario's */
   levers?: Partial<SliderInputs>;
   /** which assessed values make the land cost; default "land" */
   land_basis?: LandBasis;
 }
 
-/** one parcel on current zoning */
+/** one parcel under a scenario (the baseline unless one is given) */
 export function runParcel(p: StatewideParcel, opts: RunOptions = {}): ParcelRun {
   const loc = getLocality(p.locality);
   const zone_class = zoneKey(loc, p.zone_class);
@@ -57,15 +63,23 @@ export function runParcel(p: StatewideParcel, opts: RunOptions = {}): ParcelRun 
   if (!zone.residential_permitted)
     return { ...run, status: "not_modeled", reason: `multi-family housing is not permitted in ${zone_class}` };
   try {
-    const levers = land_cost === undefined ? opts.levers : { ...opts.levers, land_cost };
-    const output = calcParcel("current", { ...toParcel(p), zone_class }, levers);
+    const setup = scenarioSetup(opts.scenario ?? "baseline", p.locality);
+    const set = { ...feeSourceLevers(opts.fee_source ?? "county"), ...setup.levers, ...opts.levers };
+    const levers = land_cost === undefined ? set : { ...set, land_cost };
+    const parcel = { ...toParcel(p), zone_class };
+    // Honolulu's TOD rules only reach parcels in a TOD special district; the
+    // rest keep the baseline (the parcel table has no district yet, so for now
+    // every parcel does)
+    const pathway =
+      setup.pathway === "tod" && !parcel.tod_regime ? baselinePathway(p.locality) : setup.pathway;
+    const output = calcParcel(pathway, parcel, levers, pathway === "tod" ? { tier: setup.tod_tier } : {});
     return { ...run, output, level: overallLevel(output) };
   } catch (e) {
     return { ...run, status: "error", reason: e instanceof Error ? e.message : String(e) };
   }
 }
 
-/** every parcel on current zoning */
+/** every parcel under a scenario (the baseline unless one is given) */
 export function runParcels(parcels: StatewideParcel[], opts: RunOptions = {}): ParcelRun[] {
   return parcels.map((p) => runParcel(p, opts));
 }

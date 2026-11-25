@@ -1,5 +1,6 @@
 "use client";
 
+import { LOCK_COLOR } from "@/lib/theme";
 import {
   useCallback,
   useDeferredValue,
@@ -13,6 +14,7 @@ import {
   overallLevel,
   pathwayEnvelope,
   rlvRatio,
+  SCENARIO_TOD_TIER,
   type Envelope,
   type TodTier,
 } from "feasim-challenge";
@@ -109,17 +111,39 @@ const isHonolulu = (county: CountyId) => county === "hi-honolulu";
 const pathwayFor = (program: string, county: CountyId): ProgramId =>
   isHonolulu(county) ? pathwayOf(program) : "current";
 
-// the levers moved from the county's defaults: the other counties run on
-// their own defaults, so only a moved lever carries over
+// the levers that differ from the county's baseline: the other counties run
+// on their own defaults, so only a scenario's levers (parking, fees) and the
+// user's moved levers carry over
 function movedLevers(sliders: GaugeInputs, county: CountyId): GaugeInputs {
-  const defaults = defaultsFor(sliders.program, county);
+  const defaults = defaultsFor("baseline", county);
   const moved = { program: "current" } as GaugeInputs;
   for (const key of Object.keys(sliders) as (keyof GaugeInputs)[]) {
-    if (key === "program") continue;
+    if (key === "program" || key === "scenario") continue;
     if (JSON.stringify(sliders[key]) !== JSON.stringify(defaults[key]))
       moved[key] = sliders[key] as never;
   }
   return moved;
+}
+
+// The TOD scenario: Honolulu's TOD rules reach only parcels in a TOD special
+// district (PD-T or IPD-T); every other parcel keeps its Baseline result
+const inTodDistrict = (parcel: ParcelRow) => Boolean(parcel.tod_regime);
+
+// a TOD-scenario lever still at the TOD default goes back to the Baseline's
+// (parking 0.9 to 0.95, 10 ft floors to the Standard pathway's); a lever the
+// user moved stays
+function outsideTodLevers(s: GaugeInputs): GaugeInputs {
+  const tod = defaultsFor("tod");
+  const base = defaultsFor("baseline");
+  const out = { ...s, program: base.program } as GaugeInputs;
+  for (const key of new Set([...Object.keys(tod), ...Object.keys(base)]) as Set<
+    keyof GaugeInputs
+  >) {
+    if (key === "program" || key === "scenario") continue;
+    if (JSON.stringify(s[key]) === JSON.stringify(tod[key]))
+      out[key] = base[key] as never;
+  }
+  return out;
 }
 
 // one pathway's results for every parcel cached (run-parcels.ts)
@@ -129,7 +153,10 @@ function runPathway(
   sliders: GaugeInputs,
   tierPdt: TodTier,
   tierIpdt: TodTier,
-  county: CountyId
+  county: CountyId,
+  /** the parcels' data file, for the cache, when it isn't the program's own
+   *  (the Baseline run on the TOD scenario's parcels) */
+  dataKey = dataKeyFor(program, county)
 ): ParcelResult[] {
   if (parcels.length === 0) return [];
   if (!isHonolulu(county)) {
@@ -137,10 +164,18 @@ function runPathway(
       const row = { ...parcel, locality: county };
       return calcParcel("current", row, parcelLevers("current", row, movedLevers(s, county)));
     };
-    return runGauge(dataKeyFor(program, county), parcels, sliders, calc);
+    return runGauge(dataKey, parcels, sliders, calc);
   }
   const pathway = pathwayOf(program);
   const calc = (parcel: ParcelRow, s: GaugeInputs) => {
+    if (pathway === "tod" && !inTodDistrict(parcel)) {
+      const levers = outsideTodLevers(s);
+      return calcParcel(
+        pathwayOf(levers.program),
+        parcel,
+        parcelLevers(pathwayOf(levers.program), parcel, levers)
+      );
+    }
     const opts =
       pathway === "tod"
         ? { tier: parcel.tod_regime === "pdt" ? tierPdt : tierIpdt }
@@ -153,7 +188,7 @@ function runPathway(
     );
   };
   return runGauge(
-    `${dataKeyFor(program)}${program === "tod" ? `|${tierPdt}|${tierIpdt}` : ""}`,
+    `${dataKey}${program === "tod" ? `|${tierPdt}|${tierIpdt}` : ""}`,
     parcels,
     sliders,
     calc
@@ -174,6 +209,8 @@ function todStatusOf(
   const out = new Map<string, Envelope["status"]>();
   if (program !== "tod") return out;
   for (const { parcel } of results) {
+    // outside a TOD district the parcel runs the Baseline
+    if (!inTodDistrict(parcel)) continue;
     const tier = parcel.tod_regime === "pdt" ? tierPdt : tierIpdt;
     out.set(parcel.tmk, pathwayEnvelope("tod", parcel, { tier }).status);
   }
@@ -313,9 +350,10 @@ export function PolicyGaugeDashboard() {
     if (!parcelsLoading) void prefetchAllParcels();
   }, [parcelsLoading]);
 
-  // PD-T and IPD-T parcels each take their own tier
-  const [todTierPdt, setTodTierPdt] = useState<TodTier>("base");
-  const [todTierIpdt, setTodTierIpdt] = useState<TodTier>("base");
+  // PD-T and IPD-T parcels each take their own tier, starting at the TOD
+  // scenario's (full approval)
+  const [todTierPdt, setTodTierPdt] = useState<TodTier>(SCENARIO_TOD_TIER);
+  const [todTierIpdt, setTodTierIpdt] = useState<TodTier>(SCENARIO_TOD_TIER);
 
   const [selectedParcelId, setSelectedParcelId] = useState<string | null>(null);
   // Whether the user has clicked a parcel since this pathway loaded. Until
@@ -440,8 +478,9 @@ export function PolicyGaugeDashboard() {
   const selectedEnvelope = useMemo(() => {
     if (!selectedParcel) return null;
     const parcel = selectedParcel.parcel;
+    const pathway = pathwayFor(mapInputs.program, county);
     return pathwayEnvelope(
-      pathwayFor(mapInputs.program, county),
+      pathway === "tod" && !inTodDistrict(parcel) ? "bill6" : pathway,
       isHonolulu(county) ? parcel : { ...parcel, locality: county },
       mapInputs.program === "tod" && isHonolulu(county)
         ? { tier: parcel.tod_regime === "pdt" ? todTierPdt : todTierIpdt }
@@ -465,30 +504,35 @@ export function PolicyGaugeDashboard() {
 
   // ── Aggregate financial metrics across all valid parcels ────────────────
   const summary = useMemo(
-    () => ({
-      ...summarize(parcelResults, todStatus),
-      program: isHonolulu(county) ? mapInputs.program : "current",
-    }),
-    [parcelResults, mapInputs.program, todStatus, county]
+    () => summarize(parcelResults, todStatus),
+    [parcelResults, todStatus]
   );
 
-  // the same pathway with every lever at its default (TOD at the base tier):
-  // what the scenario card's unit deltas are measured against
+  // the Baseline scenario on the same parcels, every lever at its default:
+  // what the summary card's unit changes are measured against, so each
+  // scenario shows its change from today's rules
   const baseline = useMemo(() => {
-    const defaults = defaultsFor(mapInputs.program, county);
+    // on the same fee basis as the scenario, so the fee cut is all that differs
+    const defaults = {
+      ...defaultsFor("baseline", county),
+      fee_source: mapInputs.fee_source,
+    };
     const results = runPathway(
-      mapInputs.program,
+      defaults.program,
       activeParcels,
       defaults,
       "base",
       "base",
-      county
+      county,
+      // the cache key says whose parcels these are (the TOD scenario's
+      // include parcels the Baseline file doesn't)
+      `${dataKeyFor(mapInputs.program, county)}|baseline|${mapInputs.fee_source}`
     );
     return summarize(
       results,
-      todStatusOf(programIn(mapInputs.program, county), results, "base", "base")
+      todStatusOf(programIn(defaults.program, county), results, "base", "base")
     );
-  }, [activeParcels, mapInputs.program, county]);
+  }, [activeParcels, mapInputs.program, mapInputs.fee_source, county]);
 
   // TOD only: the selected parcel's regime for its card, and whether housing
   // is not applicable there at its tier
@@ -503,8 +547,10 @@ export function PolicyGaugeDashboard() {
       : name;
   }, [mapInputs.program, selectedParcel, todStatus, county]);
 
-  // a parking lever set below the Article 6 minimum needs a variance
+  // a parking lever set below the legal minimum needs a variance, except in
+  // the Parking scenario, which removes the minimums
   const parkingWarning =
+    mapInputs.scenario !== "parking" &&
     derived.parking_ratio !== undefined &&
     mapInputs.parking_ratio !== undefined &&
     mapInputs.parking_ratio < derived.parking_ratio - 1e-9
@@ -577,7 +623,7 @@ export function PolicyGaugeDashboard() {
             onChange={handleInputsChange}
             onFactorChange={setFactor}
             modified={modified}
-            defaults={defaultsFor(inputs.program, county)}
+            defaults={defaultsFor(inputs.scenario ?? "baseline", county)}
             derived={derived}
             onReset={handleReset}
             todTierPdt={todTierPdt}
@@ -603,7 +649,7 @@ export function PolicyGaugeDashboard() {
           aria-expanded={leversOpen}
           aria-controls="policy-levers"
           aria-label={leversOpen ? "Hide policy levers" : "Show policy levers"}
-          className="absolute left-full top-1/2 flex -translate-y-1/2 flex-col items-center gap-1.5 rounded-r-xl bg-[#1D667F] px-2 py-3 text-white shadow-lg shadow-slate-900/20 transition-colors active:bg-[#2a7d99] lg:hidden"
+          className="absolute left-full top-1/2 flex -translate-y-1/2 flex-col items-center gap-1.5 rounded-r-xl bg-brand px-2 py-3 text-white shadow-lg shadow-slate-900/20 transition-colors active:bg-brand-600 lg:hidden"
         >
           {leversOpen ? (
             <ChevronLeft className="size-4" aria-hidden />
@@ -616,7 +662,7 @@ export function PolicyGaugeDashboard() {
           {lockCount > 0 && (
             <span
               className="flex size-4 items-center justify-center rounded-full text-[10px] font-bold text-white"
-              style={{ backgroundColor: "#F6A01B" }}
+              style={{ backgroundColor: LOCK_COLOR }}
               title={`${lockCount} locked`}
             >
               {lockCount}
@@ -806,7 +852,7 @@ function PanelToggle({
       aria-pressed={pressed}
       className={`flex items-center gap-1.5 border-l border-slate-300 px-2.5 py-1.5 transition-colors first:border-l-0 ${
         pressed
-          ? "bg-[#1D667F] text-white"
+          ? "bg-brand text-white"
           : "hover:bg-slate-100 hover:text-slate-900"
       }`}
     >

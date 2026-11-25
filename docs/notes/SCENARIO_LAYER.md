@@ -5,8 +5,47 @@ would Hawaiʻi get over five years under this policy?". This is the piece the
 challenge scores: a statewide, five-year estimate against a baseline, for the
 baseline and at least three of the five benchmark scenarios.
 
-Status: the parcel table and the current-zoning runner are built. The rest is
-design.
+Status: the parcel table, the four scenarios' framework
+(`src/scenarios/scenarios.ts`), the fee lever and the tool's scenario box are
+built. The parking ratio and the fee cut are drafts, TOD outside Oʻahu needs
+transit data, and production is a teammate's. The rest is design.
+
+## The framework as built
+
+| Scenario | Honolulu | Maui, Hawaiʻi, Kauaʻi | Lever it sets |
+| --- | --- | --- | --- |
+| Baseline | Standard pathway (`bill6`, current zoning, Ord. 26-7) | `current` | none |
+| TOD | Honolulu's TOD pathway (PD-T and IPD-T) on parcels in a TOD district | Not defined yet: runs the baseline until each parcel has a distance to a frequent bus stop | none |
+| Parking | Baseline pathway | Baseline pathway | `parking_ratio: 0.5` (draft market ratio) |
+| Developer Fees | Baseline pathway | Baseline pathway | `fee_scale: 0.5` (the challenge's 50% cut), on each county's fees or the $50,000 benchmark |
+
+- `scenarioSetup(id, locality)` gives a scenario's pathway and levers in a
+  county. A lever the user sets still wins over the scenario's.
+- `fee_scale` (default 1) multiplies every line of `calcSoftCosts` except
+  construction management, in every pathway. `fee_per_unit` (unset by
+  default) makes those lines total that much per unit, each keeping its
+  share of the county's fees; `fee_scale` then applies to it. The fee source
+  (`feeSourceLevers`: `"county"` or `"benchmark"`, $50,000) is set on the
+  baseline and the fee scenario alike: `--fee-source benchmark` on the
+  runner, and the Fee Basis lever in the tool, whose Baseline comparison
+  follows it.
+- `runParcels(parcels, { scenario })` and `node scripts/run-parcels.mjs
+  <csv> --scenario fees` run the statewide table under a scenario. The parcel
+  table has no TOD district yet, so TOD keeps the baseline on every parcel
+  there.
+- The tool (`web/`) has a Scenario box for every county in place of
+  Honolulu's program box. Its TOD scenario runs every Standard-pathway parcel
+  plus the district parcels only TOD allows housing on: TOD rules inside a
+  district, the Baseline outside. It starts at full approval
+  (`SCENARIO_TOD_TIER`, PD-T and IPD-T alike), because the Base tier is the
+  underlying zoning: it changes no policy, and gives less floor area than
+  Bill 6 on some district parcels. Approval needs a 20,000 sq ft lot, so
+  smaller ones keep their zoning (industrial lots have no housing, except up
+  to 10 units in IMX-1 under PD-T), and its community benefits are not priced.
+  The tier levers can still be moved. Its summary card shows each scenario's change from
+  the Baseline at its default levers, on the same parcels. Bill 7, 201H and
+  the pre-Ord. 26-7 rules are no longer in the tool; they stay in the engine
+  and its tests.
 
 ## Where this sits
 
@@ -34,13 +73,10 @@ and levers), so every county runs the same scenario code through the same
 ## Honolulu's pathways
 
 Bill 7, TOD (PD-T / IPD-T), 201H, Standard and Waikīkī are Oʻahu law. They
-stay as they are. The statewide benchmark runs never call them; they run
-`current` plus a scenario's overrides in every county, Honolulu included.
-
-Honolulu's own ordinances become **Oʻahu policy variants** shown beside the
-benchmark: for example, the benchmark TOD scenario next to Honolulu's actual
-TOD rules on the same parcels. The challenge welcomes state-specific
-scenarios, and this is where the existing work shows up. No refactor of
+stay in the engine as they are. Two of them are now scenarios (decided
+2026-11-13): Honolulu's Standard pathway is its baseline (it is the same as
+`current` there), and its TOD pathway is its TOD scenario. Bill 7, 201H and the
+pre-Ord. 26-7 rules aren't scenarios and aren't in the tool. No refactor of
 `calc-bill7`, `calc-tod`, `calc-h201` or `calc-standard` is needed.
 
 ## Scenarios
@@ -99,9 +135,40 @@ reported:
   sewer, water, park, grading, the rest of `SoftCostBreakdown`) × 0.5.
   Shows that modeled Hawaiʻi fees are often well under or over $50,000.
 
-Engine change: one lever, `fee_scale` (default 1), applied to the fee lines
-in `calcSoftCosts`, and one, `fee_per_unit`, that replaces them. Construction
-management and other non-fee soft costs are not scaled.
+Built: `fee_scale` (default 1) on the fee lines in `calcSoftCosts`, and
+`fee_per_unit`, which sets their total. Construction management (3% of hard
+cost), the only soft cost that isn't a fee, is never scaled.
+
+**What "fees" covers.** Every line of the model's soft costs but
+construction management, all from each county's own schedules: building
+permit and plan review, environmental assessment, sewer, water facilities
+charge and meter, park dedication (fee in lieu at the land cost), site
+permits (grubbing, grading, stockpiling), occupancy and utility permits, and
+Honolulu's TOD zoning application and special district fees. School impact
+fees are $0 in every county (a team choice), and no county charges a traffic
+impact fee in the model. Design, legal and insurance costs aren't modeled
+separately.
+
+**County fees against the benchmark.** On a typical parcel the counties'
+fees come to about $19,000 a unit in Honolulu, $21,000 on Kauaʻi, $28,000
+in Hawaiʻi County and $33,000 on Maui (where park dedication is most of
+it), all under the challenge's $50,000.
+
+**Statewide (November 23, 2026), units on parcels rated strong:**
+
+| Fee source | Run | Honolulu | Hawaiʻi | Kauaʻi | Maui |
+| --- | --- | --- | --- | --- | --- |
+| County fees | Baseline | 366,399 | 17,170 | 0 | 227,732 |
+| County fees | Fees halved | 726,434 | 22,388 | 0 | 296,572 |
+| $50,000 per unit | Baseline | 0 | 6,570 | 0 | 208,245 |
+| $50,000 per unit | $25,000 per unit | 60,432 | 17,170 | 0 | 228,809 |
+
+These include the November 2026 package changes ([DISCLOSURES](../DISCLOSURES.md)).
+Before them, the county-fee Baseline was 985,640 in Honolulu and 296,641 on
+Maui, and the fees-halved run 1,159,695 and 299,039; Hawaiʻi and Kauaʻi were
+the same. The drop is the aging of market rents (1 point a year off rent
+growth), which lowers the levered IRR and equity multiple: without it, the
+Baseline would be 994,674 and 296,641.
 
 ### 2. Parking requirement reduction
 
@@ -132,8 +199,9 @@ coverage do not bind (the spec allows this).
 Engine changes:
 - Single-family zones in each county config, tagged `single_family: true`
   with `residential_permitted: false`, so the baseline skips them and this
-  scenario finds them. Today they are not listed, and a parcel in one stops
-  with an error.
+  scenario finds them. Today Honolulu's R-5 is listed with
+  `residential_permitted: false` (ROH Table 21-5.1) and the rest are not
+  listed; the baseline leaves both out as not modeled.
 - Land cost from the parcel's assessed value, not the flat `land_cost` per
   sqft: `landCostPerSqft(parcel, "total")` in `src/scenarios/parcels.ts`,
   passed as `land_cost`. Every calculator multiplies `land_cost` by the lot
@@ -242,6 +310,7 @@ from a clean checkout. Provenance goes in `docs/DATA_PROVENANCE.md`.
 
 ```
 src/scenarios/
+  scenarios.ts       built: the four scenarios, scenarioSetup(), the draft settings
   types.ts           Scenario, ScenarioRun, ScenarioAssumptions, StatewideParcel
   baseline.ts        fees.ts  parking.ts  missing-middle.ts  tod.ts  adu.ts
   derive.ts          copy a Locality with rule changes, under a derived id

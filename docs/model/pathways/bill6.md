@@ -7,10 +7,10 @@ The Standard pathway is baseline development under the apartment and business di
 | Rule | Standard |
 | --- | --- |
 | FAR | Table 21-3.3 as amended by Ord. 26-7: A-1/AMX-1 2.0; A-2/AMX-2 3.0; A-3/AMX-3 and the Waikiki precincts 4.0. Business districts keep Table 21-3.4: B-1 1.0, B-2 2.5, BMX-3 2.5, BMX-4 4.0 |
-| Open-space bonus | B-2 and BMX-3 up to 3.5, BMX-4 up to 7.5, with 1 sq ft of plaza per 5 sq ft of bonus floor area (see [Open-space bonus](../simulator-logic.md#open-space-bonus)) |
+| Open-space bonus | B-2 and BMX-3 up to 3.5, BMX-4 up to 7.5, with 1 sq ft of plaza per 5 sq ft of bonus floor area (per 10 sq ft in BMX-4; see [Open-space bonus](../simulator-logic.md#open-space-bonus)) |
 | Lot coverage | 60% in the apartment and AMX districts (Ord. 26-7 replaced the lot-size tiers with a flat 60%); 100% in business districts; the Waikiki precincts keep 35–50% of the lot open (see [Special districts](special-districts.md)) |
-| Height | The parcel's zoned height in the Citywide View (30 ft when the record has none), which the Max Height lever adds to or subtracts from; the Max Height slider in the Project View (default 30 ft) |
-| Ground-floor retail | Allowed in AMX-1, AMX-2, AMX-3, BMX-3, BMX-4 and the Waikiki Apartment Mixed Use Subprecinct |
+| Height | The parcel's zoned height in the Citywide View (30 ft when the record has none), which the Max Height lever adds to or subtracts from; the Max Height slider in the Project View (default 30 ft). BMX-4 goes above 350 ft only on lots of 35,000 sq ft or more (§ 21-3.120-1); the Max Height lever can still go above it |
+| Ground-floor retail | Allowed in AMX-1, AMX-2, AMX-3, B-1, B-2, BMX-3, BMX-4 and the Waikiki Apartment Mixed Use Subprecinct |
 | Unit cap | None |
 
 ## Height setbacks
@@ -22,14 +22,14 @@ Standard applies each zone's step-back rule. Before Ord. 26-7, 201H and TOD appl
 | A-2, A-3 | Above 40 ft: +1 ft per 10 ft of height or portion | Side and rear | ROH § 21-3.80-1(c)(2) |
 | AMX-2, AMX-3 | Above 40 ft: +1 ft per 10 ft | Side and rear | ROH § 21-3.90-1(c) |
 | B-2, BMX-3, IMX-1 | Above 40 ft: +1 ft per 10 ft | Side and rear | Ord. 17-55 |
-| BMX-4 | Modeled with the BMX-3 rule | Side and rear | The LUO uses a 65° street-angle plane instead (§ 21-3.120-2(c)) |
+| BMX-4 | None | n/a | The LUO uses a 65° street-angle plane over at least half the frontage instead (§ 21-3.120-2(c)(5)); a tower can meet it by its placement, so it is not modeled |
 | Resort | Above 30 ft: +1 ft per 10 ft | Side and rear | ROH § 21-3.100-1(c)(3) |
 | Waikiki Apartment Precinct and Apartment Mixed Use Subprecinct | Above 40 ft: +1 ft per 10 ft | Front, side and rear | ROH § 21-9.80-5(c)(2) |
 | A-1, AMX-1 | None | — | LUO Table 21-3.3 |
 
 How a step-back is applied storey by storey, with a worked example, is in [Height setbacks](../simulator-logic.md#height-setbacks).
 
-**Not modeled:** BMX-4's actual 65° street-angle plane (the BMX-3 rule stands in for it).
+**Not modeled:** BMX-4's 65° street-angle plane, and the transitional height setbacks next to residential and apartment lots (§ 21-3.110-1(c), § 21-3.120-2(c)), which need the neighbouring lots' zoning.
 
 ## Parking and loading
 
@@ -69,7 +69,7 @@ The model builds no affordable units in this pathway: it is rental only, and the
 
 **Building permit and plan review fees:** waived in proportion to the affordable share (Ord. 19-8 § 4, adding ROH 18-6.5(i)). The building official waives these fees for "the portion of an affordable rental housing project equal to the percentage of affordable rental housing units."
 
-**Park dedication:** affordable units exempt (Ord. 19-8 § 5, amending ROH 22-7.3(j)). The subdivision article's park-dedication requirement does not apply to affordable rental dwelling units. In the model, the park requirement is sized on chargeable (market) units only, so affordable units contribute no park-dedication cost or in-lieu fee.
+**Park dedication:** charged on every unit. § 22-7.3(j) exempts only Chapter 29 units, PD-T and IPD-T affordable units, HRS § 201H-36(a)(5) rentals and Chapter 32 rentals at or below 100% AMI (Ord. 19-8 § 5), and this pathway has no affordable units. The exemption sunsets on June 30, 2027 (see [Park dedication](../simulator-logic.md#park-dedication)).
 
 **BWS water charges:** charged on market units under the default Impact Fees toggle (Market Units Only).
 

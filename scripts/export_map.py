@@ -9,8 +9,8 @@ Output: web/public/data/parcels-<county>.json         one row per parcel on the 
 
 Only parcels the engine ran (status "run" in runs.csv) are exported: zones the county configs list as
 allowing multi-family housing. Honolulu is limited further to its apartment, mixed-use and Waikiki
-districts (MAP_ZONES): R-5, B-1, B-2 and ResMix run in the engine but are left off the map, as in the
-tool's Honolulu pathway files. Each row has tmk (9 digits), locality, zone_class (the config zone the
+districts (MAP_ZONES): B-1, B-2 and ResMix run in the engine but are left off the map, as in the
+tool's Honolulu pathway files. R-5 and the other single-family districts don't run. Each row has tmk (9 digits), locality, zone_class (the config zone the
 engine matched, e.g. Kauai "R-20/ST-P" runs as "R-20"), zone_label (the code's name), lot_sqft, height,
 lat and lng, and island. lat and lng are a point inside the parcel's shape (representative_point,
 which unlike the centroid always falls inside an oddly shaped lot), in WGS 84, 6 decimals (about
@@ -74,7 +74,8 @@ def main() -> None:
     matched = runs.set_index("tmk")["zone_class"]   # the config zone each parcel ran on
 
     table = pd.read_csv(PARCEL_TABLE, dtype={"tmk": str},
-                        usecols=["locality", "tmk", "lot_sqft", "zone_class", "height", "island"])
+                        usecols=["locality", "tmk", "lot_sqft", "zone_class", "height", "island",
+                                 "parking_exempt"], keep_default_na=False)
     table = table[table["tmk"].isin(keep)]
 
     shapes = gpd.read_file(JOINED, layer="parcels", columns=["TMK"])
@@ -114,7 +115,9 @@ def main() -> None:
         rows = table[table["locality"].eq(county)].reset_index()
         parcels = [{"tmk": r.tmk, "locality": r.locality, "zone_class": r.zone_class,
                     "zone_label": r.zone_label, "lot_sqft": float(r.lot_sqft), "height": float(r.height),
-                    "lat": float(r.lat), "lng": float(r.lng), "island": r.island}
+                    "lat": float(r.lat), "lng": float(r.lng), "island": r.island,
+                    # only where set: no parking required (Hawaii County, 25-4-59.2)
+                    **({"parking_exempt": True} if r.parking_exempt == "true" else {})}
                    for r in rows.itertuples()]
         outlines = [[tmk, outline(lines[tmk])] for tmk in rows["tmk"]]
         for name, data in [(f"parcels-{county}.json", parcels), (f"parcel-shapes-{county}.json", outlines)]:

@@ -22,6 +22,8 @@ import {
   PDT_FRONT_NO_PARKING_FT,
   openSpaceBonus,
   openSpaceBonusOver,
+  openSpaceRatio,
+  zoneHeightCap,
   residentialUse,
   todHeightLimit,
   todHeightPdt,
@@ -83,7 +85,7 @@ export interface Envelope {
   status_reason?: string;
   /** TOD: IMX-1 unit cap under PD-T */
   max_units?: number;
-  /** FAR earned by public open space, its ground given up at 5:1 */
+  /** FAR earned by public open space, its ground given up at the district's ratio */
   open_space_bonus?: number;
   /** FAR without that bonus, where it isn't max_far - open_space_bonus */
   far_without_bonus?: number;
@@ -128,13 +130,18 @@ export function todNotApplicableReason(
     return null;
   if (residentialUse(parcel.zone_class, parcel.tod_regime) === "not_permitted")
     return `multi-unit dwelling is not permitted in ${parcel.zone_class} under PD-T`;
-  // IPD-T has no special district permits: anything short of approval is base
-  if (parcel.tod_regime === "pdt" ? tier !== "base" : tier === "with_benefits")
-    return null;
   // Table 21-9.8: housing in IMX-1 needs a minor special district permit
   if (parcel.tod_regime === "pdt")
-    return "IMX-1: housing needs a minor special district permit (Table 21-9.8)";
-  return `housing in ${parcel.zone_class} needs IPD-T approval`;
+    return tier !== "base"
+      ? null
+      : "IMX-1: housing needs a minor special district permit (Table 21-9.8)";
+  // IPD-T has no special district permits: anything short of approval is base,
+  // and base bars housing (Table 21-5.1). A lot that can't be approved (under
+  // 20,000 sq ft, or not entirely urban) is base at every tier
+  const needs = `housing in ${parcel.zone_class} needs IPD-T approval`;
+  if (tier !== "with_benefits") return needs;
+  const ineligible = todIneligibleReason(parcel);
+  return ineligible ? `${needs}: ${ineligible}` : null;
 }
 
 function todEnvelope(
@@ -180,15 +187,24 @@ function todTierEnvelope(
     };
   }
 
-  // § 21-9.100-10(a)(1): the 20,000 sqft minimum is for PD-T approval; minor
-  // and major special district permits have none
+  // § 21-9.100-10(a)(1): the 20,000 sqft minimum is for PD-T approval, as is
+  // the state urban district (DPP's PD-T instructions); minor and major special
+  // district permits have neither (§ 21-9.100-8, Table 21-9.8)
   const sd_permit =
     parcel.tod_regime === "pdt" && (tier === "minor_sd" || tier === "major_sd");
   const reason = todIneligibleReason(
     sd_permit
-      ? { ...parcel, lot_sqft: Math.max(parcel.lot_sqft, TOD_MIN_LOT_SQFT) }
+      ? {
+          ...parcel,
+          lot_sqft: Math.max(parcel.lot_sqft, TOD_MIN_LOT_SQFT),
+          slu_urban: true,
+        }
       : parcel
   );
+  // § 21-9.100-7(c): IMX-1 housing under PD-T is limited to 10 units whether
+  // or not the lot can get the tier's permit
+  const pdt_imx1 =
+    parcel.tod_regime === "pdt" && parcel.zone_class === "IMX-1";
   if (reason) {
     return {
       height_limit: base_height,
@@ -196,13 +212,15 @@ function todTierEnvelope(
       far_source: "base",
       height_source: "base",
       status: "ineligible",
-      status_reason: reason,
+      status_reason: pdt_imx1
+        ? `${reason}; IMX-1 housing is limited to ${IMX1_PDT_MAX_UNITS} units`
+        : reason,
+      ...(pdt_imx1 && { max_units: IMX1_PDT_MAX_UNITS }),
     };
   }
 
   if (parcel.tod_regime === "pdt") {
     const map_bonus = opts.map_bonus_height ?? parcel.tod_map_bonus_height;
-    const imx1 = parcel.zone_class === "IMX-1";
     // by right: the underlying zoning, with no open-space bonus inside a TOD
     // special district (§ 21-9.100-8(a)(1)(B))
     if (tier === "base") {
@@ -234,7 +252,7 @@ function todTierEnvelope(
             : "pdt_map_bonus",
       status: "eligible",
       // § 21-9.100-7(c)
-      ...(imx1 && {
+      ...(pdt_imx1 && {
         max_units: IMX1_PDT_MAX_UNITS,
         status_reason: `IMX-1 under PD-T: up to ${IMX1_PDT_MAX_UNITS} units above the ground floor, with a special district permit`,
       }),
@@ -311,7 +329,14 @@ export function pathwayEnvelope(
   assertPathway(loc, program);
   // TOD and Bill 7 are Honolulu pathways, so their rules stay Honolulu's
   if (program === "tod") return todEnvelope(parcel, opts);
-  const height = parcel.height > 0 ? parcel.height : DEFAULT_HEIGHT[program];
+  // the district's own height rules over the map's (BMX-4 above 350 ft only
+  // on 35,000 sq ft lots); a starting height, which height_limit can override
+  const height = zoneHeightCap(
+    parcel.zone_class,
+    parcel.lot_sqft,
+    parcel.height > 0 ? parcel.height : DEFAULT_HEIGHT[program],
+    loc
+  );
   switch (program) {
     // current zoning in any county: its FAR (Infinity where the code sets
     // none) and any unit cap from lot area per unit. Honolulu's is Ord.
@@ -363,7 +388,10 @@ export function todOpenSpaceCostSqft(
   opts: TodEnvelopeOpts | number = {}
 ): number {
   const o = typeof opts === "number" ? { density_bonus: opts } : opts;
-  return ((todEnvelope(parcel, o).open_space_bonus ?? 0) * parcel.lot_sqft) / 5;
+  return (
+    ((todEnvelope(parcel, o).open_space_bonus ?? 0) * parcel.lot_sqft) /
+    openSpaceRatio(parcel.zone_class)
+  );
 }
 
 /** Each pathway's default assumptions, all but the parcel's envelope. With no
@@ -405,7 +433,8 @@ export const DEFAULT_INPUTS: Record<ProgramId, SliderInputs> = (() => {
     // where current is bill6 and takes its 0.95 (see parcelInputs)
     current: { ...standard, program: "current", setback: undefined, parking_ratio: undefined },
     bill6: { ...standard, program: "bill6" },
-    tod: { ...standard, program: "tod", floor_height: 10, parking_ratio: 0.85 },
+    // stalled (hawaii appleseed 2025): discretionary rentals average 0.90
+    tod: { ...standard, program: "tod", floor_height: 10, parking_ratio: 0.9 },
     h201: {
       ...standard,
       program: "h201",
@@ -414,6 +443,8 @@ export const DEFAULT_INPUTS: Record<ProgramId, SliderInputs> = (() => {
       affordability: 0.51,
       // GET-exempt, so opex matches Bill 7
       opex_ratio: 0.19,
+      // stalled (hawaii appleseed 2025): discretionary rentals average 0.90
+      parking_ratio: 0.9,
     },
     bill7: {
       program: "bill7",
@@ -434,7 +465,8 @@ export const DEFAULT_INPUTS: Record<ProgramId, SliderInputs> = (() => {
       waivable_fee_basis: "none",
       park: "exempt",
       setback: 10,
-      parking_ratio: 0.5,
+      // stalled: bill 7 rentals average 0.27; 0.35 also from developer interviews
+      parking_ratio: 0.35,
       permitting_months: 18,
       const_months: 12,
       leaseup_months: 9,
@@ -448,11 +480,6 @@ export const DEFAULT_INPUTS: Record<ProgramId, SliderInputs> = (() => {
   };
 })();
 
-/**
- * Model inputs for a parcel: pathway defaults, then `levers` (undefined = not
- * set), then the parcel's envelope. `levers.height_limit` / `max_far` override
- * the envelope, including Bill 7's 60 ft cap. `opts` is TOD only.
- */
 /** the county's legal parking minimum, stalls per unit, for a unit mix
  *  (Maui: 1 per studio or one-bedroom, Ord. 5983) */
 export function countyParkingRatio(unit_type: string, locality?: string): number {
@@ -460,7 +487,7 @@ export function countyParkingRatio(unit_type: string, locality?: string): number
 }
 
 /** the county's own lever defaults (`assumptions.lever_defaults`), which go
- *  between the pathway's defaults and the levers set; none for Honolulu */
+ *  between the pathway's defaults and the levers set (Honolulu: $170 land) */
 export function countyLeverDefaults(locality?: string): Partial<SliderInputs> {
   const d = getLocality(locality).assumptions.lever_defaults;
   if (!d) return {};
@@ -470,6 +497,14 @@ export function countyLeverDefaults(locality?: string): Partial<SliderInputs> {
   return out;
 }
 
+/**
+ * Model inputs for a parcel: pathway defaults, then the county's lever
+ * defaults, then `levers` (undefined = not set), then the parcel's envelope.
+ * `levers.height_limit` / `max_far` override the envelope, including Bill 7's
+ * 60 ft cap. An overridden `max_far` includes any open-space bonus, unless
+ * `open_space_bonus_mode` is "off": then it is the FAR built, with no plaza.
+ * `opts` is TOD only.
+ */
 export function parcelInputs(
   program: ProgramId,
   parcel: Parcel,
@@ -498,6 +533,12 @@ export function parcelInputs(
     inputs.front_no_parking_ft = envelope.front_no_parking_ft;
   } else if (envelope.open_space_bonus !== undefined) {
     inputs.open_space_bonus = envelope.open_space_bonus;
+  }
+  // a Max FAR override counts the bonus in it, and the plaza stays set aside;
+  // with the bonus off, the override is the FAR built, no plaza given up
+  if (set.open_space_bonus_mode === "off" && set.max_far != null) {
+    inputs.open_space_bonus = 0;
+    delete inputs.far_without_bonus;
   }
   // § 21-6.20(a) exemption
   if (program === "current" || program === "bill6" || program === "standard" || program === "h201")

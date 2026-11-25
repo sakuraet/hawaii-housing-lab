@@ -52,6 +52,8 @@ import {
   sizeConstructionLoan,
   SliderInputs,
   solveIRR,
+  exitCapRate,
+  holdEgi,
   stepBackOf,
   VACANCY,
   zeroOutput,
@@ -111,7 +113,7 @@ export function calcBill7Single(sliders: SliderInputs): ParcelOutput {
     sliders.permitting_months ?? DEFAULT_PERMITTING_MONTHS;
   const hard_cost_per_sqft = sliders.hard_cost_per_sqft ?? 450;
   // Bill 7 projects are exempt from off-street parking (ROH 32-2.3)
-  const parking_ratio = sliders.parking_ratio ?? 0.5;
+  const parking_ratio = sliders.parking_ratio ?? 0.35;
   const retail_share = sliders.retail_share ?? DEFAULT_RETAIL_SHARE;
   const setback = sliders.setback ?? 10;
   const building_area_per_unit = sliders.building_area_per_unit ?? 800;
@@ -249,6 +251,8 @@ export function calcBill7Single(sliders: SliderInputs): ParcelOutput {
         : 0,
     land_cost_per_sqft: land_cost,
     waivable_fee_basis,
+    fee_scale: sliders.fee_scale,
+    fee_per_unit: sliders.fee_per_unit,
     impact_fee_per_unit: 0,
     living_stories,
     fu_per_unit: mixFixtureUnits(unit_type),
@@ -359,6 +363,9 @@ export function calcBill7Single(sliders: SliderInputs): ParcelOutput {
     retail_egi = retail_pgi * (1 - VACANCY.default);
   }
   const egi = residential_egi + retail_egi;
+  // affordable rent income, which grows with ami in a hold
+  const affordable_egi =
+    pgi > 0 ? residential_egi * ((affordable_rent * afd_rent_units * 12) / pgi) : 0;
 
   // =========================================================
   // Step 5: Opex
@@ -555,7 +562,7 @@ export function calcBill7Single(sliders: SliderInputs): ParcelOutput {
     );
 
     const entry_cap = cap_rate;
-    const exit_cap = entry_cap + HOLD.exit_cap_spread;
+    const exit_cap = exitCapRate(entry_cap, hold_years);
 
     const hold_months = hold_years * 12;
     const total_with_hold = total_months + hold_months;
@@ -581,7 +588,7 @@ export function calcBill7Single(sliders: SliderInputs): ParcelOutput {
 
     for (let yr = 1; yr <= hold_years; yr++) {
       if (yr > 1) {
-        current_egi *= 1 + HOLD.annual_rent_growth;
+        current_egi = holdEgi(egi, affordable_egi, yr - 1);
         // expenses run on their own inflation series, not as a fixed share of EGI
         current_opex *= 1 + HOLD.annual_opex_growth;
         assessed_value *= 1 + HOLD.annual_assessment_growth;
@@ -601,7 +608,11 @@ export function calcBill7Single(sliders: SliderInputs): ParcelOutput {
       }
 
       if (yr === hold_years) {
-        const forward_noi = current_noi * (1 + HOLD.annual_rent_growth);
+        // next year's noi, at next year's egi growth
+        const forward_noi =
+          current_noi *
+          (holdEgi(egi, affordable_egi, yr) /
+            holdEgi(egi, affordable_egi, yr - 1));
         const gross_sale = forward_noi / exit_cap;
         stored_selling_costs = sellingCosts(gross_sale);
         const net_reversion =

@@ -11,15 +11,17 @@ Output: data/parcels_statewide.csv      the columns of PARCEL_COLUMNS (src/scena
                         its config, dropping Kauai overlays)
   height                ft, from scripts/inputs/zone_heights.csv (the county codes); 0 where no row
                         applies, and the engine's default height is used
-  land_value ... parking_exempt
+  land_value ... transit_distance_mi
                         blank: not in the public layers yet
+  parking_exempt        true for Hawaii County parcels its parking exemptions cover (parking_exempt.py:
+                        downtown Hilo and the Kainaliu frontage); blank elsewhere
 
 Parcels with no district (join_status unzoned: roads, water, unmapped land) are left out, and so are
 slivers whose area rounds to 0 acres (printed by TMK). The engine's
 loader does not read quoted fields, so commas in text become semicolons, and the script stops if a
 field would still need quoting, a TMK repeats, a parcel has no area or a county is unknown.
 
-Usage: python scripts/export_parcels.py   (run after join_zoning.py)
+Usage: python scripts/export_parcels.py   (run after join_zoning.py and fetch_data.py tiger_hawaii)
 """
 import fnmatch
 import sys
@@ -30,6 +32,7 @@ import pyogrio
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from common import INPUTS, JOINED, LOCALITY, PARCEL_TABLE, SQFT_PER_ACRE  # noqa: E402
+from parking_exempt import hawaii_parking_exempt  # noqa: E402
 
 PARCEL_COLUMNS = ["locality", "tmk", "lot_sqft", "zone_class", "height", "land_value", "building_value",
                   "existing_use", "existing_units", "transit_distance_mi", "parking_exempt"]
@@ -76,6 +79,18 @@ def heights(p: pd.DataFrame) -> tuple[pd.Series, pd.Series]:
     return ft, source
 
 
+def parking_exempt(out: pd.DataFrame) -> pd.Series:
+    """"true" for the Hawaii County parcels its parking exemptions cover, blank elsewhere."""
+    g = pyogrio.read_dataframe(JOINED, layer="parcels", columns=["TMK", "county", "join_status"],
+                               where="county = 'Hawaii' AND join_status = 'zoned'")
+    g["tmk"] = g["TMK"].astype("int64").astype(str).str.zfill(9)
+    g = g[g["tmk"].isin(out["tmk"])].merge(out[["tmk", "zone_class"]], on="tmk")
+    g = g.rename(columns={"zone_class": "zone_label"})
+    exempt, counts = hawaii_parking_exempt(g)
+    print("Hawaii County parking exemptions (25-4-59.2):", counts)
+    return out["tmk"].isin(set(g.loc[exempt.values, "tmk"])).map({True: "true", False: ""})
+
+
 def main() -> None:
     sys.stdout.reconfigure(encoding="utf-8")
     p = pyogrio.read_dataframe(JOINED, layer="parcels", read_geometry=False,
@@ -100,6 +115,7 @@ def main() -> None:
     out["height"], out["height_source"] = heights(p)
     for c in PARCEL_COLUMNS[5:]:
         out[c] = ""
+    out["parking_exempt"] = parking_exempt(out)
     out["island"] = p["island"]
     out["join_status"] = p["join_status"]
     out["share"] = p["share"].astype(float).round(4)

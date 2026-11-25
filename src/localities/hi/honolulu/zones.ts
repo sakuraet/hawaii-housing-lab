@@ -190,7 +190,8 @@ export const zones: Record<string, ZoneRules> = {
     step_back: STEPBACK_40,
   }),
 
-  // residential: lot-scaled FAR before and in the TOD base; Ord. 26-7 FAR 2.0
+  // residential: lot-scaled FAR before and in the TOD base; Ord. 26-7 FAR 2.0.
+  // Table 21-5.1 doesn't permit multi-unit dwellings here, so parcel runs skip it
   "R-5": {
     far: {
       standard: FAR_LOW_DENSITY,
@@ -206,29 +207,44 @@ export const zones: Record<string, ZoneRules> = {
     },
     commercial_coverage: 0,
     bicycle_required: true,
-    residential_permitted: true,
-    source: T21_3_3,
+    residential_permitted: false,
+    source: `${T21_3_3}; uses ROH Table 21-5.1`,
   },
 
   // business and business mixed use (Table 21-3.4); coverage not regulated
-  "B-1": sameEverywhere(flat(1.0, T21_3_4), 1.0, T21_3_4, { source: T21_3_4 }),
+  // business districts don't cap commercial floor area: B-1 and B-2 take
+  // BMX's share, and the retail share lever governs in practice. B-1 has only
+  // transitional setbacks next to residential lots (21-3.110-1(c)(2)), which
+  // need the neighbouring zoning and are not modeled
+  "B-1": sameEverywhere(flat(1.0, T21_3_4), 1.0, T21_3_4, {
+    commercial_coverage: 0.6,
+    source: T21_3_4,
+  }),
   "B-2": sameEverywhere(flat(2.5, T21_3_4), 1.0, T21_3_4, {
+    commercial_coverage: 0.6,
     open_space_far_ceiling: 3.5,
+    open_space_floor_per_sqft: 5,
     step_back: STEPBACK_40,
-    source: `${T21_3_4}; open-space bonus ROH 21-3.120-2(c)`,
+    source: `${T21_3_4}; step-back ROH 21-3.110-1(c)(3); open-space bonus 21-3.110-1(c)(5)`,
   }),
   "BMX-3": sameEverywhere(flat(2.5, T21_3_4), 1.0, T21_3_4, {
     commercial_coverage: 0.6,
     open_space_far_ceiling: 3.5,
+    open_space_floor_per_sqft: 5,
     step_back: STEPBACK_40,
-    source: `${T21_3_4}; open-space bonus ROH 21-3.120-2(c)`,
+    source: `${T21_3_4}; step-back ROH 21-3.120-2(c)(2); open-space bonus 21-3.120-2(c)(7)`,
   }),
-  // BMX-4 takes the BMX-3 step-back in place of its street-angle plane
+  // BMX-4 has no step-back: its rule is a 65° plane from the street centerline
+  // over at least half the frontage (21-3.120-2(c)(5)), which a tower can meet
+  // by its placement, so it is not modeled. Above 350 ft needs a project of at
+  // least 35,000 sq ft (and a major special district permit and 35% public
+  // open space, which are not modeled). Arcade bonuses are not modeled
   "BMX-4": sameEverywhere(flat(4.0, T21_3_4), 1.0, T21_3_4, {
     commercial_coverage: 0.6,
     open_space_far_ceiling: 7.5,
-    step_back: STEPBACK_40,
-    source: `${T21_3_4}; open-space bonus ROH 21-3.120-2(c)`,
+    open_space_floor_per_sqft: 10,
+    tall_height: { above_ft: 350, min_lot_sqft: 35000 },
+    source: `${T21_3_4}; height ROH 21-3.120-1(a)(1); open-space bonus 21-3.120-2(c)(8)`,
   }),
 
   // Waikiki Special District (ROH 21-9.80): podium coverage, open space by FAR

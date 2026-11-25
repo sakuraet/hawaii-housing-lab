@@ -155,7 +155,7 @@ All fee rows count toward the Development Fee Reduction scenario (see MODEL_AND_
 
 | Variable | Class | Scope | Note |
 | -------- | ----- | ----- | ---- |
-| loan_fee, construction_rate, cost_carried, disposition_cost, DEFAULT_PROFIT_MARGIN, DEFAULT_TARGET_RETURN, exit_cap_spread, DEFAULT_TARGET_SPREAD, RETAIL_CAP_SPREAD | Assumption | All | |
+| loan_fee, construction_rate, cost_carried, disposition_cost, DEFAULT_PROFIT_MARGIN, DEFAULT_TARGET_RETURN, exit_cap_spread_per_year, exit_cap_spread_max, age_rent_drag, DEFAULT_TARGET_SPREAD, RETAIL_CAP_SPREAD | Assumption | All | |
 | rpt_residential | Rule | County | 0.35%; each county sets its own property tax rates |
 | tax_exemption_years | Rule | Pathway (Bill 7, TOD) | |
 | annual_rent_growth, annual_opex_growth, annual_assessment_growth | Assumption | County | **Review:** same growth rates statewide? |

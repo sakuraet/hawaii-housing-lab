@@ -67,7 +67,9 @@ These are judgment calls with a realistic alternative. The ones most likely to m
 | Choice | Current value | Alternative | Why it matters |
 | --- | --- | --- | --- |
 | Market estimates (cap rate, vacancy, cost escalation, opex and assessment growth, parking costs, timing) | Honolulu's figures | Hawaiʻi County sources (Hilo and Kona may differ) | These drive land value directly |
-| Engine defaults: hard cost, land cost, sale prices | $450/sqft hard cost, $130/sqft land, Honolulu HHFDC sale tables | County figures (shipping and labor likely raise hard cost) | They live in the engine, so the county inherits Honolulu's |
+| Land cost | $55/sqft (`assumptions.lever_defaults`) | Each parcel's assessed value | Team estimate, set after looking at Title Guaranty ($48.30) and QPub ($44.78) land sales in the county's multi-family, resort and commercial zones, 2020–2025; see the [land cost note](LAND_COST.md) |
+| Unit mix | All studios (`assumptions.lever_defaults`), as for Maui | Honolulu's half studios, half one-bedrooms | Team estimate. Density is capped by land area per unit, so the cap sets the unit count and smaller units cut the cost of each. On a 17,000 sqft CV-10 lot the return on cost rises from 4.88% to 5.91% |
+| Engine defaults: hard cost, sale prices | $450/sqft hard cost, Honolulu HHFDC sale tables | County figures (shipping and labor likely raise hard cost) | They live in the engine, so the county inherits Honolulu's |
 | Property tax class | Apartment, $11.70/$1,000 | Long-Term Rental, $7.75 | Long-Term Rental excludes property "used for commercial or income-producing purposes" (19-53(k)(4)), so whether a rental apartment building qualifies is unclear; it would cut the tax by a third |
 | Lot coverage in RM, RCX and V | 80% | Coverage of buildings only, with parking counted separately | The code has no coverage cap; it requires 20% landscaping that can't include parking, so 80% is an upper bound for buildings and parking together |
 | Side yard by story | Taken at the most stories the height allows | The stories actually built | A building shorter than the limit gets a narrower side yard than modeled, so floor area is slightly understated |
@@ -100,7 +102,7 @@ How the code's rules were read where the model needed a single number. Each is i
 
 Places where the model is approximate:
 
-- Hard cost ($450/sqft), land cost ($130/sqft) and HHFDC sale prices are Honolulu engine defaults, and the market estimates are Honolulu's; only AMI and rent growth are the county's own.
+- Hard cost ($450/sqft) and HHFDC sale prices are Honolulu engine defaults, and the market estimates are Honolulu's; only AMI and rent growth are the county's own. Land cost ($55/sqft) and the unit mix (all studios) are the county's own, team estimates.
 - The 80% coverage counts buildings and parking together, while the landscaping rule only keeps parking out of the landscaped area.
 - Side yards are taken at the full height, so shorter buildings are given slightly less floor area than they could have.
 - Height comes from each parcel's `height`, so the parcel data must carry the right limit:
@@ -108,7 +110,7 @@ Places where the model is approximate:
     - 120 ft in the City of Hilo (RM, V, CG) and in CDH;
     - 90 ft for V at Keauhou and Kahaluʻu Bays;
     - 40 ft in CN and 30 ft in CV.
-- Parking exemptions (25-4-59.2) are carried only by the parcel's `parking_exempt`: dwellings at 1,000 sqft per unit or denser in the downtown Hilo core, the Kainaliu frontage and the DPC district.
+- Parking exemptions (25-4-59.2) are mapped from TIGER/Line street, river and highway lines, so their edges are as accurate as those lines (a few metres). The DPC district's isn't modeled, and neither is the exemption for non-residential uses in downtown Hilo's commercial districts (see [Parking](#parking-loading-and-bicycle-parking)).
 - The zone codes come from the County GIS list (rev. April 22, 2020). A code in the parcel data that isn't on it stops the run and needs adding.
 - Several loading spaces are slightly overstated, since half may be 10 × 22 ft.
 
@@ -188,12 +190,23 @@ Only density, coverage and yards are in the config (`current` in `zones.ts`). He
 | `loading.small_space_sqft`, `large_space_sqft` | 12 × 50 ft each | See [Modeling assumptions](#modeling-assumptions) | HCC 25-4-58 |
 | `bicycle.*` | All 0 | No bicycle minimum | HCC 25-4-52(c) |
 
-**Exemptions (25-4-59.2):** no parking is required for:
-- dwellings at 1,000 sqft per unit or denser in the downtown Hilo core, bounded by Kinoʻole Street, Ponahawai Street, Hilo Bay and the Wailuku River;
-- the Kainaliu frontage of the Belt Highway;
-- property wholly in the DPC district (added by Ord. 26-57, 2026).
+**Exemptions (25-4-59.2).** No parking is required for:
 
-The parcel's `parking_exempt` carries these.
+1. non-residential uses in downtown Hilo: the area bounded by Kinoʻole Street, Ponahawai Street and a straight extension of it into Hilo Bay, and the Wailuku River;
+2. dwellings at 1,000 sqft of land per unit or denser, in the same area;
+3. the area immediately fronting either side of the Hawaiʻi Belt Highway from TMK 7-9-7:66 to 7-9-9:22, in Kainaliu;
+4. property wholly in the DPC (Downtown Pāhoa Commercial) district, added by Ord. 26-57 (2026).
+
+The data build (`scripts/parking_exempt.py`) sets each parcel's `parking_exempt`, which waives all of a project's parking:
+
+| Exemption | How it's mapped | Parcels |
+| --- | --- | --- |
+| Downtown Hilo, dwellings (2) | The land between Kinoʻole and Ponahawai Streets (and Ponahawai's extension into the bay) and the river, from TIGER/Line 2024. A parcel is in when its centre is, and when its district allows 1,000 sqft per unit or less: CDH (500), and RM, RCX or V at 1 or less | 142, all CDH (153 parcels of any district are in the area) |
+| Kainaliu frontage (3) | Parcels within 40 m of TIGER's Route 11 line, between the two end parcels, with no other parcel between them and the road | 36, of which 28 are CV-7.5, the district the model runs |
+| Non-residential uses (1) | Not modeled: the model exempts a whole project, and a commercial district's dwellings (1,250 sqft per unit) still need parking | 0 |
+| DPC district (4) | Not modeled: an owner elects into it (25-7-58, 25-7-59), so no parcel is zoned DPC on the County's map, and the model has no DPC rules | 0 |
+
+On the exempt parcels the model builds no parking: 2,568 fewer stalls in CDH and 539 in Kainaliu. Returns barely change (CDH's median return on cost goes from 6.93% to 7.02%), because the parking there is mostly surface stalls, which are cheap.
 
 ## Fees
 

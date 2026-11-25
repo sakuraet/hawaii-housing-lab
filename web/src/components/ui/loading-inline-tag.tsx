@@ -12,7 +12,7 @@ export default function InlineLoaderSimple({
   return (
     <div
       className={cn(
-        "flex w-fit items-center justify-center gap-x-3 whitespace-nowrap rounded-sm bg-blue-400/20 px-4 py-0.5 font-bold text-ublue",
+        "flex w-fit items-center justify-center gap-x-3 whitespace-nowrap rounded-sm bg-blue-400/20 px-4 py-0.5 font-bold text-brand",
         className
       )}
     >

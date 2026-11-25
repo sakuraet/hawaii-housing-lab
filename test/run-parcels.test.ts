@@ -85,6 +85,12 @@ describe("running a parcel", () => {
     expect(r.reason).toMatch(/not permitted in I-2/);
   });
 
+  it("a single-family zone is not modeled (Honolulu R-5, ROH Table 21-5.1)", () => {
+    const r = runParcel(parcel({ locality: "hi-honolulu", zone_class: "R-5" }));
+    expect(r.status).toBe("not_modeled");
+    expect(r.reason).toMatch(/not permitted in R-5/);
+  });
+
   it("an engine error is caught and reported, and the rest still run", () => {
     // a county whose R-20 is listed but has no current zoning: the engine
     // falls back to a bill6 coverage the zone does not have, and stops
@@ -106,7 +112,7 @@ describe("the sample table", () => {
   it("every row is run or named as not modeled", () => {
     expect(runs.filter((r) => r.status === "error")).toEqual([]);
     // the single-family zones the configs do not list yet
-    expect(runs.filter((r) => r.status === "not_modeled").map((r) => r.zone_label).sort()).toEqual(["R-3", "RS-10"]);
+    expect(runs.filter((r) => r.status === "not_modeled").map((r) => r.zone_label).sort()).toEqual(["R-3", "R-5", "R-5", "RS-10"]);
   });
 
   it("totals by county add up", () => {

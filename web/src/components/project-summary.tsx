@@ -945,7 +945,7 @@ function MetricSection({
           aria-label={`${title}: figure shown`}
           className="flex gap-1"
         >
-          {/* same look as the pathway selector (ProgramSelector) */}
+          {/* the brand color for the chosen figure, as elsewhere */}
           {metrics.map((m, i) => (
             <button
               key={m}
@@ -954,7 +954,7 @@ function MetricSection({
               aria-pressed={metric === i}
               className={`cursor-pointer rounded-md px-2 py-0.5 text-center text-[10px] font-semibold transition-colors ${
                 metric === i
-                  ? "border border-[#1D667F] bg-[#1D667F] text-white"
+                  ? "border border-brand bg-brand text-white"
                   : "border border-slate-200 bg-white text-slate-600 hover:bg-slate-100"
               }`}
             >

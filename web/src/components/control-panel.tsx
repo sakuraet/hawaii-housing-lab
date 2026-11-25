@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { ProgramId, TodTier } from "feasim-challenge";
+import { SCENARIOS, scenarioSetup, type TodTier } from "feasim-challenge";
 
 import {
   Select,
@@ -14,7 +14,9 @@ import {
 import { SliderSlim as Slider } from "@/components/slider-slim";
 import { PROGRAMS as CALCULATOR_PROGRAMS } from "@/localities/honolulu/pathways";
 import { InfoTip } from "@/components/info-tip";
-import { ProgramSelector } from "@/components/program-selector";
+import { CountyTabs } from "@/components/county-tabs";
+import { ScenarioPicker } from "@/components/scenario-picker";
+import { BRAND_COLOR, DEFAULT_COLOR, LOCK_COLOR } from "@/lib/theme";
 import { ToolbarButton } from "@/components/toolbar-button";
 import { PolicyTour } from "@/components/tour/policy-tour";
 import type { GaugeInputs } from "@/localities/honolulu/pathway-defaults";
@@ -45,7 +47,6 @@ interface Props {
   onTourStart?: () => void;
   /** header text, for the full page */
   title?: string;
-  subtitle?: string;
   description?: string;
   /** which tour the header launches */
   tour?: "gauge";
@@ -54,8 +55,8 @@ interface Props {
 }
 
 // lock state colours
-const FACTOR_TEAL = "#4BACC6";
-const FACTOR_ORANGE = "#F6A01B";
+const FACTOR_DEFAULT = DEFAULT_COLOR;
+const FACTOR_ORANGE = LOCK_COLOR;
 
 // same grouping as the development calculator
 const CATEGORY_ORDER = [
@@ -259,6 +260,26 @@ const RETAIL_FACTORS: FactorConfig[] = [
 
 const FEE_FACTORS: FactorConfig[] = [
   {
+    key: "fee_scale",
+    category: "Building Revenues & Costs",
+    label: "Development Fees",
+    min: 0,
+    max: 1.5,
+    step: 0.05,
+    format: (v) => `${Math.round(v * 100)}%`,
+  },
+  {
+    key: "fee_source",
+    label: "Fee Basis",
+    type: "select",
+    // each county's own fee schedules, or the challenge's comparability
+    // assumption of $50,000 per unit (the Baseline comparison uses the same)
+    options: [
+      { value: "county", label: "County fees" },
+      { value: "benchmark", label: "$50,000/unit" },
+    ],
+  },
+  {
     key: "waivable_fee_basis",
     label: "Impact Fees",
     type: "select",
@@ -384,42 +405,7 @@ const FINANCE_FACTORS: FactorConfig[] = [
 // PER-PROGRAM FACTORS
 // =========================================================
 
-// Bill 7: affordable share and park dedication are statutory, not levers.
-const BILL7_FACTORS: FactorConfig[] = [
-  ...ZONING_FACTORS,
-  UNIT_MIX_FACTOR,
-  ...AMI_FACTORS,
-  ...REVENUE_COST_FACTORS,
-  ...RETAIL_FACTORS,
-  // Bill 7 waives the city fees and park dedication (ROH 43-10.8), so both
-  // default to Exempt; switching either on charges it, to show what the
-  // waiver is worth. Same toggles as the calculator.
-  ...FEE_FACTORS,
-  {
-    key: "grant_type",
-    label: "Grant Type",
-    type: "select",
-    options: [
-      { value: "none", label: "No grant" },
-      { value: "post_construct", label: "Post-construction" },
-      { value: "pre_construct", label: "Pre-construction" },
-    ],
-  },
-  {
-    key: "grant_amount",
-    category: "Building Revenues & Costs",
-    // post-construction pays affordable units, pre-construction every unit
-    label: "Grant Amount (per eligible unit)",
-    min: 0,
-    max: 60000,
-    step: 1000,
-    format: (v) => `$${(v / 1000).toFixed(0)}k/unit`,
-  },
-  ...TIMING_FACTORS,
-  ...FINANCE_FACTORS,
-];
-
-// Standard and Before Ord. 26-7 are modelled 100% rental, so the Chapter 29
+// Standard is modelled 100% rental, so the Chapter 29
 // affordability requirement never triggers and there are no affordable units
 // to price — market rent only. Matches STANDARD_FACTORS in the calculator.
 const MARKET_AMI_ONLY = AMI_FACTORS.filter(
@@ -442,48 +428,19 @@ const TOD_FACTORS: FactorConfig[] = [...STANDARD_FACTORS];
 // Bill 6 runs the Standard pathway's lever set
 const BILL6_FACTORS: FactorConfig[] = [...STANDARD_FACTORS];
 
-const H201_FACTORS: FactorConfig[] = [
-  ...ZONING_FACTORS,
-  UNIT_MIX_FACTOR,
-  ...AMI_FACTORS,
-  {
-    key: "affordability",
-    category: "Building Revenues & Costs",
-    // 201H needs at least 50% + 1 of units affordable, as in the calculator
-    label: "Affordability %",
-    min: 0.51,
-    max: 1,
-    step: 0.01,
-    format: (v) => `${(v * 100).toFixed(0)}%`,
-  },
-  ...REVENUE_COST_FACTORS,
-  ...RETAIL_FACTORS,
-  ...FEE_FACTORS,
-  ...TIMING_FACTORS,
-  ...FINANCE_FACTORS,
-];
-
 // =========================================================
 // PROGRAM REGISTRY
 // =========================================================
 
-// Labels and order match the development calculator's PROGRAMS registry:
-// `bill6` is the Standard Development Pathway, `standard` is the pre-Ord. 26-7
-// baseline. Same names in both tools.
-const PROGRAMS = [
-  { id: "bill6", label: "Standard", ready: true },
-  { id: "bill7", label: "Bill 7", ready: true },
-  { id: "tod", label: "TOD", ready: true },
-  { id: "h201", label: "201H", ready: true },
-  { id: "standard", label: "Before Ord. 26-7", ready: true },
-] as const;
+// The scenario cards, the same in every county. Each runs one of
+// Honolulu's two pathways there (Standard for the baseline, parking and fees;
+// TOD for TOD) and current zoning in the other counties, so the lever sets
+// below are by pathway
+const SCENARIO_OPTIONS = SCENARIOS.map((s) => ({ id: s.id, label: s.label }));
 
 const PROGRAM_FACTORS: Record<string, FactorConfig[]> = {
   bill6: BILL6_FACTORS,
-  bill7: BILL7_FACTORS,
-  standard: STANDARD_FACTORS,
   tod: TOD_FACTORS,
-  h201: H201_FACTORS,
 };
 
 /**
@@ -569,10 +526,14 @@ const IPDT_TIER_INFO =
 
 // the citywide view's own levers, which the calculator doesn't have
 const GAUGE_LEVER_INFO: Partial<Record<keyof GaugeInputs, string>> = {
+  fee_scale:
+    "Every development fee as a share of the Fee Basis: building permit, plan review, sewer, water, park dedication, grading, the school impact fee and the rest. 100% is the full fees; the Developer Fees scenario starts at 50%, the challenge's cut. Construction management is not a fee and doesn't change.",
+  fee_source:
+    "Whose fees. County fees: each county's own fees, about $19,000 to $33,000 per unit. $50,000/unit: the challenge's assumption, so results compare across submissions; each fee keeps its share of the county's total. The Baseline the summary compares against uses the same basis.",
   height_delta:
-    "Raises or lowers every parcel's own height limit by the same amount. Baseline is the limit the pathway gives each parcel, which for Bill 7 is the lower of its zoned height and 60 ft. A parcel pushed to 0 ft or below builds nothing.",
+    "Raises or lowers every parcel's own height limit by the same amount. Baseline is the limit the scenario gives each parcel. A parcel pushed to 0 ft or below builds nothing.",
   far_delta:
-    "Raises or lowers every parcel's own FAR by the same amount. Baseline is the FAR the pathway gives each parcel. A parcel pushed to 0 or below builds nothing.",
+    "Raises or lowers every parcel's own FAR by the same amount. Baseline is the FAR the scenario gives each parcel. A parcel pushed to 0 or below builds nothing.",
 };
 
 // the parking lever in the other counties: each county's own minimum, which
@@ -581,8 +542,18 @@ const PLACEMENT =
   "Stalls fill a surface lot first, then the ground floor and podium floors, which count toward height but not FAR.";
 const COUNTY_PARKING_INFO: Partial<Record<CountyId, string>> = {
   "hi-maui": `Stalls per unit. Defaults to Maui's minimum for the unit mix: 1 stall per studio or one-bedroom, 2 per two- or three-bedroom, 3 per four-bedroom (MCC 19.36B.020, as amended by Ord. 5983), so 1 for all studios. ${PLACEMENT}`,
-  "hi-hawaii": `Stalls per unit. Defaults to Hawaiʻi County's minimum: 1.25 stalls per multiple-family unit, whatever its size (HCC 25-4-51). ${PLACEMENT}`,
+  "hi-hawaii": `Stalls per unit. Defaults to Hawaiʻi County's minimum: 1.25 stalls per multiple-family unit, whatever its size (HCC 25-4-51(a)(6)); 1 in downtown Hilo's CDH district. None is required in the downtown Hilo core (for districts of 1,000 sqft of land per unit or denser) or along the Belt Highway in Kainaliu (25-4-59.2). ${PLACEMENT}`,
   "hi-kauai": `Stalls per unit. Defaults to Kauaʻi's minimum: 2 stalls per unit, whatever its size (CZO 8-4.5). ${PLACEMENT}`,
+};
+
+// the land cost lever's default in each county, and where it comes from
+const LAND_INFO = (place: string, value: number, zones: string, tg: string, qp: string) =>
+  `Price paid for the land, per square foot of lot, used in developer return calculations. ${place}'s default is $${value}/sqft, a team estimate set after looking at land sales in its ${zones} zones, 2020–2025: median $${tg}/sqft in Title Guaranty records and $${qp}/sqft in QPub (sales of $10,000 or more on lots of 1,000 sqft or more).`;
+const COUNTY_LAND_INFO: Record<CountyId, string> = {
+  "hi-honolulu": LAND_INFO("Honolulu", 170, "apartment, resort and business", "177.78", "163.97"),
+  "hi-maui": LAND_INFO("Maui", 75, "apartment, hotel and business", "72.70", "81.37"),
+  "hi-hawaii": LAND_INFO("Hawaiʻi County", 55, "multi-family, resort and commercial", "48.30", "44.78"),
+  "hi-kauai": LAND_INFO("Kauaʻi", 50, "multi-family, resort and commercial", "42.69", "79.97"),
 };
 
 // The calculator's description of a lever. Some differ by pathway (the AMI
@@ -595,6 +566,7 @@ function leverDescription(
   if (GAUGE_LEVER_INFO[key]) return GAUGE_LEVER_INFO[key];
   if (key === "parking_ratio" && COUNTY_PARKING_INFO[county])
     return COUNTY_PARKING_INFO[county];
+  if (key === "land_cost") return COUNTY_LAND_INFO[county];
   const factorKey = CALCULATOR_FACTOR_KEY[key];
   if (!factorKey) return undefined;
   const describe = (p: (typeof CALCULATOR_PROGRAMS)[number] | undefined) =>
@@ -646,7 +618,7 @@ function SliderRow({
         <span className="flex items-center gap-1">
           <span
             className="text-xs font-semibold tabular-nums"
-            style={{ color: locked ? FACTOR_ORANGE : "#1D667F" }}
+            style={{ color: locked ? FACTOR_ORANGE : BRAND_COLOR }}
           >
             {ready ? config.format(shown) : "—"}
           </span>
@@ -657,8 +629,8 @@ function SliderRow({
             <button
               type="button"
               onClick={onUnlock}
-              title="Unlock and return to the program default"
-              aria-label={`Unlock ${config.label} and return to the program default`}
+              title="Unlock and return to the scenario default"
+              aria-label={`Unlock ${config.label} and return to the scenario default`}
               className="flex size-3.5 items-center justify-center rounded-sm text-[11px] leading-none text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700"
             >
               &times;
@@ -700,7 +672,7 @@ function OptionSelect({
   locked?: boolean;
   info?: string;
 }) {
-  const tone = locked ? FACTOR_ORANGE : FACTOR_TEAL;
+  const tone = locked ? FACTOR_ORANGE : FACTOR_DEFAULT;
   return (
     <div className="flex items-center gap-1.5">
       <span className="flex items-center gap-0.5">
@@ -754,13 +726,25 @@ export function ControlPanel({
   county,
   onCountyChange,
   countyNote,
-  title = "Citywide View",
-  subtitle,
-  description = `Adjust policy levers to see how they affect residential development feasibility across ${countyOf(county).label} parcels.`,
+  title = "Hawaiʻi Housing Lab",
+  description = `Adjust policy levers to see how they affect multi-family development feasibility across ${countyOf(county).label} parcels.`,
   tour = "gauge",
   tourAutoStart = true,
 }: Props) {
   const factors = PROGRAM_FACTORS[inputs.program] ?? [];
+  const scenario = inputs.scenario ?? "baseline";
+  // what the scenario does here, and what it still lacks in this county
+  const setup = scenarioSetup(scenario, county);
+  // scenarios not defined in this county yet (TOD off Oʻahu)
+  const unavailable = new Set(
+    SCENARIOS.filter((s) => !scenarioSetup(s.id, county).available).map((s) => s.id)
+  );
+  const scenarioNote = [
+    SCENARIOS.find((s) => s.id === scenario)?.description,
+    setup.note,
+  ]
+    .filter(Boolean)
+    .join(" ");
   const isLocked = (key: keyof GaugeInputs) => modified?.[key] !== undefined;
   // Locks persist across pathway switches, so `modified` can hold levers this
   // pathway does not render. Count only the visible ones, or the badge would
@@ -772,11 +756,12 @@ export function ControlPanel({
     : 0;
 
   function set<K extends keyof GaugeInputs>(key: K, value: GaugeInputs[K]) {
-    // `program` is not a lever and must never be locked: it has to go through
-    // onChange so the dashboard rebuilds that pathway's defaults and re-applies
-    // the surviving locks. Everything else is a lever and routes to the
-    // key-aware handler.
-    if (key !== "program" && onFactorChange) onFactorChange(key, value);
+    // `scenario` and `program` are not levers and must never be locked: a
+    // scenario switch goes through onChange so the dashboard rebuilds that
+    // scenario's defaults and re-applies the surviving locks. Everything else
+    // is a lever and routes to the key-aware handler.
+    if (key !== "program" && key !== "scenario" && onFactorChange)
+      onFactorChange(key, value);
     else onChange((prev) => ({ ...prev, [key]: value }));
   }
 
@@ -808,19 +793,13 @@ export function ControlPanel({
   return (
     <div className="relative flex h-full flex-col overflow-y-auto bg-white">
       {/* Header */}
-      <div className="relative min-h-[220px] shrink-0 px-6 pb-10 pt-8 sm:min-h-[250px] sm:px-8 sm:pb-12 sm:pt-10">
-        <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(12,26,44,0.85),rgba(30,64,88,0.6))]" />
-        <div className="absolute inset-x-0 bottom-0 h-24 bg-[linear-gradient(to_bottom,transparent,rgb(255,255,255))]" />
-
-        <div className="relative z-10 flex flex-col gap-3">
-          <div className="flex items-center justify-between gap-3">
+      <div className="shrink-0 border-t-4 border-brand px-6 pb-6 pt-6 sm:px-8 sm:pt-7">
+        <div className="flex flex-col gap-4">
+          <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
-              <h1 className="text-xl font-bold text-white sm:text-2xl">
+              <h1 className="text-xl font-bold tracking-tight text-slate-900 sm:text-2xl">
                 {title}
               </h1>
-              {subtitle && (
-                <div className="mt-0.5 text-sm text-slate-200">{subtitle}</div>
-              )}
             </div>
             <PolicyTour
               view={tour}
@@ -828,32 +807,28 @@ export function ControlPanel({
               autoStart={tourAutoStart}
             />
           </div>
-          <p className="mb-3 text-xs leading-relaxed text-slate-300 sm:text-sm">
+          <p className="text-xs leading-relaxed text-slate-600 sm:text-sm">
             {description}
           </p>
-          <div className="flex flex-col gap-3">
-            <ProgramSelector
-              label="County"
-              tourId="county-selector"
-              programs={COUNTIES}
-              value={county}
-              onChange={onCountyChange}
-              note={countyNote}
-            />
-            {/* the pathways are Honolulu ordinances */}
-            {county === "hi-honolulu" && (
-              <ProgramSelector
-                programs={PROGRAMS}
-                value={inputs.program}
-                onChange={(id) => set("program", id as ProgramId)}
-              />
-            )}
-          </div>
+          <CountyTabs
+            counties={COUNTIES}
+            value={county}
+            onChange={onCountyChange}
+            note={countyNote}
+          />
+          {/* the scenarios, the same in every county */}
+          <ScenarioPicker
+            scenarios={SCENARIO_OPTIONS}
+            value={scenario}
+            onChange={(id) => set("scenario", id)}
+            unavailable={unavailable}
+            note={scenarioNote}
+          />
         </div>
       </div>
 
       {/* Policy levers */}
-      <div className="z-10 -mt-4 space-y-4 px-6 pb-8 sm:px-8">
+      <div className="space-y-4 px-6 pb-8 sm:px-8">
         {factors.length > 0 ? (
           <div
             data-tour="levers"
@@ -874,7 +849,7 @@ export function ControlPanel({
                       color: FACTOR_ORANGE,
                       backgroundColor: FACTOR_ORANGE + "14",
                     }}
-                    title="Locked levers keep their value when you switch pathways"
+                    title="Locked levers keep their value when you switch scenarios"
                   >
                     {lockCount} locked
                   </span>
@@ -964,7 +939,7 @@ export function ControlPanel({
                     <span className="flex items-center gap-1">
                       <span
                         className="inline-block size-2.5 rounded-sm"
-                        style={{ backgroundColor: FACTOR_TEAL }}
+                        style={{ backgroundColor: FACTOR_DEFAULT }}
                       />
                       <span className="text-slate-600">Unlocked</span>
                     </span>

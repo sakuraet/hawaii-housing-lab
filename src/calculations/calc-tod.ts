@@ -49,6 +49,7 @@ import {
   mixUnitSize,
   PARKING,
   PARKING_MINIMUM,
+  openSpaceRatio,
   podiumEnvelope,
   resolveCapRate,
   DEFAULT_CONST_MONTHS,
@@ -57,6 +58,8 @@ import {
   RETAIL_PREMIUM,
   sizeConstructionLoan,
   solveIRR,
+  exitCapRate,
+  holdEgi,
   stepBackOf,
   todHeightLimit,
   todUseZone,
@@ -78,7 +81,8 @@ export const TOD_DEFAULT_ZONE_CLASS = "AMX-1";
 export const TOD_DEFAULT_EQUITY = 0.3;
 export const TOD_DEFAULT_LAND_COST = 130;
 export const TOD_DEFAULT_PERMANENT_RATE = 0.0675;
-export const TOD_DEFAULT_HOLD_YEARS = 10;
+// every pathway but Bill 7 holds 8 years (DEFAULT_INPUTS)
+export const TOD_DEFAULT_HOLD_YEARS = 8;
 export const TOD_DEFAULT_RETAIL_RENT = 5;
 export const TOD_DEFAULT_AFFORDABLE_AMI = "ami_80";
 export const TOD_DEFAULT_MARKET_AMI = "ami_120";
@@ -129,10 +133,11 @@ export function calcTodSingle(sliders: SliderInputs): ParcelOutput {
   // waikiki precincts must keep 35–50% of the lot open; that and the coverage
   // cap are both measured on the zoning lot, so the stricter one governs
   const far_cap = far * lot_sqft;
-  // § 21-3.120-2(b): the bonus is earned at 5:1, so it consumes ground
+  // the bonus is earned at the district's open-space ratio (5:1, 10:1 in
+  // BMX-4), so it consumes ground
   const open_space_sqft = Math.min(
     lot_sqft,
-    ((sliders.open_space_bonus ?? 0) * lot_sqft) / 5
+    ((sliders.open_space_bonus ?? 0) * lot_sqft) / openSpaceRatio(zone_class)
   );
   const net_lot_sqft = lot_sqft - open_space_sqft;
   // per-storey floor plates
@@ -225,6 +230,8 @@ export function calcTodSingle(sliders: SliderInputs): ParcelOutput {
     park_area,
     land_cost_per_sqft: land_cost,
     waivable_fee_basis,
+    fee_scale: sliders.fee_scale,
+    fee_per_unit: sliders.fee_per_unit,
     impact_fee_per_unit,
     zoning_application_fee: FEES.zoning.tod_application,
     special_district_fee: specialDistrictTotal(lot_sqft),
@@ -315,6 +322,9 @@ export function calcTodSingle(sliders: SliderInputs): ParcelOutput {
   const residential_egi = pgi - vacancy_loss;
   const retail_egi = retail_pgi - retail_vacancy_loss;
   const egi = residential_egi + retail_egi;
+  // affordable rent income, which grows with ami in a hold
+  const affordable_egi =
+    pgi > 0 ? residential_egi * ((affordable_rent * afd_rent_units * 12) / pgi) : 0;
 
   const afd_sales = 0;
   const mkt_sales = 0;
@@ -496,7 +506,7 @@ export function calcTodSingle(sliders: SliderInputs): ParcelOutput {
       perm_loan_balance === 0 ? null : perm.is_bankable;
 
     const entry_cap = cap_rate;
-    const exit_cap = entry_cap + HOLD.exit_cap_spread;
+    const exit_cap = exitCapRate(entry_cap, hold_years);
 
     const hold_months = hold_years * 12;
     const total_with_hold = total_months + hold_months;
@@ -520,7 +530,7 @@ export function calcTodSingle(sliders: SliderInputs): ParcelOutput {
 
     for (let yr = 1; yr <= hold_years; yr++) {
       if (yr > 1) {
-        current_egi *= 1 + HOLD.annual_rent_growth;
+        current_egi = holdEgi(egi, affordable_egi, yr - 1);
         // expenses run on their own inflation series, not as a fixed share of EGI
         current_opex *= 1 + HOLD.annual_opex_growth;
         assessed_value *= 1 + HOLD.annual_assessment_growth;
@@ -540,7 +550,11 @@ export function calcTodSingle(sliders: SliderInputs): ParcelOutput {
       }
 
       if (yr === hold_years) {
-        const forward_noi = current_noi * (1 + HOLD.annual_rent_growth);
+        // next year's noi, at next year's egi growth
+        const forward_noi =
+          current_noi *
+          (holdEgi(egi, affordable_egi, yr) /
+            holdEgi(egi, affordable_egi, yr - 1));
         const gross_sale = forward_noi / exit_cap;
         stored_selling_costs = sellingCosts(gross_sale);
         const net_reversion =

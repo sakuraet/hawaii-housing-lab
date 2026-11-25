@@ -11,22 +11,33 @@ import { describe, expect, it } from "vitest";
 import {
   BILL7_MAX_HEIGHT,
   bicycleRequired,
-  calcParcel,
+  calcParcel as calcParcelAt,
   calcSingle,
   DEFAULT_INPUTS,
   IMX1_PDT_MAX_UNITS,
   LOADING,
   legalParkingRatio,
   overallLevel,
-  parcelInputs,
+  parcelInputs as parcelInputsAt,
   pathwayEnvelope,
   PDT_FRONT_NO_PARKING_FT,
   roundHalfUp,
+  todIneligibleReason,
   type Parcel,
   type ParcelOutput,
   type ProgramId,
 } from "../src";
 import parcels from "./data/gauge-parcels.json";
+
+// These tests and their snapshots are the original package's, which priced
+// Honolulu land at $130 per sqft (the pathway defaults, DEFAULT_INPUTS).
+// Honolulu's own default is now $170 (its lever_defaults), so they run at
+// $130 to keep checking the model against the package
+const FEASIM_LAND = { land_cost: 130 };
+const calcParcel = (...[program, parcel, levers = {}, opts]: Parameters<typeof calcParcelAt>) =>
+  calcParcelAt(program, parcel, { ...FEASIM_LAND, ...levers }, opts);
+const parcelInputs = (...[program, parcel, levers = {}, opts]: Parameters<typeof parcelInputsAt>) =>
+  parcelInputsAt(program, parcel, { ...FEASIM_LAND, ...levers }, opts);
 
 const SAMPLE = parcels as unknown as Record<ProgramId, Parcel[]>;
 const PROGRAMS: ProgramId[] = ["bill6", "bill7", "standard", "tod", "h201"];
@@ -161,7 +172,7 @@ describe("gauge: Article 6 parking on real parcels", () => {
     it(`${program}: the default ratio builds stalls on exempt parcels too`, () => {
       for (const parcel of SAMPLE[program]) {
         const r = calcParcel(program, parcel);
-        expect(r.parking_stalls, parcel.tmk).toBe(roundHalfUp(0.95 * r.max_units));
+        expect(r.parking_stalls, parcel.tmk).toBe(roundHalfUp(DEFAULT_INPUTS[program].parking_ratio! * r.max_units));
       }
     });
 
@@ -242,14 +253,26 @@ describe("gauge: TOD on real parcels", () => {
     expect(checked).toBeGreaterThan(20);
   });
 
+  it("builds no housing on IPD-T industrial lots that can't be approved", () => {
+    const lots = tod.filter(
+      (p) => p.tod_regime === "ipdt" && INDUSTRIAL.includes(p.zone_class) && todIneligibleReason(p) !== null
+    );
+    expect(lots.length).toBeGreaterThan(0);
+    for (const parcel of lots)
+      for (const tier of TIERS) {
+        expect(pathwayEnvelope("tod", parcel, { tier }).status, `${parcel.tmk} ${tier}`).not.toBe("ineligible");
+        expect(calcParcel("tod", parcel, {}, { tier }).max_units, `${parcel.tmk} ${tier}`).toBe(0);
+      }
+  });
+
   it("caps IMX-1 under PD-T at the unit limit", () => {
     const imx = tod.filter((p) => p.zone_class === "IMX-1" && p.tod_regime === "pdt");
     expect(imx.length).toBeGreaterThan(0);
     for (const parcel of imx)
       for (const tier of TIERS) {
         const env = pathwayEnvelope("tod", parcel, { tier });
-        if (env.status !== "eligible") continue;
-        expect(env.max_units, `${parcel.tmk} ${tier}`).toBe(IMX1_PDT_MAX_UNITS);
+        // no housing at base, 10 units at every tier above it
+        expect(env.max_units, `${parcel.tmk} ${tier}`).toBe(tier === "base" ? 0 : IMX1_PDT_MAX_UNITS);
         expect(calcParcel("tod", parcel, {}, { tier }).max_units).toBeLessThanOrEqual(IMX1_PDT_MAX_UNITS);
       }
   });

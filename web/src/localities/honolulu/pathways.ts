@@ -166,7 +166,7 @@ const BILL7_FACTORS: FactorConfig[] = [
     sliderMin: 0,
     sliderMax: 1.5,
     sliderStep: 0.05,
-    sliderDefault: 0.5,
+    sliderDefault: 0.35,
     sliderUnit: " /unit",
     highlightColor: "#475569",
     curveXValues: [0, 0.25, 0.5, 0.75, 1, 1.25, 1.5],
@@ -174,7 +174,7 @@ const BILL7_FACTORS: FactorConfig[] = [
     regulatoryLabel: "None required for Bill 7 (ROH 32-2.3)",
     ticks: [{ value: 1, label: "1/unit" }],
     chartDescription:
-      "Stalls per unit. Defaults to 0.5, though none are required for Bill 7. Stalls fill a surface lot first, then the ground floor and podium floors, which count toward height but not FAR.",
+      "Stalls per unit. Defaults to 0.35, though none are required for Bill 7. Stalls fill a surface lot first, then the ground floor and podium floors, which count toward height but not FAR.",
   },
   {
     key: "Retail_Share",
@@ -1353,7 +1353,7 @@ const TOD_FACTORS: FactorConfig[] = [
     sliderMin: 0,
     sliderMax: 1.5,
     sliderStep: 0.05,
-    sliderDefault: 0.85,
+    sliderDefault: 0.9,
     sliderUnit: " /unit",
     highlightColor: "#475569",
     curveXValues: [0, 0.25, 0.5, 0.75, 1, 1.25, 1.5],
@@ -1361,7 +1361,7 @@ const TOD_FACTORS: FactorConfig[] = [
     regulatoryLabel: "Legal minimum: none (§ 21-6.20(a))",
     ticks: [{ value: 1, label: "1/unit" }],
     chartDescription:
-      "Stalls per unit. Defaults to 0.85, though none are required near rail or in TOD districts (§ 21-6.20(a)). Stalls fill a surface lot first, then the ground floor and podium floors, which count toward height but not FAR.",
+      "Stalls per unit. Defaults to 0.9, though none are required near rail or in TOD districts (§ 21-6.20(a)). Stalls fill a surface lot first, then the ground floor and podium floors, which count toward height but not FAR.",
   },
   {
     key: "Retail_Share",
@@ -2017,7 +2017,7 @@ const H201_FACTORS: FactorConfig[] = [
     sliderMin: 0,
     sliderMax: 1.5,
     sliderStep: 0.05,
-    sliderDefault: 0.95,
+    sliderDefault: 0.9,
     sliderUnit: " /unit",
     highlightColor: "#475569",
     curveXValues: [0, 0.25, 0.5, 0.75, 1, 1.25, 1.5],
@@ -2025,7 +2025,7 @@ const H201_FACTORS: FactorConfig[] = [
     regulatoryLabel: "Legal minimum: 1 per 1,000 sqft of dwelling area (§ 21-6.20)",
     ticks: [{ value: 1, label: "1/unit" }],
     chartDescription:
-      "Stalls per unit. No 201H exemption is assumed. Defaults to 0.95. The Article 6 minimum is 1 stall per 1,000 sqft of dwelling area (0.5 per one-bedroom), plus 1 per 500 sqft of retail, 90% when combined. Parcels in the Primary Urban Center, Ewa or near rail need none. Stalls fill a surface lot first, then the ground floor and podium floors, which count toward height but not FAR.",
+      "Stalls per unit. No 201H exemption is assumed. Defaults to 0.9. The Article 6 minimum is 1 stall per 1,000 sqft of dwelling area (0.5 per one-bedroom), plus 1 per 500 sqft of retail, 90% when combined. Parcels in the Primary Urban Center, Ewa or near rail need none. Stalls fill a surface lot first, then the ground floor and podium floors, which count toward height but not FAR.",
   },
   {
     key: "Retail_Share",

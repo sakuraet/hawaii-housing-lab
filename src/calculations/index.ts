@@ -47,6 +47,7 @@ import {
   getAffordablePrice as getAffordablePriceShared,
   permitsGroundFloorRetail,
   type FeeBasis,
+  type OpenSpaceBonusMode,
   type ParcelOutput,
   type ProgramId,
   type SliderInputs,
@@ -77,7 +78,13 @@ const PROGRAMS: ProgramId[] = ["current", "bill6", "standard", "bill7", "tod", "
 // RE-EXPORTS
 // =========================================================
 
-export type { FeeBasis, ParcelOutput, ProgramId, SliderInputs };
+export type {
+  FeeBasis,
+  OpenSpaceBonusMode,
+  ParcelOutput,
+  ProgramId,
+  SliderInputs,
+};
 export { getAffordablePriceShared as getAffordablePrice };
 export { commercialFracByZone, permitsGroundFloorRetail };
 export { calcFarBill6, calcFAR } from "./calc-shared";
@@ -141,14 +148,13 @@ export {
 // DISPATCH
 // =========================================================
 
-// The § 21-3.120-2 open-space bonus adds FAR but gives up ground at 5:1, so on
-// a lot whose height can't use the extra floor area it only costs space. A
+// The § 21-3.120-2 open-space bonus adds FAR but gives up ground, so on a lot whose height can't use the extra floor area it only costs space. A
 // developer takes it where it pays: run the project with and without it and
 // keep the one with the higher residual land value. Where neither pencils,
 // keep the bigger building, the one a developer would push to make work.
+// open_space_bonus_mode "on" or "off" takes that choice away from the model.
 export function calcSingle(sliders: SliderInputs): ParcelOutput {
   const bonus = sliders.open_space_bonus ?? 0;
-  const with_bonus = calcProgram(sliders);
   // TOD without a max_far takes calcFarTod's default, which already counts
   // the bonus, so there is no FAR to compare against
   if (
@@ -158,16 +164,22 @@ export function calcSingle(sliders: SliderInputs): ParcelOutput {
       sliders.max_far == null &&
       sliders.far_without_bonus == null)
   )
-    return { ...with_bonus, open_space_bonus: 0 };
-  const without_bonus = calcProgram({
-    ...sliders,
-    open_space_bonus: 0,
-    max_far:
-      sliders.far_without_bonus ??
-      (sliders.max_far != null
-        ? Math.max(0, sliders.max_far - bonus)
-        : undefined),
-  });
+    return { ...calcProgram(sliders), open_space_bonus: 0 };
+  const mode = sliders.open_space_bonus_mode ?? "auto";
+  const withoutBonus = () =>
+    calcProgram({
+      ...sliders,
+      open_space_bonus: 0,
+      max_far:
+        sliders.far_without_bonus ??
+        (sliders.max_far != null
+          ? Math.max(0, sliders.max_far - bonus)
+          : undefined),
+    });
+  if (mode === "off") return { ...withoutBonus(), open_space_bonus: 0 };
+  const with_bonus = calcProgram(sliders);
+  if (mode === "on") return { ...with_bonus, open_space_bonus: bonus };
+  const without_bonus = withoutBonus();
   return prefersWithout(with_bonus, without_bonus)
     ? { ...without_bonus, open_space_bonus: 0 }
     : { ...with_bonus, open_space_bonus: bonus };
