@@ -31,7 +31,12 @@ Replace every [bracketed prompt] with your content. Keep it concise; clarity bea
 
 | Assumption | Value / choice | Rationale | Source |
 | ---------- | -------------- | --------- | ------ |
-| [e.g., share of eligible parcels that redevelop] | [value] | [why] | [citation] |
+| Share of feasible parcels that are built within five years | Measured curves: chance of a new building by profit level, parcel type and island (`pdev/pdev_params.json`) | Most parcels where a project pencils are not built in a given five years. Counting all of them would overstate production many times over | Honolulu permits matched to 2017–2025 assessments; Maui and Hawaiʻi County tax rolls; [pdev/README.md](../pdev/README.md) |
+| Profit is measured against each parcel's own assessed land and building value | Profit ratio = new project value ÷ (construction and soft costs + assessed land + assessed building) | An existing building is a cost of redevelopment, so a lot with a newer house needs more profit before it is replaced | County assessment rolls |
+| Construction cost changes over time | $150 per sq ft in late-2021 dollars, adjusted by the national construction materials price index | Without this, the model misses held-out years by 40–60%; with it, by 10–15% | FRED WPUSI012011 |
+| Apartment and commercial zones use the single-family curves | Borrowed, not measured | Only 29 privately held apartment or business-zoned lots on Oʻahu got a 5+ unit building in 2017–2025, too few to fit a curve. Their raw rates are lower than the single-family curves, so this likely overstates production in these zones | [pdev/README.md](../pdev/README.md#limitations) |
+| When a home counts as built | House and 201H rates: permit issued. Vacant lots: finished home on the tax roll. Houses convert to finished at × 0.73 | [Q1] open; the team leans toward finished homes | Honolulu permit close-out dates, 2013–2019 |
+| Market conditions over the five years | Base estimate × 1.0, range 0.88–1.25 | Low end: weakest five-year stretch in 2017–2025 relative to the model. High end: 90th percentile of five-year stretches of Oʻahu rebuilding since 2005 | [pdev/README.md](../pdev/README.md#validation) |
 
 # Data Sources and Cleaning Steps
 
@@ -42,6 +47,17 @@ Replace every [bracketed prompt] with your content. Keep it concise; clarity bea
 The full methodology is in [docs/model](model/README.md): the pipeline every pathway runs ([simulator logic](model/simulator-logic.md)), each Honolulu pathway, and every variable with its source ([variables](model/variables.md)). The neighbor-island counties' rules are in [docs/notes](notes/).
 
 [Explain how the tool works: the equations, logic flows, or rules; how a scenario changes the inputs; and how outputs are produced. Diagrams or pseudocode are welcome. Someone should be able to follow the reasoning from input to output.]
+
+## From feasible to built: probability of development
+
+Feasim says whether a project would make money on a parcel. The probability-of-development layer turns that into the chance the parcel is actually built within five years:
+
+```
+expected new homes = sum over parcels of P5 × net new units
+P5 = 1 − (1 − p)^5,   p = 1 / (1 + e^(−z))
+```
+
+Here z depends on the parcel's profit ratio and its type, so p is the annual chance of a new building. Vacant lots get one curve per island, with one profit slope shared by all islands. Lots with a house get an Oʻahu curve that also depends on owner occupancy, building value relative to land, slope and coastal hazard zones. Approved 201H projects and developer subdivisions get flat rates. The curves, their tests and their limits are in [pdev/README.md](../pdev/README.md); the coefficients the simulator reads are in `pdev/pdev_params.json`.
 
 ## Scenario definitions (draft)
 
@@ -58,9 +74,17 @@ Each scenario is defined in `src/scenarios/scenarios.ts`. The design and open de
 
 [What does the tool get wrong or handle poorly? Where should users be cautious? Honesty here is rewarded, not penalized.]
 
+- **Probability of development in apartment zones is borrowed.** The curves were measured on single-family lots. Apartment and business-zoned lots get the same curves until enough apartment projects can be measured against feasim's profit numbers.
+- **Single years are uncertain.** The house curve predicts four-year totals within 10–15% on held-out years, but a single year can be off by 25% or more.
+- **Kauaʻi is estimated, not measured,** because the county publishes no assessed values.
+
 # Sensitivity Notes
 
 [Which inputs move the results the most? Show what happens when key assumptions change. Ranges and sensitivity analysis are preferred over single-point claims.]
+
+- **Market conditions:** five-year totals range from 0.88 to 1.25 times the base estimate.
+- **Definition of built:** counting finished homes instead of permits lowers the house rates to 0.73 times.
+- **Profit:** a lot with a rented house at break-even has about a 1.8% chance of a new-home permit within five years; at a 20% profit, about 5.4%. Vacant Oʻahu lots go from about 11% to 15%.
 
 # Intended Users and Appropriate Use Cases
 

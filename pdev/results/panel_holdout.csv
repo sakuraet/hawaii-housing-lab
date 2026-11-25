@@ -1,0 +1,5 @@
+profit_calculation,fit_years,test_years,observed_permits,predicted_permits,error_pct
+cost held fixed,2017-2021,2022-2025,575,929,62
+cost held fixed,2022-2025,2017-2021,893,514,-42
+cost scaled by construction price index,2017-2021,2022-2025,575,517,-10
+cost scaled by construction price index,2022-2025,2017-2021,893,1026,15

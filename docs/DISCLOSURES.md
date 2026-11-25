@@ -11,6 +11,7 @@ should still be noted if its terms affect your submission.
 | Tool | Used for |
 | ---- | -------- |
 | Claude Code | Restructuring the model so each county's rules and assumptions live in a config file (`src/core/`, `src/localities/`) instead of the calculation code; porting the team's later model changes from `@uhero/feasim` 0.2.1; writing the tests that check the config against the original model (`test/honolulu-config.test.ts`, `test/schedule.test.ts`, `test/zoning.test.ts`, `test/parking.test.ts`, `test/fees.test.ts`, `test/market.test.ts`, `test/locality.test.ts`); drafting documentation |
+| Claude (Anthropic) | The probability-of-development analysis in `pdev/`: assembling the data, writing the Python research scripts, fitting and testing the curves, and drafting its documentation, under Patrick Spence's direction and review. Every number in `pdev/pdev_params.json` traces to a script in `pdev/code` and a dataset in `pdev/DATA_SOURCES.md` |
 
 # Pretrained Models, Weights, and Embeddings
 

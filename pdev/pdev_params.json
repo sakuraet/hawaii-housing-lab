@@ -1,48 +1,53 @@
 {
   "description": "Probability that a parcel is built within 5 years, given feasim's profit ratio R = value of the new project / (construction and soft costs + the parcel's current assessed land value + its current assessed building value). R = 1 is break-even. See README.md.",
   "existing_house_curve": {
-    "formula": "P5 = 1 - (1 - 1/(1 + exp(-z)))^5, z = a + b*ln(R) + c*owner_occupied + d*ln(B/L) + e*steep + f*extreme_tsunami_zone + g*sea_level_rise_3.2ft_zone  (z is the log-odds of the annual probability)",
+    "formula": "P5 = 1 - (1 - 1/(1 + exp(-z)))^5, z = const + lnR*ln(R) + own*owner_occupied + lnbl*ln(B/L) + steep*steep + tsunami_extreme*extreme_tsunami_zone + slr32*sea_level_rise_3.2ft_zone  (z is the log-odds of the annual probability of a new-home permit)",
     "coef": {
-      "const": -5.65,
-      "lnR": 6.077,
-      "own": -0.843,
-      "lnbl": -0.314,
-      "steep": -0.699,
-      "tsunami_extreme": -0.318,
-      "slr32": -0.327
+      "const": -6.022,
+      "lnR": 6.065,
+      "own": -0.894,
+      "lnbl": -0.335,
+      "steep": -0.577,
+      "tsunami_extreme": -0.238,
+      "slr32": -0.135
     },
     "bootstrap_sd": {
-      "const": 0.141,
-      "lnR": 0.507,
-      "own": 0.076,
-      "lnbl": 0.047,
-      "steep": 0.157,
-      "tsunami_extreme": 0.137,
-      "slr32": 0.15
+      "const": 0.081,
+      "lnR": 0.363,
+      "own": 0.05,
+      "lnbl": 0.04,
+      "steep": 0.096,
+      "tsunami_extreme": 0.096,
+      "slr32": 0.082
     },
     "terms": {
-      "R": "profit ratio (see description)",
+      "R": "profit ratio (see description). Construction cost is $150 per sq ft in late-2021 dollars, scaled by the construction materials price index (FRED WPUSI012011) to the valuation date",
       "owner_occupied": "homeowner exemption on the roll",
-      "ln(B/L)": "assessed building value / land value; typical Oahu lot 0.32",
+      "ln(B/L)": "assessed building value / land value; typical Oahu lot 0.285 (2025 roll)",
       "steep": "slope of 20% or more at the lot centroid, from USGS 10 m elevation data (11.5% of Oahu lots)",
       "extreme_tsunami_zone": "extreme tsunami evacuation zone (Hawaii Statewide GIS hazard layer 12)",
       "sea_level_rise_3.2ft_zone": "area exposed to the 1% annual chance coastal flood with 3.2 ft of sea-level rise (Hawaii Statewide GIS hazard layer 15)"
     },
     "rate_multipliers": {
-      "owner_occupied": 0.43,
-      "each doubling of B/L": 0.8,
-      "steep": 0.5,
-      "extreme_tsunami_zone": 0.73,
-      "sea_level_rise_3.2ft_zone": 0.72
+      "owner_occupied": 0.41,
+      "each doubling of B/L": 0.79,
+      "steep": 0.56,
+      "extreme_tsunami_zone": 0.79,
+      "sea_level_rise_3.2ft_zone": 0.87
     },
-    "held_out": "out-of-sample log loss, 5-fold by plat, 3 repeats: profit+owner 3444.4 -> +B/L 3430.9 -> +steep+coastal 3417.3",
-    "fitted_on": "Oahu single-family-zoned lots with an existing house: 2022 assessment roll matched to new-home building permits issued Jan 2022 - Jun 2025 (115,114 lots, 606 rebuilt); annual probability estimated over the 3.5-year window",
+    "held_out": "Held out by years: fitted on 2017-2021, predicts 2022-2025 permits within -10% (517 vs 575); fitted on 2022-2025, predicts 2017-2021 within +15%. Leave-one-year-out: mean absolute error 25% for a single year. With construction cost held fixed instead of indexed, the same tests miss by +62% and -42%",
+    "fitted_on": "Oahu single-family-zoned lots with an existing house, tax years 2017-2025: each year's assessed values (as of October 1 of the prior year) matched to new-home building permits issued that calendar year (1,050,343 lot-years, 120,172 lots, 1,468 permits; 2025 is January-June). Assessed values for 2017-2021 come from UHERO's scraped assessor records",
     "other_islands": "borrowed from Oahu, because only Honolulu publishes parcel-level permits; Maui assessment data also show owner-occupied homes rebuilt less often; slope and hazard flags are available statewide",
+    "valid_range_R_note": "range of R in the fitting data; values outside it are extrapolation",
+    "outcome": "building permit issued. To count homes finished instead, multiply P5 by finished_per_permit_5yr",
+    "finished_per_permit_5yr": 0.728,
+    "finished_per_permit_basis": "Honolulu new-home permits (1-4 units) issued 2013-2019: 95.2% were closed out as finished; of those, 74% within 1.5 years and 95% within 4.5 years of issue. Permits spread evenly over five years leave 72.8% finished by the end of year five",
+    "previous_version": "v1 (Nov 2026) was fitted on the 2022 roll and Jan 2022-Jun 2025 permits only, with cost held fixed: const -5.65, lnR 6.08, own -0.84, lnbl -0.31, steep -0.70, tsunami -0.32, slr -0.33. It failed the held-out-years test (-32 to -42%)",
     "valid_range_R": [
       0.6,
-      1.25
+      1.15
     ],
-    "valid_range_R_note": "range of R in the fitting data; values outside it are extrapolation"
+    "valid_range_note": "1st to 99th percentile of R in the fitting data; values outside it, including a 20% profit, are extrapolation"
   },
   "vacant_lot": {
     "formula": "P5 = 1 - (1 - 1/(1 + exp(-(a_island + b*ln(R)))))^5  (the logistic term is the annual probability)",
@@ -80,18 +85,19 @@
     "projects": 0.77,
     "units": 0.9,
     "lag_years": "3-4 to building permit",
-    "basis": "13 projects approved by the Honolulu City Council under HRS 201H in 2019-21 (DPP status report, Feb 2024): share with a building permit 3-4 years later. Oahu only; borrowed for other islands. Of 13 approved in 2022-24, 1 had a permit by Feb 2024, which is too soon to measure"
+    "basis": "13 projects approved by the Honolulu City Council under HRS 201H in 2019-21 (DPP status report, Feb 2024): share with a building permit 3-4 years later. Oahu only; borrowed for other islands. Of 13 approved in 2022-24, 1 had a permit by Feb 2024, which is too soon to measure",
+    "outcome_note": "building permit issued, not finished. Buildings of 100+ units took a median of 30 months from permit to completion (Honolulu, 2005-2019), so on a finished-homes basis the five-year share would be lower; not yet converted"
   },
   "market_conditions_multiplier": {
-    "central": 1.32,
+    "central": 1.0,
     "range": [
-      1.05,
-      1.44
+      0.88,
+      1.25
     ],
-    "basis": "Rebuilding of existing houses on Oahu in the 2022 - mid-2025 fitting window ran at 76% of its 2005-2025 average. Multiply probabilities by this to represent a typical five years; the range is the 10th-90th percentile of 5-year windows since 2005. Measured on existing-house rebuilds; assumes the slowdown affected all profit levels equally"
+    "basis": "The house curve now pools 2017-2025 and its profit term follows construction costs, so no shift is applied by default. Low end: the weakest five-year stretch of 2017-2025 relative to the model (0.88, from leave-one-year-out ratios of observed to predicted permits). High end: Oahu rebuilding in 2005-2025 ran up to 1.25 times the 2017-2025 average in its 90th-percentile five-year window, a period the assessed values do not cover"
   },
   "not_covered": [
-    "apartment and commercial zones (too few built in 2022-25 to fit a curve; the simulator's TOD, parking and fee scenarios currently apply the single-family curves to them)",
+    "apartment and commercial zones: no profit curve yet (see apartment_zones); the TOD, parking and fee scenarios currently use the single-family curves",
     "accessory dwelling units (ADUs)",
     "which specific parcels get built: use expected units = sum of P5 x net new units"
   ],
@@ -113,5 +119,11 @@
     "Hawaii Co rural": "Hawaii County residential-agricultural and small agricultural lots (RA, A-1a, A-3a)",
     "201H": "Hawaii Revised Statutes chapter 201H, which lets the County Council waive zoning and other requirements for housing projects with affordable units",
     "P5": "probability of being built within 5 years; the logistic function gives an annual probability, compounded over 5 years"
+  },
+  "apartment_zones": {
+    "curve": "not fitted",
+    "measured": "Oahu apartment and business-zoned lots (single-record, privately assessed, 5,000 sq ft or more), tax years 2017-2025: 29 permits for buildings of 5+ units in 59,294 lot-years. Annual rate about 0.23% for vacant or parking lots (about 1.2% in five years), 0.05% where building value is under a quarter of land value, and 0.01-0.02% for more built-up lots",
+    "held_out": "Rates from 2017-2021 predicted 7 projects for 2022-2025 against 20 observed; rates from 2022-2025 predicted 26 for 2017-2021 against 9. Too few and too volatile to fit a profit curve",
+    "note": "These rates are not conditioned on feasibility. Many large Oahu projects are on multi-record or government land and are counted under approved_project_5yr instead. With feasim's per-parcel profit for these lots, a profit slope could be tested on the same 29 projects"
   }
 }
