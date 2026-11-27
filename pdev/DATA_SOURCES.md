@@ -1,9 +1,10 @@
 # Data sources
 
-All sources are public and were retrieved in October and November 2026. Raw files are not committed, per repository policy; they can be downloaded from the sources below.
+All sources are public, except UHERO's assessment panel (a compilation of public assessment records), and were retrieved in October and November 2026. Raw files are not committed, per repository policy; they can be downloaded from the sources below.
 
 | Dataset | Source | Used for |
 |---|---|---|
+| Honolulu assessed values, tax years 2017–2026, by TMK | UHERO, scraped from the counties' public assessment sites (QPublic and the Honolulu Real Property Assessment Division); shared by UHERO in November 2026. Matches the City's public 2022 roll exactly for 95% of parcels | 2017–2025 panel for the existing-house curve |
 | Honolulu assessed values, tax year 2022 (values as of Oct 1, 2021) | City & County of Honolulu Assessed Property Values, ArcGIS item e8f8041075f94f37a8211ea6426c108b | Each lot's current value, Oʻahu |
 | Honolulu assessed values, ~tax year 2023 (snapshot saved Oct 26, 2023) | Honolulu GIS "Cadastral Tables by TMK", services.arcgis.com/tNJpAOha4mODLkXz/…/Cadastral_Tables_by_TMK/FeatureServer/1 | Test on held-out years |
 | Honolulu assessed values, tax year 2026 | Honolulu GIS CadastralTables ASMTPITT, …/CadastralTables/FeatureServer/10 | Vacant-lot outcome on Oʻahu (new buildings, 2022 to 2026) |
@@ -17,7 +18,7 @@ All sources are public and were retrieved in October and November 2026. Raw file
 | 201H project status | DPP, "Status Update of Council Approved 201H Projects in the Past 5 Years," Feb 2024 (hnldoc.ehawaii.gov, document 20117) | Share of approved 201H projects that reached a building permit |
 | County building permits, AZ / OR / HI, 2005–2025 | Census Building Permits Survey, www2.census.gov/econ/bps/County/ | County comparison table (AZ, OR, HI) |
 | County population 2020–2024 | Census population estimates, co-est2024-alldata.csv | Permits per resident, for the county comparison |
-| Mortgage rate, Honolulu house prices, construction materials prices | FRED: MORTGAGE30US, ATNHPIUS46520Q, WPUSI012011 | Market-cycle test |
+| Mortgage rate, Honolulu house prices, construction materials prices | FRED: MORTGAGE30US, ATNHPIUS46520Q, WPUSI012011 | Market-cycle test; WPUSI012011 also adjusts construction cost by year |
 | Slope | Hawaiʻi Statewide GIS Program, USGS 10 m slope (percent) image service | Steep-lot test |
 | Hazard zones (FEMA flood, tsunami evacuation and extreme tsunami, 3.2 ft sea-level rise, lava flow, wildfire risk) | Hawaiʻi Statewide GIS Program, Hazards MapServer (layers 3–8, 11, 12, 14, 15) | Hazard tests |
 | Arizona and Oregon parcels with values and year built | Maricopa County (gis.maricopa.gov), Oregon Metro RLIS (Multnomah, Washington, Clackamas), Jackson, Lane, Josephine and Klamath county GIS services | Mainland check |
