@@ -678,7 +678,7 @@ Debt service uses a 30-year amortization at a 6.75% permanent rate, both user in
 
 **Hold:** The developer holds the building for the hold period, then sells:
 
-- **Each year:** NOI minus permanent debt service. Affordable rents grow 4% a year and market rents, parking and retail 3% (4% less the [aging](#aging) drag; see [Rent growth](#rent-growth)), operating expenses 3.5%, and assessed value 2%. The 3.5% and 2% are the expense and property tax escalation rates California's TCAC requires in the 15-year cash flow every LIHTC applicant files (4 CCR § 10327(g)(1)); operating expenses follow their own series rather than a fixed share of EGI.
+- **Each year:** NOI minus permanent debt service. Affordable rents grow 4% a year and market rents, parking and retail 3.5% (4% less the [aging](#aging) drag; see [Rent growth](#rent-growth)), operating expenses 3.5%, and assessed value 2%. The 3.5% and 2% are the expense and property tax escalation rates California's TCAC requires in the 15-year cash flow every LIHTC applicant files (4 CCR § 10327(g)(1)); operating expenses follow their own series rather than a fixed share of EGI.
 - **At exit:** the next year's NOI ÷ exit cap (NOI grown at next year's income growth), less the selling costs on that price and the remaining loan balance.
 - **Property tax exemptions:** a pathway with a 15-year improvement exemption pays tax on land only for those years (see Property Tax).
 
@@ -715,12 +715,13 @@ Bill 7's affordable rent cap is tied to HUD's current limits, so it rises every 
 
 #### Aging
 
-Over the hold, a building's market rents fall behind those of new buildings. Market rent, parking and retail income grow 1% a year slower than rent growth, so 3% instead of 4% (`HOLD.age_rent_drag`, applied in `holdEgi`). Affordable rents keep the full 4%: they are set by HUD's limits, which bind whatever the building's age.
+Over the hold, a building's market rents fall behind those of new buildings. Market rent, parking and retail income grow 0.5% a year slower than rent growth, so 3.5% instead of 4% (`HOLD.age_rent_drag`, applied in `holdEgi`). Affordable rents keep the full 4%: they are set by HUD's limits, which bind whatever the building's age.
 
 - **Source:** Bokhari and Geltner find real depreciation of 1.5% a year across 107,805 US sales, from 1.82% a year for new buildings to 1.12% at 50 years, with apartments slightly faster. 92% of it, 1.38% a year, is "decline in current real income", and only 0.17% a year is cap rate creep. They conclude that pro formas growing cash flow at a standard 3% are "substantially biased on the high side, especially for newer buildings" ([Bokhari & Geltner, 2018](https://dspace.mit.edu/handle/1721.1/120153)).
-- **Why 1% of rent:** their 1.38% is a decline in NOI. Operating expenses and property tax grow on their own series, so a 1% drag on rent takes NOI growth down by 1.4% to 1.5% a year (EGI is about 1.45 times NOI).
-- **Oʻahu:** they also find less depreciation where land is physically scarce, so 1% may be on the high side for Oʻahu.
-- **Effect:** on a 20,000 sq ft BMX-3 lot under current zoning, levered IRR at a 20-year hold falls from 13.0% to 10.8%, and at a 1-year hold from 20.6% to 19.8%. Bill 7 moves least (0.5 points or less), since 80% of its units are affordable.
+- **Why 0.5% of rent:** depreciation varies widely by metro, from 2.95% a year in Dallas to 0.42% in Los Angeles (their Table 5), and it is notably lower where land is physically scarce. Physical land constraints alone explain over 40% of the variation across metros. Honolulu is not in their sample, so the model takes the land-scarce coastal metros at a new building's age (1 to 10 years): Los Angeles 0.25–0.32%, Boston 0.69–0.70%, San Diego 0.70–0.81%, Seattle 0.76–0.83%, San Francisco 1.09–1.00% and New York 1.19–1.06%, about 0.8% a year. 92% of that from income is about 0.7% a year off NOI. Operating expenses and property tax grow on their own series, so a drag on rent moves NOI about 1.45 times as much (EGI is about 1.45 times NOI): 0.7% of NOI is about 0.5% of rent. Their national 1.38% would be a 1% drag.
+- **What it measures:** buildings of different ages sold in the same year (the model has year and metro dummies), so it is a building's decline relative to new buildings, not after inflation. The model subtracts it from market rent growth, which follows the market as a whole.
+- **Uncertain:** this is inferred from comparable metros, not measured on Oʻahu. Test 0.25% to 1%. Their owners keep spending on capital improvements (over 2% of value a year at NCREIF properties), which this model does not charge.
+- **Effect:** on a 20,000 sq ft BMX-3 lot at 60 ft under current zoning, levered IRR at a 20-year hold falls from 13.2% to 12.2% (11.1% at a 1% drag), and at a 1-year hold from 21.3% to 20.9%. Bill 7 moves least (0.3 points or less), since 80% of its units are affordable.
 
 **Affordable rents follow HUD income limits:** Honolulu's median family income grew 4.05% a year from 2015 ($86,900) to 2025 ($129,300), and the income limits that set rent caps grew 4.4% a year from 2015 to 2026. The 2026 increase of 1.3% followed a 9.2% year. HUD caps any single year's increase at 10%, and the limits used for these projects don't fall. Since 2020, growth has averaged 3.4% a year.
 

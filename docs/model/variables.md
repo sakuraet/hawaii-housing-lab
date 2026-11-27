@@ -267,7 +267,7 @@ Levers are user inputs. The default for each pathway is set in `DEFAULT_INPUTS` 
 | --- | --- | --- | --- | --- | --- | --- |
 | `amort_years` | Constant | 30 | Permanent loan amortization fallback. |  |  | calc-shared.ts |
 | `annual_rent_growth` | Constant | 0.04 | Hold-period rent growth for all units: affordable caps track AMI (4%/yr) and market rents grew 3.6–4.3%/yr. Also grows the forward NOI at exit. |  | Yearly | calc-shared.ts |
-| `age_rent_drag` | Constant | 0.01 | Hold-period drag on market rent, parking and retail growth (4% − 1% = 3%) as the building ages; affordable rents keep the full 4%. A 1.4–1.5%/yr NOI decline (EGI ≈ 1.45 × NOI), close to Bokhari & Geltner's 1.38%/yr. | [Bokhari & Geltner (2018)](https://dspace.mit.edu/handle/1721.1/120153) | 5 Years | calc-shared.ts |
+| `age_rent_drag` | Constant | 0.005 | Hold-period drag on market rent, parking and retail growth (4% − 0.5% = 3.5%) as the building ages; affordable rents keep the full 4%. About a 0.7%/yr NOI decline (EGI ≈ 1.45 × NOI), Bokhari & Geltner's land-scarce coastal metros for new buildings (their national 1.38%/yr would be 0.01). Test 0.0025 to 0.01. | [Bokhari & Geltner (2018)](https://dspace.mit.edu/handle/1721.1/120153) | 5 Years | calc-shared.ts |
 | `holdEgi` | Function |  | EGI in a hold year: affordable rent income × 1.04^years plus the rest × (1.04 − drag)^years. |  |  | calc-shared.ts |
 | `annual_opex_growth` | Constant | 0.035 | Operating expenses grow on their own series, not as a fixed share of EGI. |  | Yearly | calc-shared.ts |
 | `annual_assessment_growth` | Constant | 0.02 | Property-tax assessment escalation. |  | Yearly | calc-shared.ts |

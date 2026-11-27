@@ -285,11 +285,13 @@ export const HOLD = {
   annual_rent_growth: honoluluMarket.annual_rent_growth,
   annual_opex_growth: honoluluMarket.annual_opex_growth,
   annual_assessment_growth: honoluluMarket.annual_assessment_growth,
-  // a building's market rents fall behind new buildings' as it ages: 1%/yr
-  // off rent growth is a 1.4-1.5%/yr noi decline (egi is ~1.45x noi), near
-  // bokhari & geltner's 1.38%/yr. affordable rents follow ami, not age. The
-  // same in every county
-  age_rent_drag: 0.01,
+  // a building's market rents fall behind new buildings' as it ages: 0.5%/yr
+  // off rent growth is about a 0.7%/yr noi decline (egi is ~1.45x noi), what
+  // bokhari & geltner's land-scarce coastal metros (la, sd, seattle, sf, nyc,
+  // boston) show for new buildings: about 0.8%/yr, 92% of it from income.
+  // their national 1.38%/yr would be a 1% drag. affordable rents follow ami,
+  // not age. The same in every county
+  age_rent_drag: 0.005,
   // exit cap widens 7.5 bps per year held, up to 75 bps (cbre's typical
   // going-in to exit spread is 50-60 bps). The same in every county
   exit_cap_spread_per_year: 0.00075,

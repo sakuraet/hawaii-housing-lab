@@ -154,21 +154,21 @@ fees come to about $19,000 a unit in Honolulu, $21,000 on Kauaʻi, $28,000
 in Hawaiʻi County and $33,000 on Maui (where park dedication is most of
 it), all under the challenge's $50,000.
 
-**Statewide (November 23, 2026), units on parcels rated strong:**
+**Statewide (November 27, 2026), units on parcels rated strong:**
 
 | Fee source | Run | Honolulu | Hawaiʻi | Kauaʻi | Maui |
 | --- | --- | --- | --- | --- | --- |
-| County fees | Baseline | 366,399 | 17,170 | 0 | 227,732 |
-| County fees | Fees halved | 726,434 | 22,388 | 0 | 296,572 |
-| $50,000 per unit | Baseline | 0 | 6,570 | 0 | 208,245 |
-| $50,000 per unit | $25,000 per unit | 60,432 | 17,170 | 0 | 228,809 |
+| County fees | Baseline | 760,434 | 17,170 | 0 | 283,169 |
+| County fees | Fees halved | 1,224,224 | 22,388 | 0 | 298,999 |
+| $50,000 per unit | Baseline | 52,679 | 6,570 | 0 | 218,515 |
+| $50,000 per unit | $25,000 per unit | 719,190 | 17,170 | 0 | 297,153 |
 
-These include the November 2026 package changes ([DISCLOSURES](../DISCLOSURES.md)).
-Before them, the county-fee Baseline was 985,640 in Honolulu and 296,641 on
-Maui, and the fees-halved run 1,159,695 and 299,039; Hawaiʻi and Kauaʻi were
-the same. The drop is the aging of market rents (1 point a year off rent
-growth), which lowers the levered IRR and equity multiple: without it, the
-Baseline would be 994,674 and 296,641.
+These include the November 2026 package changes ([DISCLOSURES](../DISCLOSURES.md)),
+without R-5 (single-family), and with market rents aging 0.5 points a year
+(see [Aging](../model/simulator-logic.md#aging)). Aging lowers only the
+levered IRR and equity multiple, not return on cost or land value. At a
+1-point drag the county-fee Baseline was 366,399 in Honolulu and 227,732 on
+Maui; with no drag, 994,674 and 296,641. Hawaiʻi and Kauaʻi don't change.
 
 ### 2. Parking requirement reduction
 
