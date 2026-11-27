@@ -24,6 +24,7 @@ import {
   openSpaceBonusOver,
   openSpaceRatio,
   zoneHeightCap,
+  NONRESIDENTIAL_REQUIRED_ZONES,
   residentialUse,
   todHeightLimit,
   todHeightPdt,
@@ -89,6 +90,9 @@ export interface Envelope {
   open_space_bonus?: number;
   /** FAR without that bonus, where it isn't max_far - open_space_bonus */
   far_without_bonus?: number;
+  /** B-1 and B-2 with IPD-T approval: BMX-3 uses, so § 21-5.50-1(c)'s
+   *  nonresidential space isn't required (§ 21-9.100-5(d)(1)) */
+  bmx3_uses?: boolean;
   /** PD-T: no ground-floor parking within this distance of the front, ft */
   front_no_parking_ft?: number;
 }
@@ -126,8 +130,10 @@ export function todNotApplicableReason(
   parcel: Parcel,
   tier: TodTier
 ): string | null {
-  if (!parcel.tod_regime || !INDUSTRIAL_ZONES.includes(parcel.zone_class))
-    return null;
+  if (!INDUSTRIAL_ZONES.includes(parcel.zone_class)) return null;
+  // outside the TOD districts nothing lifts Table 21-5.1's bar on housing
+  if (!parcel.tod_regime)
+    return `multi-unit dwelling is not permitted in ${parcel.zone_class} (Table 21-5.1)`;
   if (residentialUse(parcel.zone_class, parcel.tod_regime) === "not_permitted")
     return `multi-unit dwelling is not permitted in ${parcel.zone_class} under PD-T`;
   // Table 21-9.8: housing in IMX-1 needs a minor special district permit
@@ -161,7 +167,14 @@ function todTierEnvelope(
   opts: TodEnvelopeOpts = {}
 ): Envelope {
   const tier = opts.tier ?? "base";
-  const base_height = parcel.height;
+  // the zoned height, less what the district's own rules don't allow on this
+  // lot (BMX-4 above 350 ft), as in the other pathways. IPD-T approval sets its
+  // own height from there (§ 21-9.100-5(e)(2))
+  const base_height = zoneHeightCap(
+    parcel.zone_class,
+    parcel.lot_sqft,
+    parcel.height
+  );
 
   if (!(base_height > 0)) {
     return {
@@ -307,6 +320,9 @@ function todTierEnvelope(
       plan_far != null
         ? undefined
         : calcFarTod(parcel.zone_class, parcel.lot_sqft, 0),
+    ...(NONRESIDENTIAL_REQUIRED_ZONES.includes(parcel.zone_class) && {
+      bmx3_uses: true,
+    }),
   };
 }
 
@@ -531,6 +547,7 @@ export function parcelInputs(
     if (set.max_far == null)
       inputs.far_without_bonus = envelope.far_without_bonus;
     inputs.front_no_parking_ft = envelope.front_no_parking_ft;
+    if (envelope.bmx3_uses) inputs.bmx3_uses = true;
   } else if (envelope.open_space_bonus !== undefined) {
     inputs.open_space_bonus = envelope.open_space_bonus;
   }

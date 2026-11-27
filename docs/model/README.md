@@ -1,13 +1,13 @@
 # Model documentation
 
-How the model works and where its numbers come from, for Honolulu's pathways. These pages come from the documentation of UHERO's `@uhero/feasim` package (its `business-districts` branch, November 24, 2026), which this repository's engine was built from. The [README](../../README.md) covers running the engine and the tool.
+How the model works and where its numbers come from, for Honolulu's pathways. These pages come from the documentation of UHERO's `@uhero/feasim` package (its `business-districts` branch, November 27, 2026), which this repository's engine was built from. The [README](../../README.md) covers running the engine and the tool.
 
 **What's different in this repository:**
 
 - **Rules and assumptions are in county config files.** Honolulu's are in `src/localities/hi/honolulu/`, and each neighbor-island county has its own folder. The constants these pages name keep their names in `src/calculations/calc-shared.ts`, which reads Honolulu's values from that config. For example, `INCOME_LIMITS` is `honolulu.rules.income_limits`, and the conveyance tax schedule is in the state config, `src/localities/hi/state.ts`.
 - **The neighbor-island counties run one more pathway, `current`.** It is current zoning, read from each zone's `current` rules. For Honolulu, `current` is the same as `bill6`. Each county's rules and sources are in [docs/notes](../notes/), for example [MAUI.md](../notes/MAUI.md).
 - **No shared FAR pipeline.** The package runs `bill6` and `standard` on one file, `calc-far-pathway.ts`, and shares the hold and flip code. Here each pathway keeps its own file, because `bill6` also runs every county's current zoning. The results are the same.
-- **Business district rules are in the zoning config.** `OPEN_SPACE_FLOOR_PER_SQFT`, `BMX4_TALL_HEIGHT` and `BMX4_TALL_MIN_LOT_SQFT` are each zone's `open_space_floor_per_sqft` and `tall_height` (`src/localities/hi/honolulu/zones.ts`).
+- **Business district rules are in the zoning config.** `OPEN_SPACE_FLOOR_PER_SQFT`, `BMX4_TALL_HEIGHT` and `BMX4_TALL_MIN_LOT_SQFT` are each zone's `open_space_floor_per_sqft` and `tall_height`, and `NONRESIDENTIAL_REQUIRED_ZONES` is each zone's `housing_needs_nonresidential` (`src/localities/hi/honolulu/zones.ts`). So the B-1 and B-2 rule (§ 21-5.50-1(c)) applies in Honolulu only; Maui's B-1 and B-2 are different districts.
 - **The aging of rents, the exit cap spread and the parking sizing apply in every county.** Market rents age off each county's own rent growth. The parking defaults that changed (TOD 0.9, 201H 0.9, Bill 7 0.35) are Honolulu pathways' only.
 - **R-5 is not multi-family.** The package's residential-use check covers only the industrial districts, so it would allow housing projects in R-5. Here the zoning config marks R-5 as not permitting multi-unit dwellings (ROH Table 21-5.1), and the parcel runs leave it out.
 - **Parcel data.** The pages say B-1 lots are 40 ft and lots under 500 sq ft are left out. That describes the package's parcel set; this repository's tables don't apply it.

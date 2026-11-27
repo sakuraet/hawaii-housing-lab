@@ -83,6 +83,9 @@ export interface ZoneRules {
   /** heights above `above_ft` need a lot of at least `min_lot_sqft`; smaller
    *  lots start at `above_ft` (Honolulu BMX-4); absent = no such rule */
   tall_height?: { above_ft: number; min_lot_sqft: number };
+  /** housing must sit above, or come with, nonresidential floor area
+   *  (Honolulu B-1 and B-2, ROH 21-5.50-1(c)); absent = no such rule */
+  housing_needs_nonresidential?: boolean;
   /** required open space as a share of the lot, by FAR (special districts) */
   open_space?: Schedule;
   step_back?: StepBackRule;

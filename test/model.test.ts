@@ -78,6 +78,9 @@ import {
   zoneStepBack,
   openSpaceRatio,
   zoneHeightCap,
+  MAX_GROUND_LOBBY_SQFT,
+  minNonresidentialSqft,
+  nonresidentialRequired,
 } from "../src";
 import * as feasim from "../src";
 import {
@@ -645,6 +648,27 @@ describe("TOD pathway", () => {
     for (const tier of TIERS) expect(todNotApplicableReason(TOD.ipdtCore, tier)).toBeNull();
   });
 
+  it("has no housing on industrial lots outside every TOD district", () => {
+    for (const zone_class of ["I-1", "I-2", "I-3", "IMX-1"]) {
+      const lot: Parcel = { ...TOD.outside, zone_class };
+      for (const tier of TIERS) {
+        expect(todNotApplicableReason(lot, tier), `${zone_class} ${tier}`).toMatch(/not permitted in .* \(Table 21-5\.1\)/);
+        expect(pathwayEnvelope("tod", lot, { tier }), `${zone_class} ${tier}`).toMatchObject({ status: "not_applicable", max_units: 0 });
+        expect(calcParcel("tod", lot, {}, { tier }).max_units, `${zone_class} ${tier}`).toBe(0);
+        // levers can't bring it back
+        expect(calcParcel("tod", lot, { max_far: 9, height_limit: 300 }, { tier }).max_units, `${zone_class} ${tier}`).toBe(0);
+      }
+      // no recorded height still comes first
+      expect(pathwayEnvelope("tod", { ...lot, height: 0 }).status, zone_class).toBe("not_modeled");
+    }
+    // other zones outside the districts keep their base zoning
+    for (const tier of TIERS) {
+      expect(todNotApplicableReason(TOD.outside, tier), tier).toBeNull();
+      expect(pathwayEnvelope("tod", TOD.outside, { tier }).status, tier).toBe("ineligible");
+      expect(calcParcel("tod", TOD.outside, {}, { tier }).max_units, tier).toBeGreaterThan(0);
+    }
+  });
+
   it("needs the state urban district for PD-T and IPD-T approval, not for special district permits", () => {
     // § 21-9.100-5(b)(4) is IPD-T's; DPP's instructions add it for PD-T
     // approval; § 21-9.100-8 and Table 21-9.8 have none
@@ -1188,10 +1212,29 @@ describe("Article 6 parking minimums", () => {
     const base = { plates: flat(10, 10000), far_cap: 1e9, retail_cap: 10000, retail_share: 0.2, unit_size: 500, ...article6Parking(5000) };
     const housing = podiumEnvelope({ ...base, retail_cap: 0, parking_ratio: 0.5 });
     expect(housing.stalls).toBe(roundHalfUp(0.5 * housing.units));
-    const mixed = podiumEnvelope({ ...base, parking_ratio: 0.5 });
+    const mixed = podiumEnvelope({ ...base, parking_ratio: 0.5, legal_ratio: true });
     expect(mixed.stalls).toBe(roundHalfUp(0.9 * (0.5 * mixed.units + mixed.retail_sqft / 500)));
+    // a ratio the user sets isn't a required one: only the retail's stalls are reduced
+    const set = podiumEnvelope({ ...base, parking_ratio: 0.5 });
+    expect(set.stalls).toBe(roundHalfUp(0.5 * set.units + (0.9 * set.retail_sqft) / 500));
     // retail stalls are required even when the housing ratio is 0
     expect(podiumEnvelope({ ...base, parking_ratio: 0 }).stalls).toBe(roundHalfUp(2000 / 500));
+  });
+
+  it("builds a set ratio as given, so the exemption never adds stalls per unit", () => {
+    for (const program of ["bill6", "standard", "h201"] as const)
+      for (const zone_class of ["B-1", "B-2", "BMX-3", "AMX-2"])
+        for (const include_retail of [false, true]) {
+          const lot: Parcel = { lot_sqft: 25000, zone_class, height: 60 };
+          const run = (parking_exempt: boolean) => calcParcel(program, { ...lot, parking_exempt }, { include_retail, business_housing: "above" });
+          const ratio = DEFAULT_INPUTS[program].parking_ratio!;
+          const exempt = run(true);
+          const not = run(false);
+          const name = `${program} ${zone_class} ${include_retail}`;
+          expect(exempt.parking_stalls, name).toBe(roundHalfUp(ratio * exempt.max_units));
+          expect(not.parking_stalls, name).toBe(roundHalfUp(ratio * not.max_units + (0.9 * not.net_commercial_sqft) / 0.8 / 500));
+          expect(exempt.parking_stalls / exempt.max_units, name).toBeLessThanOrEqual(not.parking_stalls / not.max_units + 0.01);
+        }
   });
 
   it("requires no stalls on a parcel exempt under § 21-6.20(a)", () => {
@@ -1318,7 +1361,8 @@ describe("open-space bonus", () => {
   );
 
   it.each(cases)("%s %s at %i ft keeps the better of with and without the bonus", (program, zone, height) => {
-    const inputs = parcelInputs(program, site(zone, height), {}, { tier: "with_benefits" });
+    // one B-2 housing option (§ 21-5.50-1(c)), so only the bonus varies
+    const inputs = parcelInputs(program, site(zone, height), { business_housing: "above" }, { tier: "with_benefits" });
     const bonus = inputs.open_space_bonus ?? 0;
     expect(bonus).toBeGreaterThan(0);
     const withBonus = RUN[program](inputs);
@@ -1375,7 +1419,8 @@ describe("open-space bonus", () => {
   });
 
   describe("open_space_bonus_mode", () => {
-    const levers = { unit_type: "one_bb_100", parking_ratio: 0.5 };
+    // one B-2 housing option (§ 21-5.50-1(c)), so only the bonus varies
+    const levers = { unit_type: "one_bb_100", parking_ratio: 0.5, business_housing: "above" } as const;
 
     it.each(cases)("%s %s at %i ft: on takes it, off doesn't, auto picks", (program, zone, height) => {
       const inputs = parcelInputs(program, site(zone, height), levers, { tier: "with_benefits" });
@@ -1657,9 +1702,178 @@ describe("ground-floor retail in business districts", () => {
   it.each(["bill6", "standard", "h201"] as const)("%s builds retail in B-1 and B-2 when it's on", (program) => {
     for (const zone of ["B-1", "B-2"]) {
       expect(calcParcel(program, lot(zone), retail).net_commercial_sqft, zone).toBeGreaterThan(0);
-      expect(calcParcel(program, lot(zone)).net_commercial_sqft, zone).toBe(0);
+
     }
+    // B-1 and B-2 must build some whether it's on or not (§ 21-5.50-1(c))
+    for (const zone of ["BMX-3", "BMX-4"]) expect(calcParcel(program, lot(zone)).net_commercial_sqft, zone).toBe(0);
     expect(calcParcel(program, lot("A-2"), retail).net_commercial_sqft).toBe(0);
+  });
+});
+
+describe("B-1 and B-2 nonresidential space (§ 21-5.50-1(c))", () => {
+  const ACRE = 43560;
+  const FAR_PROGRAMS = ["bill6", "standard", "h201"] as const;
+  const LOTS: Parcel[] = ["B-1", "B-2"].flatMap((zone_class) =>
+    [5000, 20000, 2 * ACRE, 5 * ACRE, 10 * ACRE].map((lot_sqft) => ({
+      zone_class,
+      lot_sqft,
+      height: zone_class === "B-1" ? 40 : 60,
+    }))
+  );
+  const name = (p: Parcel) => `${p.zone_class} ${p.lot_sqft}`;
+  const retail = (r: ParcelOutput) => r.net_commercial_sqft / 0.8;
+
+  it("sets option (B)'s minimum by lot size", () => {
+    expect(minNonresidentialSqft(10000)).toBe(2000);
+    expect(minNonresidentialSqft(3 * ACRE)).toBeCloseTo(0.2 * 3 * ACRE, 6);
+    // over 3 acres: 10,000 sqft or 0.05 FAR
+    expect(minNonresidentialSqft(4 * ACRE)).toBe(10000);
+    expect(minNonresidentialSqft(6 * ACRE)).toBeCloseTo(0.05 * 6 * ACRE, 6);
+    // over 7 acres: 40,000 sqft or 0.05 FAR
+    expect(minNonresidentialSqft(8 * ACRE)).toBe(40000);
+    expect(minNonresidentialSqft(20 * ACRE)).toBeCloseTo(0.05 * 20 * ACRE, 6);
+  });
+
+  it("applies to B-1 and B-2 only, and not to an approved IPD-T project", () => {
+    for (const zone of ["B-1", "B-2"]) {
+      expect(nonresidentialRequired(zone), zone).toBe(true);
+      expect(nonresidentialRequired(zone, true), zone).toBe(false);
+    }
+    for (const zone of ["A-2", "AMX-2", "BMX-3", "BMX-4", "IMX-1", "Resort"])
+      expect(nonresidentialRequired(zone), zone).toBe(false);
+  });
+
+  it.each(FAR_PROGRAMS)("%s: no building is all housing, whatever the levers", (program) => {
+    for (const lot of LOTS)
+      for (const levers of [
+        {},
+        { parking_ratio: 0 },
+        { include_retail: true },
+        { include_retail: true, retail_share: 0 },
+        { open_space_bonus_mode: "off" },
+      ] as Partial<SliderInputs>[]) {
+        const r = calcParcel(program, lot, levers);
+        expect(r.max_units, name(lot)).toBeGreaterThan(0);
+        expect(retail(r), name(lot)).toBeGreaterThan(0);
+        if (r.business_housing === "min_floor_area")
+          expect(retail(r), name(lot)).toBeGreaterThanOrEqual(minNonresidentialSqft(lot.lot_sqft) - 1e-6);
+        else expect(r.business_housing, name(lot)).toBe("above");
+        // the retail counts toward FAR, and the building stays in its height
+        expect(r.buildable_sqft, name(lot)).toBeLessThanOrEqual(pathwayEnvelope(program, lot).max_far * lot.lot_sqft + 1);
+        expect(r.built_height, name(lot)).toBeLessThanOrEqual(r.height_limit);
+      }
+  });
+
+  it("takes the option with the higher residual land value, or more units where neither pencils", () => {
+    for (const lot of LOTS) {
+      // with no bonus in play, only the housing option varies
+      const run = (business_housing?: "above" | "min_floor_area") =>
+        calcParcel("bill6", lot, { business_housing, open_space_bonus_mode: "off" });
+      const above = run("above");
+      const by_area = run("min_floor_area");
+      const r = run();
+      expect(above.business_housing).toBe("above");
+      expect(by_area.business_housing).toBe("min_floor_area");
+      if (above.rlv > 0 || by_area.rlv > 0) expect(r.rlv, name(lot)).toBe(Math.max(above.rlv, by_area.rlv));
+      else expect(r.max_units, name(lot)).toBe(Math.max(above.max_units, by_area.max_units));
+      expect(run("above")).toEqual(calcParcel("bill6", lot, { business_housing: "above", open_space_bonus_mode: "off" }));
+    }
+  });
+
+  it("(A) keeps housing off the ground floor, with a small shop and a lobby of at most 1,500 sqft", () => {
+    for (const parking_ratio of [0, 0.5, 1.5]) {
+      const plates = [8000, 8000, 8000, 8000];
+      const base = { plates, far_cap: 1e9, unit_size: 400, parking_ratio, retail_cap: 1000, retail_share: 0.1 };
+      const env = podiumEnvelope({ ...base, housing_above: true });
+      expect(env.retail_sqft, `${parking_ratio}`).toBe(800);
+      expect(env.lobby_sqft, `${parking_ratio}`).toBeLessThanOrEqual(MAX_GROUND_LOBBY_SQFT);
+      // three floors above the ground at most
+      expect(env.residential_sqft, `${parking_ratio}`).toBeLessThanOrEqual(3 * 8000);
+      expect(env.built_floors, `${parking_ratio}`).toBeLessThanOrEqual(4);
+    }
+    // one storey can't put housing above anything
+    expect(
+      podiumEnvelope({ plates: [8000], far_cap: 1e9, unit_size: 400, parking_ratio: 0, retail_cap: 1000, retail_share: 0.1, housing_above: true }).units
+    ).toBe(0);
+  });
+
+  it("(A) sizes the shop at the default 10% of the ground floor; the retail lever overrides it", () => {
+    const big: Parcel = { zone_class: "B-2", lot_sqft: 5 * ACRE, height: 60 };
+    const small: Parcel = { zone_class: "B-2", lot_sqft: 5000, height: 60 };
+    const above = (p: Parcel, levers: Partial<SliderInputs> = {}) =>
+      retail(calcParcel("bill6", p, { business_housing: "above", open_space_bonus_mode: "off", ...levers }));
+    for (const p of [big, small]) {
+      const { height_limit } = pathwayEnvelope("bill6", p);
+      const [ground] = floorPlates({
+        floors: height_limit / 10,
+        floor_height: 10,
+        height_limit,
+        lot_sqft: p.lot_sqft,
+        coverage_plate: p.lot_sqft,
+        setback: 10,
+        stepback: zoneStepBack(p.zone_class),
+      });
+      expect(above(p), name(p)).toBeCloseTo(0.1 * ground, 6);
+      // the toggle at its default 10% builds the same shop; the lever alone does nothing
+      expect(above(p, { include_retail: true }), name(p)).toBeCloseTo(0.1 * ground, 6);
+      expect(above(p, { retail_share: 0.3 }), name(p)).toBeCloseTo(0.1 * ground, 6);
+      expect(above(p, { include_retail: true, retail_share: 0.2 }), name(p)).toBeCloseTo(0.2 * ground, 6);
+    }
+    // the slider at 0% is the same as the toggle off
+    for (const p of [big, small])
+      expect(above(p, { include_retail: true, retail_share: 0 })).toBe(above(p));
+  });
+
+  it("(B) builds no housing where its nonresidential space doesn't fit", () => {
+    const r = podiumEnvelope({ plates: [500, 500, 500], far_cap: 1e9, unit_size: 400, parking_ratio: 0, retail_cap: 0, retail_share: 0, retail_min: 1000 });
+    expect(r.units).toBe(0);
+  });
+
+  it("required retail earns rent and, off exempt lots, needs stalls at the Table 21-6.2 rate, with the toggle off or on", () => {
+    const lot: Parcel = { zone_class: "B-2", lot_sqft: 20000, height: 60 };
+    for (const program of FAR_PROGRAMS) {
+      const r = calcParcel(program, lot, { business_housing: "min_floor_area" });
+      expect(r.retail_egi, program).toBeGreaterThan(0);
+      const ratio = DEFAULT_INPUTS[program].parking_ratio!;
+      expect(r.parking_stalls, program).toBe(roundHalfUp(ratio * r.max_units + (0.9 * retail(r)) / 500));
+      const on = calcParcel(program, lot, { business_housing: "min_floor_area", include_retail: true });
+      expect(on.parking_stalls, program).toBe(roundHalfUp(ratio * on.max_units + (0.9 * retail(on)) / 500));
+      // with the lever unset the housing's stalls are required too, so they take it
+      const legal = calcSingle({ ...parcelInputs(program, lot, { business_housing: "min_floor_area" }), parking_ratio: undefined });
+      expect(legal.parking_stalls, program).toBe(roundHalfUp(0.9 * (legalParkingRatio("studio50_1br50") * legal.max_units + retail(legal) / 500)));
+      // an exempt lot's retail needs no stalls, so there is nothing to share
+      const exempt = calcParcel(program, { ...lot, parking_exempt: true }, { business_housing: "min_floor_area" });
+      expect(exempt.parking_stalls, program).toBe(roundHalfUp(ratio * exempt.max_units));
+      // (A)'s default shop is the toggle's default, so the two agree
+      expect(calcParcel(program, lot, { business_housing: "above", include_retail: true }), program).toEqual(
+        calcParcel(program, lot, { business_housing: "above" })
+      );
+    }
+  });
+
+  it("TOD: only an approved IPD-T project is exempt", () => {
+    const ipdt: Parcel = { zone_class: "B-2", lot_sqft: 30000, height: 60, tod_regime: "ipdt", slu_urban: true, station_area: "Kalihi" };
+    const run = (p: Parcel, tier: (typeof TIERS)[number]) => calcParcel("tod", p, {}, { tier });
+    expect(pathwayEnvelope("tod", ipdt, { tier: "with_benefits" }).bmx3_uses).toBe(true);
+    expect(run(ipdt, "with_benefits").net_commercial_sqft).toBe(0);
+    expect(run(ipdt, "with_benefits").business_housing).toBeUndefined();
+    expect(run(ipdt, "base").net_commercial_sqft).toBeGreaterThan(0);
+    // can't be approved, so not exempt
+    for (const p of [{ ...ipdt, lot_sqft: 10000 }, { ...ipdt, slu_urban: false }])
+      expect(run(p, "with_benefits").net_commercial_sqft).toBeGreaterThan(0);
+    // PD-T keeps the regular use table at every tier (§ 21-9.100-7)
+    for (const tier of TIERS) expect(run({ ...ipdt, tod_regime: "pdt" }, tier).net_commercial_sqft, tier).toBeGreaterThan(0);
+    // not a B district: no flag, no shop
+    expect(pathwayEnvelope("tod", { ...ipdt, zone_class: "BMX-3" }, { tier: "with_benefits" }).bmx3_uses).toBeUndefined();
+  });
+
+  it("leaves Bill 7 and the other districts alone", () => {
+    expect(calcParcel("bill7", { zone_class: "B-2", lot_sqft: 10000, height: 60 }).net_commercial_sqft).toBe(0);
+    for (const zone_class of ["A-2", "BMX-3", "BMX-4"]) {
+      const p: Parcel = { zone_class, lot_sqft: 20000, height: 60 };
+      expect(calcParcel("bill6", p, { business_housing: "min_floor_area" })).toEqual(calcParcel("bill6", p));
+      expect(calcParcel("bill6", p).business_housing).toBeUndefined();
+    }
   });
 });
 
@@ -1741,6 +1955,29 @@ describe("business district rules (Table 21-3.4, § 21-3.110-1, § 21-3.120-1, �
     const lot: Parcel = { lot_sqft: 20000, zone_class: "BMX-4", height: 450 };
     expect(pathwayEnvelope("bill6", lot).height_limit).toBe(350);
     expect(parcelInputs("bill6", lot, { height_limit: 400 }).height_limit).toBe(400);
+  });
+
+  it("starts TOD lots from the same BMX-4 height", () => {
+    const lot: Parcel = {
+      lot_sqft: 10000, zone_class: "BMX-4", height: 450, tod_regime: "ipdt", slu_urban: true, station_area: "Downtown", tod_precinct: "core",
+    };
+    const height = (p: Parcel, tier: (typeof TIERS)[number]) => pathwayEnvelope("tod", p, { tier }).height_limit;
+    // base, and approval a small lot can't get
+    for (const tier of TIERS) expect(height(lot, tier), tier).toBe(350);
+    // 35,000 sq ft or more keeps its zoned height, as do other zones
+    for (const tier of TIERS) {
+      expect(height({ ...lot, lot_sqft: 35000 }, tier), tier).toBe(450);
+      expect(height({ ...lot, zone_class: "BMX-3" }, tier), tier).toBe(450);
+    }
+    // approval goes to the plan's height (§ 21-9.100-5(e)(2)(B)): 400 ft in
+    // Downtown's core, 250 ft in its TIZ, where the existing 350 ft prevails
+    const mid = { ...lot, lot_sqft: 25000 };
+    expect(height(mid, "base")).toBe(350);
+    expect(height(mid, "with_benefits")).toBe(400);
+    expect(height({ ...mid, tod_precinct: "tiz" }, "with_benefits")).toBe(350);
+    // a lower zoned height is untouched, and a lever can still go above the cap
+    expect(height({ ...lot, height: 200 }, "base")).toBe(200);
+    expect(parcelInputs("tod", lot, { height_limit: 400 }).height_limit).toBe(400);
   });
 
   it("allows BMX-4 above 350 ft only on lots of 35,000 sq ft or more", () => {

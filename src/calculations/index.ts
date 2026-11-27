@@ -45,7 +45,9 @@ import {
 import {
   commercialFracByZone,
   getAffordablePrice as getAffordablePriceShared,
+  nonresidentialRequired,
   permitsGroundFloorRetail,
+  type BusinessHousing,
   type FeeBasis,
   type OpenSpaceBonusMode,
   type ParcelOutput,
@@ -79,6 +81,7 @@ const PROGRAMS: ProgramId[] = ["current", "bill6", "standard", "bill7", "tod", "
 // =========================================================
 
 export type {
+  BusinessHousing,
   FeeBasis,
   OpenSpaceBonusMode,
   ParcelOutput,
@@ -201,9 +204,47 @@ function prefersWithout(
   return b > a;
 }
 
+// B-1 and B-2 (§ 21-5.50-1(c)): a project puts its housing above a
+// nonresidential use or builds a minimum nonresidential floor area. Run both
+// and keep the better, on the same terms as the open-space bonus.
+// business_housing "above" or "min_floor_area" takes that choice away.
+// Bill 7 has its own standards (§ 32-2.3).
 function calcProgram(sliders: SliderInputs): ParcelOutput {
   // stop a pathway the locality does not have (other counties: current only)
-  assertPathway(getLocality(sliders.locality), PROGRAMS.includes(sliders.program) ? sliders.program : "bill6");
+  const loc = getLocality(sliders.locality);
+  assertPathway(loc, PROGRAMS.includes(sliders.program) ? sliders.program : "bill6");
+  if (
+    sliders.program === "bill7" ||
+    !nonresidentialRequired(sliders.zone_class ?? "", sliders.bmx3_uses, loc)
+  )
+    return runProgram(sliders);
+  const run = (business_housing: BusinessHousing): ParcelOutput => ({
+    ...runProgram({ ...sliders, business_housing }),
+    business_housing,
+  });
+  const mode = sliders.business_housing ?? "auto";
+  if (mode !== "auto") return run(mode);
+  const above = run("above");
+  const by_area = run("min_floor_area");
+  return prefersMinFloorArea(above, by_area) ? by_area : above;
+}
+
+/** whether (B) beats (A): a higher residual land value, or where neither
+ *  pencils, more units (the two build about the same floor area) */
+function prefersMinFloorArea(
+  above: ParcelOutput,
+  by_area: ParcelOutput
+): boolean {
+  if (above.max_units <= 0 || by_area.max_units <= 0)
+    return by_area.max_units > above.max_units;
+  const a = rlvOf(above);
+  const b = rlvOf(by_area);
+  if (a <= 0 && b <= 0 && above.max_units !== by_area.max_units)
+    return by_area.max_units > above.max_units;
+  return b > a;
+}
+
+function runProgram(sliders: SliderInputs): ParcelOutput {
   switch (sliders.program) {
     case "standard":
       return calcStandardSingle(sliders);

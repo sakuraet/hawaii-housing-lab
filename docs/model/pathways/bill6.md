@@ -10,7 +10,7 @@ The Standard pathway is baseline development under the apartment and business di
 | Open-space bonus | B-2 and BMX-3 up to 3.5, BMX-4 up to 7.5, with 1 sq ft of plaza per 5 sq ft of bonus floor area (per 10 sq ft in BMX-4; see [Open-space bonus](../simulator-logic.md#open-space-bonus)) |
 | Lot coverage | 60% in the apartment and AMX districts (Ord. 26-7 replaced the lot-size tiers with a flat 60%); 100% in business districts; the Waikiki precincts keep 35–50% of the lot open (see [Special districts](special-districts.md)) |
 | Height | The parcel's zoned height in the Citywide View (30 ft when the record has none), which the Max Height lever adds to or subtracts from; the Max Height slider in the Project View (default 30 ft). BMX-4 goes above 350 ft only on lots of 35,000 sq ft or more (§ 21-3.120-1); the Max Height lever can still go above it |
-| Ground-floor retail | Allowed in AMX-1, AMX-2, AMX-3, B-1, B-2, BMX-3, BMX-4 and the Waikiki Apartment Mixed Use Subprecinct |
+| Ground-floor retail | Allowed in AMX-1, AMX-2, AMX-3, B-1, B-2, BMX-3, BMX-4 and the Waikiki Apartment Mixed Use Subprecinct. B-1 and B-2 housing must include some nonresidential space: see [Nonresidential space in B-1 and B-2](../simulator-logic.md#nonresidential-space-in-b-1-and-b-2--21-550-1c) |
 | Unit cap | None |
 
 ## Height setbacks
@@ -37,12 +37,12 @@ How a step-back is applied storey by storey, with a worked example, is in [Heigh
 | --- | --- |
 | Housing stalls | 1 per 1,000 sq ft of dwelling area (0.5 per one-bedroom), Table 21-6.1 |
 | Retail stalls | 1 per 500 sq ft |
-| Joint use | 90% when housing and retail both need stalls (Table 21-6.2) |
+| Joint use | 90% of the required stalls when housing and retail both need them (Table 21-6.2); a ratio set with the Parking lever is not reduced |
 | Loading | Lots over 7,500 sq ft (Table 21-6.5) |
 | Bicycle parking | Required (§ 21-6.40) |
-| § 21-6.20(a) exemption | Applied parcel by parcel: exempt parcels (Primary Urban Center, Ewa, near rail) need no car stalls but still need loading and bicycle parking. 6,998 of 9,444 Standard parcels are exempt |
+| § 21-6.20(a) exemption | Applied parcel by parcel: exempt parcels (Primary Urban Center, Ewa, near rail) need no car stalls but still need loading and bicycle parking. 8,044 of 11,340 Standard parcels are exempt |
 
-**Impact of the exemption.** Citywide View totals with all one-bedroom units and the Parking lever unset, retail off, with the Article 6 minimum on every parcel and then with the exemption applied: stalls fall from 623,728 to 120,384, units rise from 1,243,569 to 1,444,875, and parcels rated strong rise from 176 to 5,159. The default 0.95 ratio puts housing stalls on exempt parcels too, so at the defaults, with retail off, the exemption changes nothing.
+**Impact of the exemption.** Citywide View totals with all one-bedroom units and the Parking lever unset, retail off, with the Article 6 minimum on every parcel and then with the exemption applied: stalls fall from 750,853 to 180,124, units rise from 1,500,354 to 1,744,831, and parcels rated strong rise from 6 to 4,351. The default 0.95 ratio puts housing stalls on exempt parcels too, so at the defaults, with retail off, the exemption changes only 1,022 B-1 and B-2 parcels, which must include retail: it drops that retail's stalls. There it lowers stalls from 1,630,499 to 1,624,009; units go from 1,701,067 to 1,701,051 and strong parcels from 1,529 to 1,552.
 
 How stalls are counted, placed and priced is in [Parking and loading](../simulator-logic.md#parking-and-loading).
 

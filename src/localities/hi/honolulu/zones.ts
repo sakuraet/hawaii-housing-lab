@@ -218,14 +218,16 @@ export const zones: Record<string, ZoneRules> = {
   // need the neighbouring zoning and are not modeled
   "B-1": sameEverywhere(flat(1.0, T21_3_4), 1.0, T21_3_4, {
     commercial_coverage: 0.6,
-    source: T21_3_4,
+    housing_needs_nonresidential: true,
+    source: `${T21_3_4}; nonresidential space ROH 21-5.50-1(c)`,
   }),
   "B-2": sameEverywhere(flat(2.5, T21_3_4), 1.0, T21_3_4, {
     commercial_coverage: 0.6,
     open_space_far_ceiling: 3.5,
     open_space_floor_per_sqft: 5,
     step_back: STEPBACK_40,
-    source: `${T21_3_4}; step-back ROH 21-3.110-1(c)(3); open-space bonus 21-3.110-1(c)(5)`,
+    housing_needs_nonresidential: true,
+    source: `${T21_3_4}; step-back ROH 21-3.110-1(c)(3); open-space bonus 21-3.110-1(c)(5); nonresidential space 21-5.50-1(c)`,
   }),
   "BMX-3": sameEverywhere(flat(2.5, T21_3_4), 1.0, T21_3_4, {
     commercial_coverage: 0.6,

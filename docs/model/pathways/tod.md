@@ -12,7 +12,7 @@ The TOD pathway models housing on parcels near Honolulu rail stations under two 
 | Open-space bonus | IPD-T only; none under PD-T (see Lot coverage and open-space bonus) |
 | Lot coverage | The underlying zone's (see Lot coverage and open-space bonus) |
 | Height | The tier's height (see Tiers and Heights) |
-| Ground-floor retail | The underlying zone's rules; under IPD-T, retail follows BMX-3 uses (§ 21-9.100-5(d)(1)) |
+| Ground-floor retail | The underlying zone's rules; under IPD-T, retail follows BMX-3 uses (§ 21-9.100-5(d)(1)). B-1 and B-2 housing must include some nonresidential space, except with IPD-T approval: see [Nonresidential space in B-1 and B-2](../simulator-logic.md#nonresidential-space-in-b-1-and-b-2--21-550-1c) |
 | Unit cap | 10 units on IMX-1 under PD-T (see Industrial zones) |
 
 ### Regimes
@@ -58,7 +58,7 @@ The Citywide View's selected-parcel card shows the regime ("PD-T" or "IPD-T") in
 
 ### Industrial zones
 
-Housing in an industrial zone needs a TOD permit, and under PD-T only IMX-1 can get one. Table 21-5.1 bars multi-unit dwellings in industrial districts; IPD-T lifts that by allowing BMX-3 uses (§ 21-9.100-5(d)(1)), while PD-T allows up to 10 dwelling units in IMX-1 only (§ 21-9.100-10(g)(2)).
+Housing in an industrial zone needs a TOD permit, and under PD-T only IMX-1 can get one. Table 21-5.1 bars multi-unit dwellings in industrial districts; IPD-T lifts that by allowing BMX-3 uses (§ 21-9.100-5(d)(1)), while PD-T allows up to 10 dwelling units in IMX-1 only (§ 21-9.100-10(g)(2)). An industrial lot outside every TOD district (no `tod_regime`) is not applicable at every tier; no parcel in the data is one.
 
 | Zone | PD-T Base | PD-T Minor, Major, Approval | IPD-T Base | IPD-T Approval |
 | --- | --- | --- | --- | --- |
@@ -77,7 +77,9 @@ Underlying FAR: I-1 1.0, I-2 and I-3 2.5, IMX-1 1.5. All 1,158 industrial parcel
 
 PD-T heights come from the TOD zoning map's parenthetical (bonus) height; IPD-T heights come from the station plan where we have its figures, otherwise from doubling. No tier ever drops below the zoned height.
 
-**PD-T parenthetical heights.** 598 parcels carry one (`tod_map_bonus_height`). Minor and major permit heights are capped at it. PD-T Approval reaches it. Where a PD-T parcel has none (82 parcels, mostly in Waipahu), the two tools read the law differently:
+**BMX-4 above 350 ft.** The zoned height starts at 350 ft at most on lots under 35,000 sq ft, as in the other pathways (§ 21-3.120-1(a)(1)). 63 parcels, all IPD-T, are zoned higher; at Base, and where a lot can't be approved, they take 350 ft. IPD-T Approval goes to the station plan's height from there (§ 21-9.100-5(e)(2)), or keeps 350 ft where that is higher: whether § 21-3.120-1 also limits an approved project is not settled, and the model assumes it does not. No result changes at default settings, since FAR stops these buildings first (the tallest is 330 ft).
+
+**PD-T parenthetical heights.** 588 parcels carry one (`tod_map_bonus_height`). Minor and major permit heights are capped at it. PD-T Approval reaches it. Where a PD-T parcel has none (80 parcels, mostly in Waipahu), the two tools read the law differently:
 
 | Tool | PD-T Approval height with no parenthetical | Why |
 | --- | --- | --- |
@@ -144,7 +146,7 @@ Inside a TOD special district, parking and loading stay out of the front 40 ft o
 | § 21-9.100-7(b): AMX ground floor facing those frontages in dwellings or active use | Not modeled; met on the front | Not checked, since there is no key-street data, but met on every lot's front as a side effect: the 40 ft rule keeps parking out of it, and what remains (housing, retail or a residential lobby) all qualify under § 21-9.100(c), which lists lobbies for multi-unit dwellings as active use. Not covered: the side facade of a corner lot facing a key street, which could still get ground-floor stalls |
 | § 21-9.100-7(c): up to 10 dwelling units in IMX-1, above the ground floor | Partly modeled | The 10-unit cap applies; units are not forced above the ground floor |
 
-With no parking the strip changes nothing. With parking added the effect is small: at 1 stall per unit and PD-T Approval, PD-T units fall 0.8% (692,706 to 687,413), and the strip never adds units.
+With no parking the strip changes nothing. With parking added the effect is small: at 1 stall per unit and PD-T Approval, PD-T units fall 0.06% (804,587 to 804,116) with the default unit mix and 0.7% (678,428 to 673,918) with all one-bedroom units, and the strip never adds units.
 
 ## Affordability
 
@@ -238,13 +240,14 @@ The model follows §§ 21-9.100-5, -8 and -10 for FAR, height, eligibility and u
 | East Kapolei regime | Still IPD-T until its special district is adopted | Parcels with a parenthetical are PD-T | Anticipates adoption |
 | State urban district | IPD-T projects must be entirely in it (§ 21-9.100-5(b)(4)), and DPP's [PD-T and IPD-T instructions](https://www.honolulu.gov/dpp/wp-content/uploads/sites/56/2025/12/PD-T-and-IPD-T-Instructions-11.25.25.pdf) (November 2025) also require it for PD-T; the special district permits have no such rule (§ 21-9.100-8, Table 21-9.8) | The same. A minor or major permit counts the whole lot, though State land use law can limit housing on the part outside the district | Upper bound for the 19 PD-T lots partly outside it where housing is allowed |
 | Combining lots | Several lots, even across a street, can form one 20,000 sq ft project (§ 21-9.100-5(b)(3), -10(a)(1)) | Each lot stands alone | Small lots understated |
+| B-1 and B-2 under IPD-T Approval | Uses "may be any of those uses permitted in the BMX-3" district (§ 21-9.100-5(d)(1)) | Exempt from § 21-5.50-1(c)'s nonresidential space: 30 of the 58 IPD-T B-1 and B-2 lots. The other 28 can't be approved and are not exempt | A reading of the text, not confirmed with DPP |
 | IMX-1 under PD-T | Up to 10 units above the ground floor | 10-unit cap; ground floor not forced non-residential | Slightly optimistic |
 | BMX-4 under IPD-T Approval | Doubling after the bonus would give 15.0; (A) caps FAR at 7.5 | Capped at 7.5 | A reading of open text |
 | PD-T Approval without a parenthetical | Height may not exceed the parenthetical (§ 21-9.100-10(c)(2)) | Citywide View keeps the zoned height; Project View uses the major permit height | Project View optimistic |
 | Station precincts | Plans map core and TIZ precincts | Quarter-mile distance proxy | Approximate plan ceilings |
 | IPD-T flexibility | Yards, building area, open space and landscaping set by the conceptual plan; arcade bonus; public housing at 7.5 FAR and 400 ft | Underlying standards; not modeled | Conservative |
 | Affordable housing (Ch. 29) | Applies to for-sale projects of 10 or more units | Not applied: the model is rental only | None |
-| Lot size | HHDB land area | GIS polygon area for the 1,170 industrial parcels | Small, near the 20,000 sq ft cutoff |
+| Lot size | HHDB land area | GIS polygon area for the 1,158 industrial parcels | Small, near the 20,000 sq ft cutoff |
 | Yards (planned for a later version) | Table 21-3.4 yards by district for multifamily dwellings: B-1 and BMX-3 10 ft front and 10 ft side and rear; B-2 5 ft front and 10 ft side and rear; BMX-4 5 ft front and 0 side and rear | The one Setbacks value (default 10 ft) for every yard in every zone | Conservative in B-2 and much too strict in BMX-4 (see [Business districts](../simulator-logic.md#business-districts-table-21-34)) |
 | Business-district rules not modeled | BMX-4's 65° street-centerline plane (deliberately left out); transitional height setbacks next to residential, apartment or resort lots; arcade bonuses; BMX-4 above 350 ft needing a major permit and 35% public open space; the 5 ft front yard for structures up to 12 ft | Not modeled (see [Business districts](../simulator-logic.md#business-districts-table-21-34)) | Mostly optimistic |
 

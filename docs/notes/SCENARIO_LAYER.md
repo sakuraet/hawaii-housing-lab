@@ -158,15 +158,18 @@ it), all under the challenge's $50,000.
 
 | Fee source | Run | Honolulu | Hawaiʻi | Kauaʻi | Maui |
 | --- | --- | --- | --- | --- | --- |
-| County fees | Baseline | 760,434 | 17,170 | 0 | 283,169 |
-| County fees | Fees halved | 1,224,224 | 22,388 | 0 | 298,999 |
+| County fees | Baseline | 613,594 | 17,170 | 0 | 283,169 |
+| County fees | Fees halved | 1,177,237 | 22,388 | 0 | 298,999 |
 | $50,000 per unit | Baseline | 52,679 | 6,570 | 0 | 218,515 |
-| $50,000 per unit | $25,000 per unit | 719,190 | 17,170 | 0 | 297,153 |
+| $50,000 per unit | $25,000 per unit | 564,829 | 17,170 | 0 | 297,153 |
 
 These include the November 2026 package changes ([DISCLOSURES](../DISCLOSURES.md)),
 without R-5 (single-family), and with market rents aging 0.5 points a year
 (see [Aging](../model/simulator-logic.md#aging)). Aging lowers only the
-levered IRR and equity multiple, not return on cost or land value. At a
+levered IRR and equity multiple, not return on cost or land value. Honolulu's
+B-1 and B-2 lots must also build nonresidential space with their housing (ROH
+§ 21-5.50-1(c)), which takes Honolulu's Baseline from 760,434 to 613,594
+(B-2 alone from 190,709 to 44,846). At a
 1-point drag the county-fee Baseline was 366,399 in Honolulu and 227,732 on
 Maui; with no drag, 994,674 and 296,641. Hawaiʻi and Kauaʻi don't change.
 

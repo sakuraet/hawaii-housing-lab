@@ -27,9 +27,9 @@ import {
   calcPropertyTax,
   calcSoftCosts,
   calcFarTod,
-  commercialFracByZone,
+
   DEFAULT_PROFIT_MARGIN,
-  DEFAULT_RETAIL_SHARE,
+
   DEFAULT_TARGET_RETURN,
   DEFAULT_TARGET_SPREAD,
   EFFICIENCY,
@@ -51,6 +51,7 @@ import {
   PARKING_MINIMUM,
   openSpaceRatio,
   podiumEnvelope,
+  retailProgram,
   resolveCapRate,
   DEFAULT_CONST_MONTHS,
   DEFAULT_PERMITTING_MONTHS,
@@ -105,7 +106,7 @@ export function calcTodSingle(sliders: SliderInputs): ParcelOutput {
   const hold_years = sliders.hold_years ?? TOD_DEFAULT_HOLD_YEARS;
   const amort_years = sliders.amort_years ?? HOLD.amort_years;
   const min_dscr = sliders.min_dscr ?? 1.2;
-  const include_retail = sliders.include_retail ?? false;
+
   const retail_rent = sliders.retail_rent ?? TOD_DEFAULT_RETAIL_RENT;
   const affordable_ami = sliders.affordable_ami ?? TOD_DEFAULT_AFFORDABLE_AMI;
   const market_ami = sliders.market_ami ?? TOD_DEFAULT_MARKET_AMI;
@@ -123,7 +124,7 @@ export function calcTodSingle(sliders: SliderInputs): ParcelOutput {
   const opex_ratio = sliders.opex_ratio ?? 0.3;
   const hard_cost_per_sqft = sliders.hard_cost_per_sqft ?? 450;
   const parking_ratio = sliders.parking_ratio ?? PARKING.stalls_per_unit;
-  const retail_share = sliders.retail_share ?? DEFAULT_RETAIL_SHARE;
+
   const setback = sliders.setback ?? 10;
 
   // 2. BUILDABLE ENVELOPE (tod_hard)
@@ -155,15 +156,20 @@ export function calcTodSingle(sliders: SliderInputs): ParcelOutput {
   // commercial use checker, returns 0 if the selected zone isn't compatible.
   // IPD-T imports BMX-3 uses into every district but BMX-4 (§ 21-9.100-5(d)(1)),
   // so ground-floor commercial follows the use district, not the base district.
-  const frac = include_retail
-    ? commercialFracByZone(todUseZone(zone_class))
-    : 0;
+  const retail = retailProgram({
+    ...sliders,
+    zone_class,
+    lot_sqft,
+    use_zone: todUseZone(zone_class),
+  });
   const unit_size = mixUnitSize(unit_type);
   const env = podiumEnvelope({
     plates,
     far_cap,
-    retail_cap: frac * lot_sqft,
-    retail_share,
+    retail_cap: retail.retail_cap,
+    retail_share: retail.retail_share,
+    retail_min: retail.retail_min,
+    housing_above: retail.housing_above,
     unit_size,
     parking_ratio,
     // no parking minimum near rail (§ 21-6.20(a)); loading still applies
@@ -314,7 +320,7 @@ export function calcTodSingle(sliders: SliderInputs): ParcelOutput {
   const pgi = pri + admin_income + parking_income;
   const vacancy_loss = pgi * VACANCY.rental;
 
-  const retail_pgi = include_retail
+  const retail_pgi = retail.has_retail
     ? net_commercial_sqft * retail_rent * 12 * mkt_rent_multiplier
     : 0;
   const retail_vacancy_loss = retail_pgi * VACANCY.default;

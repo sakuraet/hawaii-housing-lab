@@ -48,6 +48,76 @@ export function commercialFracByZone(
   return zoneRules(loc, zone_class)?.commercial_coverage ?? 0;
 }
 
+// § 21-5.50-1(c): housing in B-1 and B-2 needs nonresidential space, either
+// (A) "above": all housing on the floors above at least one nonresidential
+// use, with a ground-floor lobby of up to 1,500 sqft; or (B)
+// "min_floor_area": a minimum nonresidential floor area, housing anywhere
+// Honolulu's districts with the rule, from its zoning config (each zone's
+// housing_needs_nonresidential); no other county's code has it
+export const NONRESIDENTIAL_REQUIRED_ZONES: string[] = Object.entries(honolulu.rules.zones).flatMap(
+  ([zone, rules]) => (rules.housing_needs_nonresidential ? [zone] : [])
+);
+export const MAX_GROUND_LOBBY_SQFT = 1500;
+export type BusinessHousing = "above" | "min_floor_area";
+
+/** § 21-5.50-1(c)(1)(B): nonresidential floor area a B-1 or B-2 lot must build.
+ *  The law leaves exactly 7 acres undefined; it takes the larger tier. */
+export function minNonresidentialSqft(lot_sqft: number): number {
+  const acres = lot_sqft / 43560;
+  if (acres <= 3) return 0.2 * lot_sqft;
+  return Math.max(acres < 7 ? 10000 : 40000, 0.05 * lot_sqft);
+}
+
+/** whether § 21-5.50-1(c) applies. An approved IPD-T project takes BMX-3 uses,
+ *  which have no such rule (§ 21-9.100-5(d)(1)). */
+export function nonresidentialRequired(
+  zone_class: string,
+  bmx3_uses = false,
+  loc: Locality = honolulu
+): boolean {
+  return (zoneRules(loc, zone_class)?.housing_needs_nonresidential ?? false) && !bmx3_uses;
+}
+
+/** Retail inputs to podiumEnvelope: what the Use Mix toggle asks for, and in
+ *  B-1 and B-2 what § 21-5.50-1(c) requires whether or not it is on. */
+export function retailProgram(
+  i: Pick<
+    SliderInputs,
+    | "include_retail"
+    | "retail_share"
+    | "bmx3_uses"
+    | "business_housing"
+  > & {
+    zone_class: string;
+    lot_sqft: number;
+    // the district whose commercial share applies, if not the lot's own
+    use_zone?: string;
+    // whose zoning applies; Honolulu by default
+    loc?: Locality;
+  }
+) {
+  const loc = i.loc ?? honolulu;
+  const required = nonresidentialRequired(i.zone_class, i.bmx3_uses, loc);
+  const share = i.retail_share ?? DEFAULT_RETAIL_SHARE;
+  // a 0% share asks for no retail, so only what the law requires is built
+  const on = (i.include_retail ?? false) && share > 0;
+  // "auto" is settled in calcSingle; a pathway run directly takes (A)
+  const by_area = required && i.business_housing === "min_floor_area";
+  const above = required && !by_area;
+  const has_retail = on || required;
+  const zone_cap =
+    commercialFracByZone(i.use_zone ?? i.zone_class, loc) * i.lot_sqft;
+  return {
+    has_retail,
+    retail_cap: has_retail ? zone_cap : 0,
+    // the retail share lever when retail is on. (A) sets no size for its
+    // nonresidential use, so without the lever it takes the default share
+    retail_share: on ? share : above ? DEFAULT_RETAIL_SHARE : 0,
+    retail_min: by_area ? minNonresidentialSqft(i.lot_sqft) : 0,
+    housing_above: above,
+  };
+}
+
 // PARK DEDICATION CONSTANTS
 // currrently unused as of 2026-08-05, but may be used in future versions of the calculator
 // private park build cost per sqft (ground-level amenity)
@@ -1683,6 +1753,11 @@ export interface SliderInputs {
   leaseup_months?: number;
   min_dscr?: number;
   include_retail?: boolean;
+  // § 21-5.50-1(c), B-1 and B-2: which option the project takes. "auto" (the
+  // default) keeps the better of the two
+  business_housing?: "auto" | BusinessHousing;
+  // an approved IPD-T project, which takes BMX-3 uses (§ 21-9.100-5(d)(1))
+  bmx3_uses?: boolean;
   retail_rent?: number;
   // ground-floor retail as a share of the floor plate
   retail_share?: number;
@@ -1735,6 +1810,8 @@ export interface ParcelOutput {
   height_limit: number;
   // open-space FAR bonus taken; 0 when the project does better without it
   open_space_bonus?: number;
+  // B-1 and B-2: the § 21-5.50-1(c) option the project takes
+  business_housing?: BusinessHousing;
   buildable_sqft: number;
   net_residential_sqft: number;
   net_commercial_sqft: number;
@@ -2458,12 +2535,21 @@ function podiumLayout(i: {
   // most ground-floor retail the zone allows (sqft); 0 for none
   retail_cap: number;
   retail_share: number;
+  // nonresidential floor area that must be built (§ 21-5.50-1(c)(1)(B)), on the
+  // ground floor; a ground floor too small for it builds no housing
+  retail_min?: number;
+  // no housing on the ground floor but a lobby (§ 21-5.50-1(c)(1)(A))
+  housing_above?: boolean;
   unit_size: number;
   parking_ratio: number;
   // stalls required per sqft of ground-floor retail (Table 21-6.1); 0 for none
   retail_stalls_per_sqft?: number;
-  // Table 21-6.2 rate when housing and retail share stalls and loading
+  // Table 21-6.2 rate when housing and retail share stalls and loading. It
+  // reduces required stalls only
   joint_use?: number;
+  // parking_ratio is the legal minimum, so its stalls take that rate too; a
+  // ratio the user sets is built as given
+  legal_ratio?: boolean;
   // § 21-6.110: reserve ground for the required loading spaces
   loading?: boolean;
   // § 21-6.40: reserve ground for the required bicycle parking
@@ -2489,18 +2575,29 @@ function podiumLayout(i: {
   const ground = plates[0] ?? 0;
   const retail_sqft = Math.max(
     0,
-    Math.min(i.retail_cap, i.retail_share * ground, i.far_cap)
+    Math.min(
+      Math.max(i.retail_cap, i.retail_min ?? 0),
+      Math.max(i.retail_share * ground, i.retail_min ?? 0),
+      i.far_cap,
+      ground
+    )
   );
+  // no housing at all where the required nonresidential space doesn't fit
+  const housing_above = i.housing_above ?? false;
+  const no_housing =
+    retail_sqft < (i.retail_min ?? 0) - 1e-6 ||
+    (housing_above && retail_sqft <= 0);
   const retail_stalls = retail_sqft * (i.retail_stalls_per_sqft ?? 0);
   const parking = i.parking_ratio > 0 || retail_stalls > 0;
-  // housing and retail share the stalls (Table 21-6.2)
+  // housing and retail share the required stalls (Table 21-6.2)
   const joint =
     i.parking_ratio > 0 && retail_stalls > 0 ? (i.joint_use ?? 1) : 1;
   // a fraction of 0.5 or more rounds up, or any fraction where the
   // locality says so (Hawaiʻi County, § 25-4-52(a))
   const round = loc.rules.parking.round_up ? (x: number) => Math.ceil(x - 1e-9) : roundHalfUp;
+  const housing_joint = i.legal_ratio ? joint : 1;
   const stallsFor = (units: number) =>
-    round(joint * (i.parking_ratio * units + retail_stalls));
+    round(housing_joint * i.parking_ratio * units + joint * retail_stalls);
   // most units whose stalls fit `capacity`; stallsFor rises with units
   const unitsFor = (capacity: number) => {
     if (stallsFor(0) > capacity) return 0;
@@ -2517,6 +2614,16 @@ function podiumLayout(i: {
   };
   const above = new Array<number>(floors + 1).fill(0);
   for (let j = floors - 1; j >= 0; j--) above[j] = above[j + 1] + plates[j];
+  if (no_housing) above.fill(0);
+  // the first storey housing may use, and the ground-floor retail that shares
+  // its storeys
+  const first_housing = housing_above ? Math.min(1, floors) : 0;
+  const beside_retail = housing_above ? 0 : retail_sqft;
+  const housingRoom = () =>
+    Math.max(
+      0,
+      Math.min(i.far_cap - retail_sqft, above[first_housing] - beside_retail)
+    );
   // a unit-count cap limits the floor area, so only those units are built
   if (i.unit_cap != null)
     i = {
@@ -2544,8 +2651,7 @@ function podiumLayout(i: {
   // loading spaces, sized for the most units the envelope holds
   const most_units = Math.min(
     Math.floor(
-      (Math.max(0, Math.min(i.far_cap, above[0]) - retail_sqft) * EFFICIENCY) /
-        i.unit_size
+      (housingRoom() * EFFICIENCY) / i.unit_size
     ),
     i.max_units ?? Infinity,
     sizing_units
@@ -2567,16 +2673,21 @@ function podiumLayout(i: {
   // surface lot first: if every stall fits on the ground plate a slimmer
   // building leaves open, no parking is built into the building
   if (parking) {
-    const residential_sqft = Math.max(
-      0,
-      Math.min(i.far_cap, above[0]) - retail_sqft
-    );
+    const residential_sqft = housingRoom();
     const units = Math.min(
       Math.floor((residential_sqft * EFFICIENCY) / i.unit_size),
       i.max_units ?? Infinity
     );
     const stalls = stallsFor(units);
-    const footprint = slimFootprint(plates, residential_sqft + retail_sqft);
+    // (A) puts the retail and a lobby on the ground floor, the housing above
+    const in_storeys = residential_sqft + beside_retail;
+    const ground_lobby = housing_above
+      ? Math.min(MAX_GROUND_LOBBY_SQFT, Math.max(0, ground - retail_sqft))
+      : 0;
+    const footprint = Math.max(
+      slimFootprint(plates.slice(first_housing), in_storeys),
+      housing_above ? retail_sqft + ground_lobby : 0
+    );
     // the building fronts the street; open ground in the strip stays unpaved
     const open = Math.max(0, ground - Math.max(footprint, front_strip));
     if (
@@ -2586,12 +2697,13 @@ function podiumLayout(i: {
       // the building only slims as far as the lot needs
       const built = Math.max(
         footprint,
-        Math.min(ground - parking_sqft, residential_sqft + retail_sqft)
+        Math.min(ground - parking_sqft, in_storeys)
       );
-      const gross_sqft = residential_sqft + retail_sqft + parking_sqft;
+      const gross_sqft =
+        residential_sqft + retail_sqft + ground_lobby + parking_sqft;
       let living_stories = 0;
       for (
-        let j = 0, filled = 0;
+        let j = first_housing, filled = 0;
         j < floors && filled < residential_sqft - 1e-9;
         j++
       ) {
@@ -2601,7 +2713,7 @@ function podiumLayout(i: {
       return {
         residential_sqft,
         retail_sqft,
-        lobby_sqft: 0,
+        lobby_sqft: ground_lobby,
         units,
         stalls,
         surface_stalls: stalls,
@@ -2611,10 +2723,12 @@ function podiumLayout(i: {
         bicycle_short_term: bicycle.short_term,
         bicycle_long_term: bicycle.long_term,
         podium_levels: 0,
-        built_floors: storeysFor(
-          plates.map((plate) => Math.min(built, plate)),
-          residential_sqft + retail_sqft
-        ),
+        built_floors:
+          first_housing +
+          storeysFor(
+            plates.slice(first_housing).map((plate) => Math.min(built, plate)),
+            in_storeys
+          ),
         parking_sqft,
         parking_cost: parking_sqft * park.surface_cost_per_sqft,
         parking_share: gross_sqft > 0 ? parking_sqft / gross_sqft : 0,
@@ -2625,11 +2739,13 @@ function podiumLayout(i: {
   }
 
   const firstResidential = (podium_levels: number) =>
-    parking ? Math.min(floors, 1 + podium_levels) : 0;
+    parking ? Math.min(floors, 1 + podium_levels) : first_housing;
   const residentialAt = (podium_levels: number) => {
     const by_height = parking
       ? above[firstResidential(podium_levels)]
-      : above[0] - retail_sqft - loading_sqft;
+      : housing_above
+        ? above[first_housing]
+        : above[0] - retail_sqft - loading_sqft;
     const residential_sqft = Math.max(
       0,
       Math.min(i.far_cap - retail_sqft, by_height)
@@ -2652,7 +2768,11 @@ function podiumLayout(i: {
       ground - retail_sqft - loading_sqft - stalls * park.stall_sqft
     );
   const groundHousing = (stalls: number) =>
-    groundLeft(stalls) >= i.unit_size / EFFICIENCY ? groundLeft(stalls) : 0;
+    !housing_above &&
+    !no_housing &&
+    groundLeft(stalls) >= i.unit_size / EFFICIENCY
+      ? groundLeft(stalls)
+      : 0;
   const fit = (sqft: number) =>
     Math.min(
       Math.floor((sqft * EFFICIENCY) / i.unit_size),
@@ -2725,10 +2845,14 @@ function podiumLayout(i: {
   const podium_sqft = parking
     ? above[Math.min(1, floors)] - above[firstResidential(podium_levels)]
     : 0;
-  // ground floor too small for a unit: lobby, loading, circulation
+  // ground floor too small for a unit: lobby, loading, circulation. Under (A)
+  // the lobby stops at 1,500 sqft and the rest of the ground is left open
   const lobby_sqft =
-    parking && ground_housing === 0
-      ? Math.max(0, ground - retail_sqft - loading_sqft - ground_parking_sqft)
+    housing_above || (parking && ground_housing === 0)
+      ? Math.min(
+          housing_above ? MAX_GROUND_LOBBY_SQFT : Infinity,
+          Math.max(0, ground - retail_sqft - loading_sqft - ground_parking_sqft)
+        )
       : 0;
   const parking_sqft = ground_parking_sqft + podium_sqft + loading_sqft;
   const gross_sqft =
@@ -2750,7 +2874,10 @@ function podiumLayout(i: {
 
   // with parking: the ground floor, the podium, then the housing above them
   const built_floors = !parking
-    ? storeysFor(plates, res.residential_sqft + retail_sqft + loading_sqft)
+    ? housing_above
+      ? first_housing +
+        storeysFor(plates.slice(first_housing), res.residential_sqft)
+      : storeysFor(plates, res.residential_sqft + retail_sqft + loading_sqft)
     : res.units === 0 && retail_sqft === 0
       ? 0
       : 1 +

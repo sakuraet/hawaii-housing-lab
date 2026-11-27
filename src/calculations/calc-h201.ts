@@ -23,9 +23,9 @@ import {
   calcPredevEquity,
   calcPropertyTax,
   calcSoftCosts,
-  commercialFracByZone,
+
   DEFAULT_PROFIT_MARGIN,
-  DEFAULT_RETAIL_SHARE,
+
   DEFAULT_TARGET_RETURN,
   DEFAULT_TARGET_SPREAD,
   EFFICIENCY,
@@ -46,6 +46,7 @@ import {
   ParcelOutput,
   PARKING,
   podiumEnvelope,
+  retailProgram,
   resolveCapRate,
   DEFAULT_CONST_MONTHS,
   RETAIL_CAP_SPREAD,
@@ -102,7 +103,7 @@ export function calcH201Single(sliders: SliderInputs): ParcelOutput {
   const hold_years = sliders.hold_years ?? H201_DEFAULT_HOLD_YEARS;
   const amort_years = sliders.amort_years ?? HOLD.amort_years;
   const min_dscr = sliders.min_dscr ?? 1.2;
-  const include_retail = sliders.include_retail ?? false;
+
   const retail_rent = sliders.retail_rent ?? H201_DEFAULT_RETAIL_RENT;
   const affordable_ami = sliders.affordable_ami ?? H201_DEFAULT_AFFORDABLE_AMI;
   const market_ami = sliders.market_ami ?? H201_DEFAULT_MARKET_AMI;
@@ -124,7 +125,7 @@ export function calcH201Single(sliders: SliderInputs): ParcelOutput {
   const parking_ratio =
     sliders.parking_ratio ??
     (sliders.parking_exempt ? 0 : legalParkingRatio(unit_type));
-  const retail_share = sliders.retail_share ?? DEFAULT_RETAIL_SHARE;
+
   const setback = sliders.setback ?? 10;
 
   // 2. BUILDABLE ENVELOPE (h201_hard)
@@ -150,16 +151,18 @@ export function calcH201Single(sliders: SliderInputs): ParcelOutput {
     stepback: stepBackOf(sliders, zoneStepBack(zone_class)),
   });
 
-  // commercial use checker, returns 0 if the selected zone isn't compatible
-  const frac = include_retail ? commercialFracByZone(zone_class) : 0;
+  const retail = retailProgram({ ...sliders, zone_class, lot_sqft });
   const unit_size = mixUnitSize(unit_type);
   const env = podiumEnvelope({
     plates,
     far_cap,
-    retail_cap: frac * lot_sqft,
-    retail_share,
+    retail_cap: retail.retail_cap,
+    retail_share: retail.retail_share,
+    retail_min: retail.retail_min,
+    housing_above: retail.housing_above,
     unit_size,
     parking_ratio,
+    legal_ratio: sliders.parking_ratio == null,
     ...article6Parking(lot_sqft, sliders.parking_exempt),
   });
   const gross_residential_sqft = env.residential_sqft;
@@ -305,7 +308,7 @@ export function calcH201Single(sliders: SliderInputs): ParcelOutput {
   const pgi = pri + parking_income + admin_income;
   const vacancy_loss = pgi * VACANCY.rental;
 
-  const retail_pgi = include_retail
+  const retail_pgi = retail.has_retail
     ? net_commercial_sqft * retail_rent * 12 * mkt_rent_multiplier
     : 0;
   const retail_vacancy_loss = retail_pgi * VACANCY.default;

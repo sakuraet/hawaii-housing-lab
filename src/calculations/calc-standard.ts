@@ -28,9 +28,7 @@ import {
   calcPredevEquity,
   calcPropertyTax,
   calcSoftCosts,
-  commercialFracByZone,
   DEFAULT_PROFIT_MARGIN,
-  DEFAULT_RETAIL_SHARE,
   DEFAULT_TARGET_RETURN,
   DEFAULT_TARGET_SPREAD,
   EFFICIENCY,
@@ -53,6 +51,7 @@ import {
   ParcelOutput,
   DEFAULT_PERMITTING_MONTHS,
   podiumEnvelope,
+  retailProgram,
   resolveCapRate,
   DEFAULT_CONST_MONTHS,
   RETAIL_CAP_SPREAD,
@@ -94,11 +93,11 @@ function standardHard(
   unit_type: string,
   rental_split: number,
   sale_split: number,
-  include_retail: boolean,
+  retail: ReturnType<typeof retailProgram>,
   setback: number,
   hard_cost_per_sqft: number,
   parking_ratio: number,
-  retail_share: number,
+  legal_ratio: boolean,
   max_far?: number,
   stepback?: StepBack,
   open_space_bonus = 0,
@@ -124,15 +123,16 @@ function standardHard(
     stepback,
   });
 
-  // commercial use checker, returns 0 if the selected zone isn't compatible
-  const commercial_frac = include_retail ? commercialFracByZone(zone_class) : 0;
   const env = podiumEnvelope({
     plates,
     far_cap,
-    retail_cap: commercial_frac * lot_sqft,
-    retail_share,
+    retail_cap: retail.retail_cap,
+    retail_share: retail.retail_share,
+    retail_min: retail.retail_min,
+    housing_above: retail.housing_above,
     unit_size: mixUnitSize(unit_type),
     parking_ratio,
+    legal_ratio,
     ...article6Parking(lot_sqft, parking_exempt),
   });
   const gross_residential_sqft = env.residential_sqft;
@@ -627,7 +627,6 @@ export function calcStandardSingle(sliders: SliderInputs): ParcelOutput {
   // park dedication is only waived under Bill 7 (ROH 43-10.8); every other
   // pathway pays the in-lieu fee unless the caller says otherwise
   const park = sliders.park ?? "in_lieu";
-  const include_retail = sliders.include_retail ?? false;
   const retail_rent = sliders.retail_rent ?? 5;
   const affordable_ami = sliders.affordable_ami ?? "ami_50";
   const market_ami = sliders.market_ami ?? "ami_120";
@@ -644,7 +643,7 @@ export function calcStandardSingle(sliders: SliderInputs): ParcelOutput {
   const parking_ratio =
     sliders.parking_ratio ??
     (sliders.parking_exempt ? 0 : legalParkingRatio(unit_type));
-  const retail_share = sliders.retail_share ?? DEFAULT_RETAIL_SHARE;
+  const retail = retailProgram({ ...sliders, zone_class, lot_sqft });
 
   // Step 1: Hard costs
   const hard = standardHard(
@@ -655,11 +654,11 @@ export function calcStandardSingle(sliders: SliderInputs): ParcelOutput {
     unit_type,
     rental_split,
     sale_split,
-    include_retail,
+    retail,
     setback,
     hard_cost_per_sqft,
     parking_ratio,
-    retail_share,
+    sliders.parking_ratio == null,
     max_far,
     stepBackOf(sliders, zoneStepBack(zone_class)),
     sliders.open_space_bonus ?? 0,

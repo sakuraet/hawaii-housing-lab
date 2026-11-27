@@ -20,7 +20,7 @@ In the code the steps are numbered slightly differently (sale value and RLV have
 
 Physical inputs (lot size, height, zone class) are user sliders in the Project View but read from parcel records in the Citywide View; every financial and policy input is user-adjustable in both. These are the shared defaults; where a pathway uses a different value, its page lists it under Default assumptions.
 
-***Citywide View parcels:*** lots under 500 sq ft are left out of every pathway's parcel set, because a lot that small can't hold a feasible project under any pathway (the smallest lot in the set is 515 sq ft). The B-1 and B-2 parcels follow the same rule.
+***Citywide View parcels:*** lots under 500 sq ft are left out of every pathway's parcel set but TOD's, because a lot that small can't hold a feasible project under any pathway (the smallest lot left is 500 sq ft). The B-1 and B-2 parcels follow the same rule. The TOD set still holds 47 such lots, which build nothing at any tier.
 
 | Input | Default | Notes |
 | --- | --- | --- |
@@ -110,8 +110,9 @@ Each limit is a cap, and the building is the largest one that fits under all of 
 
 Units built are the fewest any of these allows. Raising a limit that isn't the binding one leaves the building and its results unchanged: Max FAR on a lot its height already caps, or Setbacks on a lot FAR already caps, for example. Loading and bicycle parking are sized for the units built (see [Loading spaces](#loading-spaces--21-6110-table-21-65)), so they don't change when a limit that doesn't bind is raised.
 
-Two choices are the model's, not limits:
+Three choices are the model's, not limits:
 - **The open-space bonus** in B-2, BMX-3 and BMX-4 trades ground for floor area, and the model takes it only where it raises the residual land value (see [Open-space bonus](#open-space-bonus)).
+- **The nonresidential option** in B-1 and B-2 (see [Nonresidential space in B-1 and B-2](#nonresidential-space-in-b-1-and-b-2--21-550-1c)).
 - **Units:** where a limit is raised and more units fit, the model builds them, even if the extra units add more cost than value. A developer could choose to build fewer.
 
 ### Lot coverage
@@ -120,14 +121,14 @@ Each pathway sets its own lot coverage limit, listed in the Envelope section of 
 
 ### Retail space
 
-Ground-floor retail is off by default and is turned on with the Use Mix toggle. It is allowed only in the mixed-use zones, up to a share of the lot:
+Ground-floor retail is off by default and is turned on with the Use Mix toggle, except in B-1 and B-2, where housing needs some nonresidential space (see [Nonresidential space in B-1 and B-2](#nonresidential-space-in-b-1-and-b-2--21-550-1c)). It is allowed only in the mixed-use and business zones, up to a share of the lot:
 
 | Zone | Most retail allowed |
 | --- | --- |
 | AMX-1 | 30% of lot area |
 | AMX-2 | 40% of lot area |
-| AMX-3, BMX-3, BMX-4, Waikiki Apartment Mixed Use | 60% of lot area |
-| A-1, A-2, A-3, B-1, B-2 | None |
+| AMX-3, B-1, B-2, BMX-3, BMX-4, Waikiki Apartment Mixed Use | 60% of lot area |
+| A-1, A-2, A-3 | None |
 
 Retail built = the smallest of that cap, the Ground-Floor Retail share (default 10%) of the ground floor, and the FAR cap. Retail rent is entered in $ per sq ft per month (default $5) and earns on its net area.
 
@@ -143,8 +144,9 @@ B-1, B-2, BMX-3 and BMX-4 follow Table 21-3.4 and §§ 21-3.110-1, 21-3.120-1 an
 
 - FAR: B-1 1.0, B-2 2.5, BMX-3 2.5, BMX-4 4.0. Lot coverage is not regulated.
 - Open-space bonus up to 3.5 FAR in B-2 and BMX-3 and 7.5 in BMX-4, none in B-1; each square foot of public open space earns 5 sq ft of floor area (10 in BMX-4). See [Open-space bonus](#open-space-bonus).
-- Height: the zoned height in the parcel data, which the Max Height lever adds to or subtracts from. B-1 parcels are 40 ft (Table 21-3.4); 18 B-1 lots matched to a higher height-map zone were checked and set to 40 ft. BMX-4 starts at 350 ft at most on lots under 35,000 sq ft (§ 21-3.120-1(a)(1)). These are starting heights, not caps: as in every district, a user can raise the height to test a taller building.
+- Height: the zoned height in the parcel data, which the Max Height lever adds to or subtracts from. B-1 parcels are 40 ft at most (Table 21-3.4; 435 are 40 ft, 53 are 30 ft and 22 are 25 ft); 18 B-1 lots matched to a higher height-map zone were checked and set to 40 ft. BMX-4 starts at 350 ft at most on lots under 35,000 sq ft (§ 21-3.120-1(a)(1)). These are starting heights, not caps: as in every district, a user can raise the height to test a taller building.
 - Step-back above 40 ft (1 ft per 10 ft) in B-2 and BMX-3. None in B-1 or BMX-4.
+- Nonresidential space in B-1 and B-2 (§ 21-5.50-1(c)), next.
 
 **Not modeled:**
 
@@ -154,6 +156,31 @@ B-1, B-2, BMX-3 and BMX-4 follow Table 21-3.4 and §§ 21-3.110-1, 21-3.120-1 an
 - Above 350 ft in BMX-4: the major special district permit and the 35% of the lot kept as public open space (§ 21-3.120-1(a)(3), (b)).
 - The 5 ft front yard for structures up to 12 ft tall, and open space or an arcade in place of the front yard on streets wider than 50 ft (Table 21-3.4, note 5).
 - Yards that follow the adjoining district's dwelling yards (Table 21-3.4, notes 3 and 4).
+
+#### Nonresidential space in B-1 and B-2 (§ 21-5.50-1(c))
+
+A B-1 or B-2 lot can't be all housing. Table 21-5.1 permits multi-unit dwellings there subject to § 21-5.50-1(c) (Ord. 25-2, in effect since January 3, 2025), which gives a project two options. BMX-3 and BMX-4 permit them outright.
+
+| Option | The law | The model |
+| --- | --- | --- |
+| (A) Housing above, `above` | All housing on consecutive floors above all nonresidential uses, with at least one nonresidential use. A residential lobby of up to 1,500 sq ft may be on the ground floor. No minimum size | No housing on the ground floor. It holds a shop, parking and loading, and a lobby of up to 1,500 sq ft; any ground left over is open. The shop is 10% of the ground floor, the Ground-Floor Retail default (`DEFAULT_RETAIL_SHARE`, an assumption) |
+| (B) Minimum floor area, `min_floor_area` | Lots of 3 acres or less: 0.2 FAR. Over 3 and under 7 acres: the greater of 10,000 sq ft and 0.05 FAR. Over 7 acres: the greater of 40,000 sq ft and 0.05 FAR. Housing can go anywhere | That much ground-floor retail, beside housing or parking (`minNonresidentialSqft`). Where it doesn't fit on the ground floor, (B) isn't available. Exactly 7 acres, which the law leaves out, takes the larger minimum |
+
+**Which option:** the model runs both and keeps the higher residual land value, or the one with more units where neither pencils, as for the open-space bonus. `business_housing` on the result is the option taken; as an input, "above" or "min_floor_area" forces one ("auto" is the default).
+
+**Retail that is required** is built whether or not the Use Mix toggle is on. It counts toward FAR, costs and earns what any retail does, and needs stalls off exempt lots and loading. With the toggle on, the Ground-Floor Retail share sets its size, but never below what option (B) needs; a share of 0% is the same as the toggle off. The slider is hidden while the toggle is off, so the default 10% applies then.
+
+**Where it applies:** Standard, Before Ord. 26-7, 201H (the model assumes no project-specific exemption) and TOD, except an IPD-T project with approval: it takes BMX-3 uses (§ 21-9.100-5(d)(1)), which is our reading and is not confirmed with the Department of Planning and Permitting. IPD-T lots at Base or that can't be approved, and all PD-T lots (§ 21-9.100-7), are covered. Bill 7 sets its own standards and has no B-1 or B-2 parcels.
+
+**Effect:** on the Citywide View's B-1 and B-2 parcels under Standard at default settings, units fall 6.8% in B-1 (39,612 to 36,900) and 1.1% in B-2 (257,286 to 254,430), 0.3% of all Standard units. Units rated strong fall more, from 749,616 to 594,013 across Standard (188,411 to 31,911 in B-2): many B-2 lots sit within a few hundredths of a point of the return on cost they need, so the space moves them to marginal. That drop comes mostly from the assumed size of (A)'s shop: with a 1,000 sq ft shop instead of 10% of the ground floor, 179,499 units in B-2 would be rated strong.
+
+**Assumptions and gaps:**
+
+- The size of (A)'s shop, since the law sets none.
+- Required retail takes Table 21-6.2's 90% joint-use rate off exempt lots on the retail's own stalls, not on housing stalls set with the Parking lever (see [Joint use](#levers-and-warnings)), as retail turned on with the toggle does, so "Housing only" and "Ground floor retail" at 10% nearly agree.
+- At low parking most of (A)'s ground floor is empty: the shop takes 10%, the lobby at most 1,500 sq ft, and with no stalls the rest is left open (about three quarters of it in both districts with the Parking lever at 0, and under 10% at the default). That is legal, but a developer would probably build more retail there. Filling it would be a separate modeling choice.
+- Retail stays on the ground floor. The law lets (B)'s space go on any floor.
+- HRS § 46-4.6 permits housing in commercial zones "notwithstanding any law to the contrary", but lets counties limit it to floors above the ground floor and set development standards. How it bears on the nonresidential requirement is a legal question; the model follows the city's rule.
 
 **Lots under 5,000 sq ft:** Table 21-3.4 sets a 5,000 sq ft minimum lot area, but about 800 B and BMX parcels are smaller. They are existing nonconforming lots, which can still be built on, so the model keeps them.
 
@@ -277,16 +304,17 @@ The rules below are the ROH Chapter 21, Article 6 minimum. Each pathway page say
 
 Retail uses the Commercial 1 rate (retail and sales, eating and drinking, offices). The model builds only housing and ground-floor retail, so the industrial (1 per 2,000 sq ft), Commercial 2 (1 per 1,000 sq ft), hotel and assembly rates in Table 21-6.1 are not used; housing in resort and industrial zones takes the residential rate.
 
-Dropping stalls from the exempt parcels frees ground and podium floors for units, and each stall costs more to build than its $100 monthly rent repays, so with the Parking lever unset the exemption moves thousands of parcels into strong. Each pathway page gives those totals with and without the exemption. The flat Parking default sets housing stalls on exempt parcels too, so at the defaults the exemption removes only retail stalls.
+Dropping stalls from the exempt parcels frees ground and podium floors for units, and each stall costs more to build than its $100 monthly rent repays, so with the Parking lever unset the exemption moves thousands of parcels into strong. Each pathway page gives those totals with and without the exemption. The flat Parking default sets housing stalls on exempt parcels too, so at the defaults the exemption removes only retail stalls, which with retail off means the stalls B-1 and B-2's required retail needs. A 25,006 sq ft, 60 ft B-2 lot, for example, builds 109 units either way, with 104 stalls exempt and 113 not.
 
 ### Counting stalls
 
 ```math
-\text{stalls} = \mathrm{round}\left(j \times \left(r \times \text{units} + \frac{\text{retail sq ft}}{500}\right)\right)
+\text{stalls} = \mathrm{round}\left(j_h \times r \times \text{units} + j \times \frac{\text{retail sq ft}}{500}\right)
 ```
 
 - **r:** stalls per unit, set by the Parking lever. It defaults to 0.95 (Bill 7 0.35, TOD and 201H 0.9). With the lever unset, the model uses the legal minimum: the unit mix's average private dwelling area ÷ 1,000. Common areas and accessory recreation areas are excluded (§ 21-6.20(b)(2)(A)), so the unit sizes alone count: studio 300, one-bedroom 500, two-bedroom 700 sq ft.
-- **j:** 0.9 when housing and retail both need stalls (Table 21-6.2, residential with retail/commercial), else 1.
+- **j:** 0.9 when housing and retail both need stalls (Table 21-6.2, residential with retail/commercial), else 1. Retail that B-1 and B-2 require counts, whether or not the Use Mix toggle is on.
+- **j<sub>h</sub>:** the same as j with the Parking lever unset, since r is then the legal minimum. With the lever set it is 1: § 21-6.30(g) reduces *required* stalls, and the lever is what the project chooses to build.
 - A fraction of 0.5 or more rounds up (§ 21-6.20(b)(1)).
 
 | Unit mix | Average private area (sq ft) | Minimum stalls per unit |
@@ -300,7 +328,7 @@ Dropping stalls from the exempt parcels frees ground and podium floors for units
 | Half one-bedroom, half two-bedroom | 600 | 0.60 |
 | All two-bedroom | 700 | 0.70 |
 
-***Example:*** 40 one-bedroom units over 2,000 sq ft of retail need 0.9 × (20 + 4) = 21.6, so 22 stalls.
+***Example:*** 40 one-bedroom units over 2,000 sq ft of retail need 0.9 × (20 + 4) = 21.6, so 22 stalls. With the Parking lever set to 0.95 they build 38 + 0.9 × 4 = 41.6, so 42.
 
 ### Loading spaces (§ 21-6.110, Table 21-6.5)
 
@@ -353,7 +381,7 @@ Ground-floor and podium stalls cost the same per square foot. What separates the
 #### Why the defaults use the ground floor 
 At the Standard defaults (A-1, 10,000 sq ft, 30 ft), 60% lot coverage gives 6,000 sq ft floor plates, and three floors hold 18,000 sq ft. FAR 2 allows 20,000 sq ft. A surface lot does not fit on the open ground, so the 16 stalls go inside: about $1.0 million, plus about $123,000 for the 646 sq ft of loading and bicycle area and $23,400 of racks and lockers. As a surface lot they would cost $10,800 each, $172,800 in all. Units fall from 34 with no parking to 17.
 
-Surface parking appears when FAR, not height or coverage, limits the building, so a slimmer building leaves ground open: a tall height limit with a low FAR. Across the Citywide View's parcels at default settings (43,110 runs: every parcel in each pathway, and TOD at each tier its regime offers), 1,813 runs use a surface lot, 39,235 use ground-floor stalls and 28,429 use podium stalls. The model never puts surface stalls on the part of the lot that lot coverage keeps unbuilt (about 4,000 sq ft on the default lot); allowing that would be a modeling change.
+Surface parking appears when FAR, not height or coverage, limits the building, so a slimmer building leaves ground open: a tall height limit with a low FAR. Across the Citywide View's parcels at default settings (48,798 runs: every parcel in each pathway, and TOD at each tier its regime offers), 1,883 runs use a surface lot and 44,162 park inside the building, 28,206 of them with podium stalls. The model never puts surface stalls on the part of the lot that lot coverage keeps unbuilt (about 4,000 sq ft on the default lot); allowing that would be a modeling change.
 
 ### Levers and warnings
 
@@ -361,8 +389,8 @@ The Parking lever starts at a flat default and does not follow the unit mix or t
 
 - **No exemption toggle:** Neither view has a switch for the exemption, by decision: the Citywide View reads it from each parcel for the warning, and the Project View, which has no parcel, always warns against the non-exempt minimum.
 - **Below the minimum:** A lower value is modeled as if a variance were granted. The Project View's status line says "Parking below the Article 6 minimum of X stalls per unit (§ 21-6.20)", and the Citywide View's parcel card shows a "Parking below legal minimum" tag, both in the warning orange.
-- **Retail stalls:** switch on with retail (1 per 500 sq ft, with the 90% joint-use rate) and are always required on a non-exempt parcel; the lever sets housing stalls only. On an exempt parcel retail stalls stay at 0 whatever the lever says.
-- **Joint use:** also applies to a ratio the user sets by hand.
+- **Retail stalls:** switch on with retail (1 per 500 sq ft, with the 90% joint-use rate where housing has stalls too) and are always required on a non-exempt parcel; the lever sets housing stalls only. On an exempt parcel retail stalls stay at 0 whatever the lever says.
+- **Joint use:** Table 21-6.2's 90% applies to required stalls only: the retail's, and the housing's when the lever is unset and the model uses the legal minimum. A ratio the user sets, including each pathway's default, is built as given. An earlier version took 10% off that ratio too. Since exempt lots need no retail stalls they got no reduction, so the same lot could build more stalls and fewer units when exempt; and since the default ratio is above the minimum, adding a small shop could add units.
 - **Retail sliders:** Retail Rent and Ground-Floor Retail % appear only when the use mix includes retail, in both tools.
 
 ### Deviations or what is not modeled

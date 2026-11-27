@@ -66,6 +66,8 @@ export const zones: Record<string, ZoneRules> = {
     // open_space_floor_per_sqft: TODO,
     // optional: heights above this need a lot of at least this size
     // tall_height: { above_ft: TODO, min_lot_sqft: TODO },
+    // optional: housing needs nonresidential floor area in this district
+    // housing_needs_nonresidential: true,
     // optional: a share of the lot that must stay open, by FAR
     // open_space: { bands: [...], source: "TODO" },
     // optional: a height step-back ("wedding cake") above a trigger height
